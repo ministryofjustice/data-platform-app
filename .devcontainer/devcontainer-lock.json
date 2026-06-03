@@ -1,0 +1,14 @@
+{
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:": {
+      "version": "3.0.1",
+      "resolved": "ghcr.io/devcontainers/features/docker-in-docker@sha256:ca2508495b01ba29eba93e8153772a2daa65eaa86471cc6863fe2a3d21933df9",
+      "integrity": "sha256:ca2508495b01ba29eba93e8153772a2daa65eaa86471cc6863fe2a3d21933df9"
+    },
+    "ghcr.io/ministryofjustice/devcontainer-feature/astral:": {
+      "version": "1.0.1",
+      "resolved": "ghcr.io/ministryofjustice/devcontainer-feature/astral@sha256:8ee1cd600c19e2c6ac841dccdebd135a628680ca4aeca70f1ff74b1afe153645",
+      "integrity": "sha256:8ee1cd600c19e2c6ac841dccdebd135a628680ca4aeca70f1ff74b1afe153645"
+    }
+  }
+}
