@@ -1,0 +1,16 @@
+---
+name: Container Scan
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions: {}
+
+jobs:
+  container-scan:
+    name: Container Scan
+    permissions:
+      contents: read
+    uses: ministryofjustice/data-platform-github-actions/.github/workflows/container-scan.yml@feat/container-scanning # zizmor: ignore[unpinned-uses]
