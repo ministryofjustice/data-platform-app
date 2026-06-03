@@ -13,4 +13,5 @@ jobs:
     name: Container Scan
     permissions:
       contents: read
+      security-events: write
     uses: ministryofjustice/data-platform-github-actions/.github/workflows/container-scan.yml@feat/container-scanning # zizmor: ignore[unpinned-uses]
