@@ -11,20 +11,20 @@
 1. Clone this repository.
 2. Open the project in Visual Studio Code.
 3. Reopen in the devcontainer when prompted.
-	- You can also run: `Dev Containers: Reopen in Container` from the command palette.
+   - You can also run: `Dev Containers: Reopen in Container` from the command palette.
 4. Wait for the devcontainer setup to complete.
    - Dependencies are installed automatically by `.devcontainer/post-create.sh`.
    - If setup was interrupted, run:
 
-	```bash
-	make install
-	```
+   ```bash
+   make install
+   ```
 
 5. Start the app:
 
-	```bash
-	make run
-	```
+   ```bash
+   make run
+   ```
 
 6. Open the local URL shown in the terminal (usually `http://127.0.0.1:8000`).
 
