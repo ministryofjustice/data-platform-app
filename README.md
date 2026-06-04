@@ -9,7 +9,7 @@
 ## Developer quickstart
 
 1. Clone this repository.
-2. Open the project in VS Code.
+2. Open the project in Visual Studio Code.
 3. Reopen in the devcontainer when prompted.
 	- You can also run: `Dev Containers: Reopen in Container` from the command palette.
 4. Wait for the devcontainer setup to complete.
@@ -42,18 +42,18 @@ If you change frontend assets during development:
 
 1. Rebuild CSS only:
 
-	```bash
-	make build-css
-	```
+   ```bash
+   make build-css
+   ```
 
 2. Rebuild JavaScript assets only:
 
-	```bash
-	make build-js
-	```
+   ```bash
+   make build-js
+   ```
 
 3. Rebuild everything under `static/assets`:
 
-	```bash
-	make build-static
-	```
+   ```bash
+   make build-static
+   ```

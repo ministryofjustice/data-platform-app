@@ -2,12 +2,36 @@
   "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
   "version": "0.2",
   "language": "en-GB",
+  "ignorePaths": [
+    "package-lock.json",
+    "uv.lock",
+    "static/assets/**"
+  ],
   "words": [
+    "addopts",
+    "djlint",
+    "dotenv",
+    "evenodd",
     "cooldown",
+    "govuk",
+    "isort",
+    "kubeconform",
+    "maxfail",
     "ministryofjustice",
+    "mypy",
+    "nbqa",
+    "opengraph",
     "openssf",
+    "pycodestyle",
+    "pyflakes",
+    "pylint",
+    "pyproject",
+    "pytest",
+    "pyupgrade",
     "tfstate",
+    "testpaths",
     "venv",
+    "xlink",
     "zizmor"
   ]
 }
