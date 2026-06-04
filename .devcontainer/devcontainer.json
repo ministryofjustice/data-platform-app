@@ -23,7 +23,7 @@
     }
   },
   "postCreateCommand": "bash .devcontainer/post-create.sh",
-    "remoteEnv": {
+  "remoteEnv": {
     "UV_PROJECT_ENVIRONMENT": "/home/vscode/.venv"
   }
 }
