@@ -28,6 +28,28 @@
 
 6. Open the local URL shown in the terminal (usually `http://127.0.0.1:8000`).
 
+## Code quality
+
+To check code quality locally:
+
+```bash
+make lint
+```
+
+To automatically fix formatting issues:
+
+```bash
+make format
+```
+
+To run tests:
+
+```bash
+make test
+```
+
+These commands lint and format Python, Django templates, JavaScript, CSS, JSON, and YAML files. See the Makefile for all available development commands.
+
 ## Database note
 
 For initial development, we are using SQLite locally.

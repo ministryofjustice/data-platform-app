@@ -40,11 +40,13 @@ lint:
 	ruff format --check
 	ruff check
 	$(MAKE) lint-templates
+	npx prettier . --check
 
 format:
 	ruff format
 	ruff check --fix
 	$(MAKE) format-templates
+	npx prettier . --write
 
 lint-templates:
 	uv run djlint templates --lint --profile=django
