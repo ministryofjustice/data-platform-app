@@ -1,9 +1,22 @@
 .env
 .terraform/
 coverage/
+.venv/
 venv/
 env/
 .DS_STORE
 *.code-workspace
 *.sha256
 terraform.tfstate
+node_modules/
+static/
+staticfiles/
+db.sqlite3
+
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info

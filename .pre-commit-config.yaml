@@ -19,4 +19,21 @@ repos:
     hooks:
       - id: zizmor
 
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.2
+    hooks:
+      # Run the linter.
+      - id: ruff
+        args: [--fix]
+      # Run the formatter.
+      - id: ruff-format
+
+  - repo: https://github.com/djlint/djLint
+    rev: v1.36.4
+    hooks:
+      - id: djlint
+        args: ["--lint", "--profile=django"]
+      - id: djlint-reformat
+        args: ["--profile=django"]
+
 exclude: .devcontainer/devcontainer-lock.json

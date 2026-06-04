@@ -1,0 +1,22 @@
+{
+  "name": "data-platform-app",
+  "version": "1.0.0",
+  "description": "Data Platform App",
+  "main": "index.js",
+    "dependencies": {
+    "@ministryofjustice/frontend": "9.0.0",
+    "amazon-quicksight-embedding-sdk": "2.11.3",
+    "@x-govuk/govuk-prototype-components": "6.0.0",
+    "govuk-frontend": "6.1.0"
+  },
+  "devDependencies": {
+    "prettier": "3.8.3",
+    "sass": "1.99.0"
+  },
+  "scripts": {
+    "test": "echo \\\"Error: no test specified\\\" && exit 1",
+    "css": "sass --quiet-deps --load-path=./ --style=compressed scss/app.scss:static/assets/css/app.css"
+  },
+  "author": "MOJ Data Platform Services",
+  "license": "MIT"
+}

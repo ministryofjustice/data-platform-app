@@ -1,0 +1,53 @@
+[project]
+name = "data-platform-app"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "django==6.0.5",
+    "python-dotenv==1.2.2",
+]
+
+[dependency-groups]
+dev = [
+    "djlint==1.36.4",
+    "django-debug-toolbar==6.3.0",
+    "pre-commit==4.6.0",
+    "pytest==9.0.3",
+    "ruff==0.15.15",
+]
+
+[tool.ruff]
+line-length = 99
+
+[tool.ruff.lint]
+select = [
+    # pycodestyle
+    "E",
+    # Pyflakes
+    "F",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/migrations/*.py" = ["E501"]
+
+[tool.pytest.ini_options]
+addopts = "-v --tb=auto --ds=.settings.test"
+testpaths = ["tests"]
+
+[tool.djlint]
+profile = "django"
+indent = 2
+max_line_length = 99
+format_css = true
+format_js = true
+ignore = "H006,H021,H023,H025,H030,H031,T002"
