@@ -1,5 +1,10 @@
 {% extends "base/base.html" %}
 {% load static %}
+{% block nav %}
+{% endblock nav %}
+{% block title %}
+  500 Internal Server Error
+{% endblock title %}
 {% block content %}
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-two-thirds">
@@ -7,7 +12,7 @@
       <p class="govuk-body">Try again later.</p>
       <p class="govuk-body">
         If the problem persists, please
-        <a href="mailto:analytical-platform@justice.gov.uk" class="govuk-link"> email the Analytical Platform team at analytical-platform@justice.gov.uk</a>.
+        <a href="mailto:data-platform@justice.gov.uk" class="govuk-link"> email the Data Platform team at data-platform@justice.gov.uk</a>.
       </p>
     </div>
   </div>
