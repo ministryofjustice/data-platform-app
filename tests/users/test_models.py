@@ -27,3 +27,4 @@ class TestUserModel:
         assert user.username == "jane.doe"
         assert user.email == "jane@example.com"
         assert user.pk is not None
+        assert user.check_password("unsafe-test-password") is True
