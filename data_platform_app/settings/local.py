@@ -20,7 +20,7 @@ INTERNAL_IPS = [
     "127.0.0.1",
 ]
 
-# TODO switch this to postgres when adding dev container support
+# TODO switch this to postgres for local development so dev and prod environments are aligned
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",

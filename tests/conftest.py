@@ -2,7 +2,7 @@ import pytest
 
 
 @pytest.fixture
-def anonymous_user(db):
+def anonymous_user():
     """An unsaved AnonymousUser instance."""
     from django.contrib.auth.models import AnonymousUser
 
