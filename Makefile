@@ -11,7 +11,7 @@ install:
 	$(MAKE) build-static
 
 build-css:
-	npm install
+	npm ci
 	rm -rf static/assets/fonts
 	rm -rf static/assets/images
 	rm -rf static/assets/css
@@ -24,7 +24,7 @@ build-css:
 	npm run css
 
 build-js:
-	npm install
+	npm ci
 	rm -rf static/assets/js
 	mkdir -p static/assets/js
 	cp node_modules/govuk-frontend/dist/govuk/govuk-frontend.min.js static/assets/js/govuk-frontend.min.js
