@@ -50,6 +50,23 @@ make test
 
 These commands lint and format Python, Django templates, JavaScript, CSS, JSON, and YAML files. See the Makefile for all available development commands.
 
+## Testing
+
+All code changes must include tests. Tests are organized by app/module under `tests/`, mirroring the source structure.
+
+### Run tests
+
+```bash
+make test
+```
+
+This runs the full test suite with coverage analysis. Tests must maintain **≥90% code coverage** (enforced by CI).
+
+### Coverage
+
+- `make test` generates a `coverage.xml` report and prints a summary.
+- Aim for meaningful coverage of business logic, edge cases, and error handling. Avoid low-value tests that only bump numbers.
+
 ## Database note
 
 For initial development, we are using SQLite locally.

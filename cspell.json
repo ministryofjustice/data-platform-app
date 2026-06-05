@@ -5,6 +5,7 @@
   "ignorePaths": ["package-lock.json", "uv.lock", "static/assets/**"],
   "words": [
     "addopts",
+    "asgi",
     "djlint",
     "dotenv",
     "evenodd",
@@ -32,6 +33,7 @@
     "tfstate",
     "testpaths",
     "venv",
+    "wsgi",
     "xlink",
     "zizmor"
   ]

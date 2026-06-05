@@ -13,13 +13,19 @@ dependencies = [
 dev = [
     "djlint==1.36.4",
     "django-debug-toolbar==6.3.0",
+    "model-bakery==1.20",
     "pre-commit==4.6.0",
     "pytest==9.0.3",
+    "pytest-cov==6.0",
+    "pytest-django==4.9",
     "ruff==0.15.15",
 ]
 
 [tool.ruff]
 line-length = 99
+
+[tool.uv]
+exclude-newer = "7d"
 
 [tool.ruff.lint]
 select = [
@@ -41,8 +47,18 @@ select = [
 "**/migrations/*.py" = ["E501"]
 
 [tool.pytest.ini_options]
-addopts = "-v --tb=auto --ds=.settings.test"
+DJANGO_SETTINGS_MODULE = "data_platform_app.settings.test"
+addopts = "-v --tb=auto --cov=data_platform_app --cov=users --cov-branch --cov-report=term-missing --cov-report=xml --cov-fail-under=90"
 testpaths = ["tests"]
+
+[tool.coverage.run]
+omit = [
+    "*/migrations/*",
+    "data_platform_app/settings/*",
+    "data_platform_app/wsgi.py",
+    "data_platform_app/asgi.py",
+    "manage.py",
+]
 
 [tool.djlint]
 profile = "django"

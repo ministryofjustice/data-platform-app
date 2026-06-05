@@ -55,4 +55,4 @@ format-templates:
 	uv run djlint templates --reformat --profile=django
 
 test:
-	pytest . --failed-first --maxfail=5 $(ARGS)
+	uv run pytest . --failed-first --maxfail=5 $(ARGS)

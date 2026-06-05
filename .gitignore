@@ -1,6 +1,9 @@
 .env
 .terraform/
 coverage/
+coverage.xml
+.coverage
+.pytest_cache/
 .venv/
 venv/
 env/
@@ -12,6 +15,7 @@ node_modules/
 static/
 staticfiles/
 db.sqlite3
+.github/copilot-instructions.md
 
 # Python-generated files
 __pycache__/
