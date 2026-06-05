@@ -50,6 +50,8 @@ make test
 
 These commands lint and format Python, Django templates, JavaScript, CSS, JSON, and YAML files. See the Makefile for all available development commands.
 
+This repository installs both pre-commit and pre-push hooks. The pre-push hook runs the full lint suite (`make lint`) before a push, to try to avoid annoying super-linter failures in CI.
+
 ## Testing
 
 All code changes must include tests. Tests are organized by app/module under `tests/`, mirroring the source structure.
