@@ -3,10 +3,16 @@
   "image": "ghcr.io/ministryofjustice/devcontainer-base:latest",
   "features": {
     "ghcr.io/devcontainers/features/docker-in-docker:": {},
-    "ghcr.io/ministryofjustice/devcontainer-feature/astral:": {}
+    "ghcr.io/ministryofjustice/devcontainer-feature/astral:": {},
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "24"
+    }
   },
   "customizations": {
     "vscode": {
+      "settings": {
+        "python.defaultInterpreterPath": "/home/vscode/.venv/bin/python3"
+      },
       "extensions": [
         "EditorConfig.EditorConfig",
         "GitHub.copilot-chat",
@@ -16,5 +22,8 @@
       ]
     }
   },
-  "postCreateCommand": "bash .devcontainer/post-create.sh"
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "remoteEnv": {
+    "UV_PROJECT_ENVIRONMENT": "/home/vscode/.venv"
+  }
 }

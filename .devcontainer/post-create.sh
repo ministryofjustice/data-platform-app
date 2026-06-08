@@ -2,5 +2,4 @@
 
 set -euo pipefail
 
-# Install pre-commit hooks
-uvx pre-commit install
+make install
