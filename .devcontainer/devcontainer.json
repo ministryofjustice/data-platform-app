@@ -4,7 +4,7 @@
   "features": {
     "ghcr.io/devcontainers/features/docker-in-docker:": {},
     "ghcr.io/ministryofjustice/devcontainer-feature/astral:": {},
-    "ghcr.io/devcontainers/features/node:1": {
+    "ghcr.io/devcontainers/features/node:": {
       "version": "24"
     }
   },
