@@ -1,1 +1,73 @@
 {% extends "base/base.html" %}
+{% load static %}
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      <h2 class="govuk-heading-l">Justice Data Platform</h2>
+      <p class="govuk-body">
+        The new platform will bring together the tools and capabilities of the current <a class="govuk-link"
+    href="https://controlpanel.services.analytical-platform.service.justice.gov.uk/">Analytical Platform</a> and <a class="govuk-link"
+    href="https://find-moj-data.service.justice.gov.uk/">Find MOJ data</a>. It will provide everything you need to find, transform, analyse, and share data.
+      </p>
+      <p class="govuk-body">
+        By design, it will be secure, high-performance, cost-effective, and aligned with data protection and governance policies.
+      </p>
+      <p class="govuk-body">
+        The federated data model will allow you to store data securely, and manage permissions on a granular, project-by-project level, without the need for GitHub access.
+      </p>
+      <div class="info-panel">
+        <p class="govuk-body govuk-!-margin-0">
+          Find out what we've done so far, and what we're doing next, in <a class="govuk-link" href="{% url 'roadmap' %}">our roadmap</a>.
+        </p>
+      </div>
+    </div>
+  </div>
+  <hr class="govuk-section-break govuk-section-break--xl govuk-section-break--visible">
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-one-half">
+      <h2 class="govuk-heading-l">Manage data</h2>
+      <p class="govuk-body">
+        Each business area will have its own data factory for ingestion, processing, storage, and sharing. The framework allows for clearer ownership, easier governance, and better, more consistent metadata.
+      </p>
+      <p class="govuk-body">
+        <a class="govuk-link" href="{% url 'data_factories' %}">Learn about data factories</a>
+      </p>
+    </div>
+    <div class="govuk-grid-column-one-half">
+      <img src="{% static 'assets/images/manage_data.svg' %}"
+           alt="Diagram showing the components of a data factory"
+           class="home-image">
+    </div>
+  </div>
+  <hr class="govuk-section-break govuk-section-break--xl govuk-section-break--visible">
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-one-half">
+      <h2 class="govuk-heading-l">Access AI tools</h2>
+      <p class="govuk-body">
+        Get access to a wide range of Large Language Models (LLMs) and AI tools through the AI gateway API. Prevent fragmented deployments and reduce duplicated effort. Get structured governance and cost transparency across models.
+      </p>
+      <p class="govuk-body">
+        Contact the team on slack to get started <a class="govuk-link" href="#">#ask-data-platform</a>
+      </p>
+    </div>
+    <div class="govuk-grid-column-one-half">
+      <img src="{% static 'assets/images/access_ai_tools.svg' %}"
+           alt="Diagram showing a user accessing the AI Gateway to use AI tools"
+           class="home-image">
+    </div>
+  </div>
+  <hr class="govuk-section-break govuk-section-break--xl govuk-section-break--visible">
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      <h2 class="govuk-heading-l">Stay in touch</h2>
+      <p class="govuk-body">
+        Get updates on Slack <a class="govuk-link"
+    href="https://moj.enterprise.slack.com/archives/C0AJ6EZBCVB">#data-platform-updates</a> or <a class="govuk-link"
+    href="https://teams.microsoft.com/l/channel/19%3A59dee033a7554308bb08a3b4ab69e12b%40thread.tacv2/Updates?groupId=3779825a-f484-4818-bb50-ab7e776f431f&tenantId=c6874728-71e6-41fe-a9e1-2e8c36776ad8">Teams Justice Data Platform - Updates</a>.
+      </p>
+      <p class="govuk-body">
+        If you have questions, feedback, or would like to get take part in our ongoing user research, get in touch with the team at <a class="govuk-link" href="mailto:justicedataplatform@justice.gov.uk">justicedataplatform@justice.gov.uk</a>.
+      </p>
+    </div>
+  </div>
+{% endblock content %}
