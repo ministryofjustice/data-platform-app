@@ -8,7 +8,7 @@
 );
 @use "node_modules/@x-govuk/govuk-prototype-components/src/x-govuk";
 
-$masthead-background-color: #381A62;
+$masthead-background-color: #381a62;
 
 .app-width-container--full {
   max-width: none;
@@ -38,9 +38,9 @@ $masthead-background-color: #381A62;
 
 .info-panel {
   width: 652px;
-  background-color: #F4F8FB;
+  background-color: #f4f8fb;
   padding: govuk-spacing(3);
-  border: 1px solid #8EB8FC;
+  border: 1px solid #8eb8fc;
 }
 
 .home-image {
