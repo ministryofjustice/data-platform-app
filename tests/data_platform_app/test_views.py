@@ -1,8 +1,6 @@
-import pytest
 from django.urls import reverse
 
 
-@pytest.mark.django_db
 class TestHomeView:
     """Tests for the HomeView at '/'."""
 
@@ -19,7 +17,6 @@ class TestHomeView:
         assert "service_navigation_items" in response.context
 
 
-@pytest.mark.django_db
 class TestRoadmapView:
     """Tests for the RoadmapView at '/roadmap/'."""
 
@@ -36,7 +33,6 @@ class TestRoadmapView:
         assert "service_navigation_items" in response.context
 
 
-@pytest.mark.django_db
 class TestDataFactoriesView:
     """Tests for the DataFactoriesView at '/data-factories/'."""
 
