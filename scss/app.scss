@@ -37,7 +37,8 @@ $masthead-background-color: #381a62;
 }
 
 .info-panel {
-  width: 652px;
+  max-width: 652px;
+  width: 100%;
   background-color: #f4f8fb;
   padding: govuk-spacing(3);
   border: 1px solid #8eb8fc;

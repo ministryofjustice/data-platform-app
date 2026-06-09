@@ -57,6 +57,3 @@ format-templates:
 
 test:
 	uv run pytest --failed-first --maxfail=5 $(ARGS)
-
-activate-venv:
-	source /home/vscode/.venv/bin/activate
