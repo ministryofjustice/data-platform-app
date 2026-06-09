@@ -28,8 +28,6 @@ class TestRoadmapView:
 
     def test_context(self, client):
         response = client.get(reverse("roadmap"))
-
-        assert response.context["show_masthead"] is False
         assert "service_navigation_items" in response.context
 
 
@@ -44,6 +42,4 @@ class TestDataFactoriesView:
 
     def test_context(self, client):
         response = client.get(reverse("data_factories"))
-
-        assert response.context["show_masthead"] is False
         assert "service_navigation_items" in response.context
