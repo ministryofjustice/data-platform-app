@@ -8,3 +8,11 @@ class HomeView(TemplateView):
         context = super().get_context_data(**kwargs)
         context["show_masthead"] = True
         return context
+
+
+class RoadmapView(TemplateView):
+    template_name = "roadmap.html"
+
+
+class DataFactoriesView(TemplateView):
+    template_name = "data_factories.html"

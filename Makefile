@@ -21,6 +21,7 @@ build-css:
 	cp -R node_modules/govuk-frontend/dist/govuk/assets/fonts/. static/assets/fonts
 	cp -R node_modules/govuk-frontend/dist/govuk/assets/images/. static/assets/images
 	cp -R node_modules/@ministryofjustice/frontend/moj/assets/images/. static/assets/images
+	cp -R assets/images/. static/assets/images
 	npm run css
 
 build-js:
