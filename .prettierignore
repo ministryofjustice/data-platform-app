@@ -3,3 +3,7 @@
 
 # pre-commit's autoupdate formatting breaks yamllint by adding an extra space before a comment
 .pre-commit-config.yaml
+
+# HTML files are linted/formatted with djlint, not prettier
+*.html
+templates/

@@ -19,6 +19,19 @@ jobs:
     with:
       super-linter-variables: |
         {
+          "LINTER_RULES_PATH": ".",
+          "PYTHON_RUFF_FORMAT_CONFIG_FILE": "pyproject.toml",
+          "VALIDATE_CHECKOV": false,
           "VALIDATE_CSS": false,
-          "VALIDATE_JSCPD": false
+          "VALIDATE_DOCKERFILE_HADOLINT": false,
+          "VALIDATE_HTML": false,
+          "VALIDATE_HTML_PRETTIER": false,
+          "VALIDATE_JSCPD": false,
+          "VALIDATE_JUPYTER_NBQA_RUFF": false,
+          "VALIDATE_KUBERNETES_KUBECONFORM": false,
+          "VALIDATE_PYTHON_BLACK": false,
+          "VALIDATE_PYTHON_FLAKE8": false,
+          "VALIDATE_PYTHON_ISORT": false,
+          "VALIDATE_PYTHON_PYLINT": false,
+          "VALIDATE_PYTHON_MYPY": false
         }

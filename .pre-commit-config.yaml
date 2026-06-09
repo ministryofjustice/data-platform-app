@@ -1,4 +1,6 @@
 ---
+default_install_hook_types: [pre-commit, pre-push]
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c  # frozen: v6.0.0
@@ -18,5 +20,32 @@ repos:
     rev: 9257c6050c0261b8c57e712f632dc4a8010109a9  # frozen: v1.25.2
     hooks:
       - id: zizmor
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.15
+    hooks:
+      # Run the linter.
+      - id: ruff
+        args: [--fix]
+      # Run the formatter.
+      - id: ruff-format
+
+  - repo: https://github.com/djlint/djLint
+    rev: v1.36.4
+    hooks:
+      - id: djlint
+        args: ["--lint", "--profile=django"]
+      - id: djlint-reformat
+        args: ["--profile=django"]
+
+  - repo: local
+    hooks:
+      - id: full-lint-on-push
+        name: Run full lint before push
+        entry: make lint
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+        always_run: true
 
 exclude: .devcontainer/devcontainer-lock.json
