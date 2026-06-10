@@ -19,10 +19,12 @@ from django.conf import settings
 from django.contrib import admin
 from django.urls import path
 
-from data_platform_app.views import HomeView
+from data_platform_app.views import DataFactoriesView, HomeView, RoadmapView
 
 urlpatterns = [
     path("", HomeView.as_view(), name="home"),
+    path("roadmap/", RoadmapView.as_view(), name="roadmap"),
+    path("data-factories/", DataFactoriesView.as_view(), name="data_factories"),
     path("admin/", admin.site.urls),
 ]
 

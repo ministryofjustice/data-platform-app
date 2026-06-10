@@ -1,3 +1,4 @@
+{% load static %}
 <div class="x-govuk-masthead x-govuk-masthead--inverse">
   <div class="govuk-width-container">
     <div class="govuk-grid-row">
@@ -6,6 +7,11 @@
         <p class="x-govuk-masthead__description">
           Ministry of Justice teams will be able to find, transform, analyse and share justice data, all in one place.
         </p>
+      </div>
+      <div class="govuk-grid-column-one-third-from-desktop">
+        <img src="{% static 'assets/images/new_platform.svg' %}"
+             alt="Image showing a design of the new Justice Data Platform"
+             class="masthead-image">
       </div>
     </div>
   </div>

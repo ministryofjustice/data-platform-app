@@ -8,23 +8,51 @@
 );
 @use "node_modules/@x-govuk/govuk-prototype-components/src/x-govuk";
 
+$masthead-background-color: #381a62;
+
 .app-width-container--full {
   max-width: none;
   padding: 0 govuk-spacing(6);
 }
 
 .x-govuk-masthead.x-govuk-masthead--inverse {
-  background-color: govuk-colour("black");
+  background-color: $masthead-background-color;
 }
 
 .moj-header {
   border-bottom-color: govuk-colour("black");
 }
 
+.moj-header--inverse {
+  background-color: $masthead-background-color;
+  border-bottom-color: $masthead-background-color;
+}
+
 .govuk-service-navigation--inverse {
-  background-color: govuk-colour("black");
+  background-color: $masthead-background-color;
 
   .govuk-width-container {
     border-color: govuk-colour("white");
   }
+}
+
+.info-panel {
+  max-width: 652px;
+  width: 100%;
+  background-color: #f4f8fb;
+  padding: govuk-spacing(3);
+  border: 1px solid #8eb8fc;
+}
+
+.home-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.masthead-image {
+  display: block;
+  max-width: 80%;
+  height: auto;
+  margin-top: govuk-spacing(5);
 }
