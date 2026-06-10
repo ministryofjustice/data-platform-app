@@ -6,7 +6,8 @@
     "ghcr.io/ministryofjustice/devcontainer-feature/astral:": {},
     "ghcr.io/devcontainers/features/node:": {
       "version": "24"
-    }
+    },
+    "ghcr.io/ministryofjustice/devcontainer-feature/apm:": {}
   },
   "customizations": {
     "vscode": {
