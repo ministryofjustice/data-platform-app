@@ -8,7 +8,6 @@ run:
 install:
 	uv sync --locked
 	uv run pre-commit install --hook-type pre-commit --hook-type pre-push
-	apm install --frozen
 	$(MAKE) build-static
 
 build-css:
