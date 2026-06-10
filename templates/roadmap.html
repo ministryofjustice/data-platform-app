@@ -1,4 +1,85 @@
 {% extends "base/base.html" %}
 {% load static %}
 {% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      <h1 class="govuk-heading-xl">Roadmap</h1>
+      <h2 class="govuk-heading-l">Things we're working on now</h2>
+      <h3 class="govuk-heading-m">Project based data access</h3>
+      <p class="govuk-body">
+        We're replacing our YAML-based model with structured, project-scoped permissions. Our users will be able to manage permissions on the platform, with no need for GitHub access.
+      </p>
+      <h3 class="govuk-heading-m">Non data project permissions</h3>
+      <p class="govuk-body">
+        We're extending the project-based access model to cover tooling, including AI. We'll have one consistent permissions model across the platform.
+      </p>
+      <h3 class="govuk-heading-m">Microsoft Entra implementation</h3>
+      <p class="govuk-body">We're replacing GitHub as our provider, to align with MOJ standards.</p>
+      <h3 class="govuk-heading-m">Mandatory metadata</h3>
+      <p class="govuk-body">
+        We're establishing the minimum metadata required to share data. This will help establish trust and allow for further governance integration.
+      </p>
+      <h3 class="govuk-heading-m">AI gateway infrastructure</h3>
+      <p class="govuk-body">
+        We're building the AI gateway on Justice Data Platform infrastructure. We're also getting it ready for IT health check. The gateway will enable access to a wide range of LLMs and AI tools through a single API.
+      </p>
+      <hr class="govuk-section-break govuk-section-break--xl govuk-section-break--visible">
+      <h2 class="govuk-heading-l">Things we'll do next</h2>
+      <h3 class="govuk-heading-m">AI gateway user interface</h3>
+      <p class="govuk-body">
+        We'll have a user interface for the gateway. This will mean easier management and cost attribution.
+      </p>
+      <h3 class="govuk-heading-m">End-to-end project-based access</h3>
+      <p class="govuk-body">
+        We'll build out the remaining user journeys. This will include requesting, approving/denying, and revoking data access. This will reduce reliance on informal channels for access.
+      </p>
+      <h3 class="govuk-heading-m">Analytics</h3>
+      <p class="govuk-body">
+        We'll establish baseline metrics for platform use, access patterns and request flows. This will allow us to measure outcomes and prioritise development based on evidence.
+      </p>
+      <h3 class="govuk-heading-m">Catalogue rebuild</h3>
+      <p class="govuk-body">
+        We'll rebuild Find MOJ Data on a new tech stack. It will align to the MOJ tech-radar, on Justice Data Platform infrastructure.
+      </p>
+      <hr class="govuk-section-break govuk-section-break--xl govuk-section-break--visible">
+      <h2 class="govuk-heading-l">Things we'll do later</h2>
+      <h3 class="govuk-heading-m">Minimum viable platform</h3>
+      <p class="govuk-body">
+        We'll build a minimum viable end-to-end data platform. We'll cover the core data journeys: ingest, transform, orchestrate and analyse.
+      </p>
+      <h3 class="govuk-heading-m">Governance accounts</h3>
+      <p class="govuk-body">
+        We want the platform to serve as the governance layer for MOJ federated data. It will be the place to manage cross-domain data sharing, access policy and compliance.
+      </p>
+      <h3 class="govuk-heading-m">Governance by default</h3>
+      <p class="govuk-body">
+        We want to give stewards and data owners visibility of how data is being used after access is granted. This will help move governance from a one-time gate to an ongoing practice.
+      </p>
+      <h3 class="govuk-heading-m">Self-service data access</h3>
+      <p class="govuk-body">
+        We'll enable users to discover, request and access data assets without engineering intervention. Roles, responsibilities and rules will be clear and consistent.
+      </p>
+      <h3 class="govuk-heading-m">Responsible AI at scale</h3>
+      <p class="govuk-body">
+        We want model governance, cost attribution and guardrails embedded into the platform.
+      </p>
+      <h3 class="govuk-heading-m">Data quality</h3>
+      <p class="govuk-body">
+        We'll put in place guardrails and tools to ensure data meets quality standards before it is shared.
+      </p>
+      <h3 class="govuk-heading-m">Data retention</h3>
+      <p class="govuk-body">
+        We'll ensure that data retention policies can be met automatically, within the platform.
+      </p>
+      <h3 class="govuk-heading-m">Full service migration</h3>
+      <p class="govuk-body">
+        We will migrate or refactor the remaining Analytical Platform capabilities. Users will have access to all current functionalities on the new platform.
+      </p>
+      <hr class="govuk-section-break govuk-section-break--xl govuk-section-break--visible">
+      <h2 class="govuk-heading-l">Things we've done</h2>
+      <p class="govuk-body">
+        User research and technical feasibility discovery on the new access and permissions model.
+      </p>
+    </div>
+  </div>
 {% endblock content %}
