@@ -15,4 +15,4 @@ jobs:
       contents: read
       pull-requests: write
       security-events: write
-    uses: ministryofjustice/data-platform-github-actions/.github/workflows/container-scan.yml@feat/container-scanning # zizmor: ignore[unpinned-uses]
+    uses: ministryofjustice/data-platform-github-actions/.github/workflows/container-scan.yml@v4.0.0-rc1 # zizmor: ignore[unpinned-uses]
