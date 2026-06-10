@@ -1,4 +1,84 @@
 {% extends "base/base.html" %}
 {% load static %}
 {% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h1 class="govuk-heading-l">Data Factories</h1>
+      <p class="govuk-body">
+        Justice Data Platform and the data factories framework together enable a shift in how MOJ data is delivered and analysed.
+      </p>
+      <p class="govuk-body">
+        A data factory ingests raw data, cleans and transforms it, and produces data products ready for analysis and reporting.
+      </p>
+      <p class="govuk-body">
+        Each business area will be responsible for its own data factory. They’ll be supported by data engineers and architects from the Office of the CTO.
+      </p>
+      <p class="govuk-body">
+        Data engineers ingest, clean and standardise raw data from source systems. They take care of cleaning, de-duplicating, running lookups and any other processing within that factory.
+      </p>
+      <p class="govuk-body">
+        Analytics engineers transform that data into trusted products, applying business logic and context. The finished products can be made available on the Justice Data Platform.
+      </p>
+      <p class="govuk-body">
+        This framework allows for clearer ownership, easier governance, and better, more consistent metadata.
+      </p>
+    </div>
+  </div>
+  <hr class="govuk-section-break govuk-section-break govuk-section-break--m govuk-section-break--visible">
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h2 class="govuk-heading-m">Single source of truth</h2>
+      <p class="govuk-body">
+        Data factories allow for a single source of truth for data from an operational system. There should be no need for multiple pipelines from one source.
+      </p>
+      <p class="govuk-body">
+        We're implementing this as a data lake. This will allow us to manage a large collection of structured and semi-structured data, with no one schema.
+      </p>
+    </div>
+  </div>
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h2 class="govuk-heading-m">Clearer ownership</h2>
+      <p class="govuk-body">
+        Factories are run by data and analytical engineers with the right domain expertise. They're also best placed to manage access to their data products.
+      </p>
+      <p class="govuk-body">
+        Teams will not need to cover multiple domains beyond their expertise or capacity.  Processing tasks like data cleansing can be done in one place for multiple users.
+      </p>
+    </div>
+  </div>
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h2 class="govuk-heading-m">Improved security</h2>
+      <p class="govuk-body">
+        Each factory is a separate Amazon Web Services (AWS) account, which limits risk if an account is compromised.
+      </p>
+      <p class="govuk-body">
+        Using AWS Lake Formation means we can implement granular permissions at the row and column level, making it easier to comply with data protection law.
+      </p>
+    </div>
+  </div>
+  <hr class="govuk-section-break govuk-section-break--m govuk-section-break--visible">
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      <h2 class="govuk-heading-m">How it works</h2>
+      <img src="{% static 'assets/images/data_factory.svg' %}"
+           alt="Diagram showing a user accessing the AI Gateway to use AI tools"
+           class="home-image">
+    </div>
+  </div>
+  <hr class="govuk-section-break govuk-section-break--m govuk-section-break--visible">
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h2 class="govuk-heading-m">Get in touch</h2>
+      <p class="govuk-body">
+        If you have questions or concerns, get in touch through the Slack <a class="govuk-link"
+    href="https://moj.enterprise.slack.com/archives/C08TSQVQ5LJ"
+    target="_blank">#data-factory-working-group</a>.
+      </p>
+      <p class="govuk-body">
+        You can also reach out to Tom Westlake by email <a class="govuk-link" href="mailto:tom.westlake@justice.gov.uk">(tom.westlake@justice.gov.uk)</a>.
+      </p>
+    </div>
+  </div>
 {% endblock content %}
