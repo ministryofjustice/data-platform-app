@@ -9,3 +9,4 @@ make install
 
 # Run migrations
 uv run python manage.py migrate
+apm install --frozen

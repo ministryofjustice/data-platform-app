@@ -1,0 +1,40 @@
+lockfile_version: '1'
+generated_at: '2026-06-10T14:57:39.902070+00:00'
+apm_version: 0.19.0
+dependencies:
+- repo_url: ministryofjustice/data-platform-ai-toolkit
+  host: github.com
+  resolved_commit: cbf0782ccb721df7a924773846b2c47658a22d58
+  resolved_ref: main
+  virtual_path: toolkits/software-engineering
+  is_virtual: true
+  package_type: apm_package
+  deployed_files:
+  - .github/instructions/django.instructions.md
+  - .github/instructions/python.instructions.md
+  deployed_file_hashes:
+    .github/instructions/django.instructions.md: sha256:786b141416df971f0a7b919a22e182e77cea0e92e5c0390e2fbd3c841b716767
+    .github/instructions/python.instructions.md: sha256:7b482b4927af78e71dc7e94b28597260fdb8b328463e34ced9f1db06a6796b41
+  content_hash: sha256:7bb0e882173dbc5ae14a3b895d003a520079d67cca656ef5b6f11328e8b1ccf6
+- repo_url: ministryofjustice/data-platform-ai-toolkit
+  host: github.com
+  resolved_commit: cbf0782ccb721df7a924773846b2c47658a22d58
+  resolved_ref: main
+  virtual_path: toolkits/universal
+  is_virtual: true
+  package_type: apm_package
+  deployed_files:
+  - .github/instructions/language.instructions.md
+  - .github/instructions/ministryofjustice.instructions.md
+  deployed_file_hashes:
+    .github/instructions/language.instructions.md: sha256:70e9d0f220f2ceec1cf5b8088c9e199259670f9baa383b330ff3ba9e4107e655
+    .github/instructions/ministryofjustice.instructions.md: sha256:470dc2fbec601f32b14b73f6665a17dd7e3427c0bcdc5c8197c5e3905d30dfcc
+  content_hash: sha256:807f74b1c1f7679b032627bec83bb5095656444b1575bca03875aae8d2327754
+mcp_servers:
+- github
+mcp_configs:
+  github:
+    name: github
+    transport: http
+    registry: false
+    url: https://api.githubcopilot.com/mcp/
