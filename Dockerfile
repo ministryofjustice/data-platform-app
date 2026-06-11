@@ -36,7 +36,6 @@ RUN --mount=type=cache,target=/root/.cache \
     uv sync \
         --locked \
         --no-dev \
-        ${UV_SYNC_DEPENDENCY_SCOPE} \
         --no-install-project
 
 ##### BUILD NODE

@@ -9,6 +9,7 @@ dependencies = [
     "gunicorn==26.0.0",
     "python-dotenv==1.2.2",
     "psycopg[binary]==3.3.3",
+    "pytest-django==4.12.0",
 ]
 
 [dependency-groups]
@@ -19,7 +20,6 @@ dev = [
     "pre-commit==4.6.0",
     "pytest==9.0.3",
     "pytest-cov==7.1.0",
-    "pytest-django==4.12.0",
     "ruff==0.15.15",
 ]
 
