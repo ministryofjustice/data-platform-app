@@ -11,6 +11,7 @@
   "words": [
     "addopts",
     "asgi",
+    "automount",
     "djlint",
     "docstrings",
     "dotenv",
@@ -26,6 +27,7 @@
     "hsts",
     "isort",
     "kubeconform",
+    "letsencrypt",
     "libpq",
     "linted",
     "maxfail",
@@ -44,6 +46,7 @@
     "pyflakes",
     "pylint",
     "pyproject",
+    "PYTHONDONTWRITEBYTECODE",
     "PYTHONUNBUFFERED",
     "pytest",
     "pyupgrade",
