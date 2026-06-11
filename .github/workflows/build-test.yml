@@ -1,0 +1,51 @@
+---
+name: Build and Test
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions: {}
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Build Image
+        id: build_image
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
+        with:
+          file: Dockerfile
+          push: false
+          load: true
+          tags: data_platform_app
+
+      - name: Pull Test Dependencies
+        id: pull_test_dependencies
+        run: |
+          for i in 1 2 3; do
+            docker compose --file docker-compose-test.yml pull db && exit 0
+            echo "Attempt $i failed, retrying in 10s..."
+            sleep 10
+          done
+          exit 1
+        env:
+          IMAGE_TAG: data_platform_app
+
+      - name: Run Python Tests
+        id: run_python_tests
+        run: |
+          docker compose --file docker-compose-test.yml run --rm interfaces
+        env:
+          NETWORK: default
+          IMAGE_TAG: data_platform_app
