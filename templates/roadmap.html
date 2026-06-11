@@ -1,10 +1,29 @@
 {% extends "base/base.html" %}
-{% load static %}
 {% block content %}
   <div class="govuk-grid-row">
-    <div class="govuk-grid-column-full">
+    <!-- Sidebar -->
+    <div class="govuk-grid-column-one-third">
+      <nav class="moj-side-navigation" aria-label="Roadmap sections">
+        <ul class="moj-side-navigation__list">
+          <li class="moj-side-navigation__item moj-side-navigation__item--active">
+            <a href="#things-now" aria-current="location">Things we're working on now</a>
+          </li>
+          <li class="moj-side-navigation__item">
+            <a href="#things-next">Things we'll do next</a>
+          </li>
+          <li class="moj-side-navigation__item">
+            <a href="#things-later">Things we'll do later</a>
+          </li>
+          <li class="moj-side-navigation__item">
+            <a href="#things-done">Things we've done</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+    <!-- Main content -->
+    <div class="govuk-grid-column-two-thirds">
       <h1 class="govuk-heading-xl">Roadmap</h1>
-      <h2 class="govuk-heading-l">Things we're working on now</h2>
+      <h2 class="govuk-heading-l" id="things-now">Things we're working on now</h2>
       <h3 class="govuk-heading-m">Project based data access</h3>
       <p class="govuk-body">
         We're replacing our YAML-based model with structured, project-scoped permissions. Our users will be able to manage permissions on the platform, with no need for GitHub access.
@@ -24,7 +43,7 @@
         We're building the AI gateway on Justice Data Platform infrastructure. We're also getting it ready for IT health check. The gateway will enable access to a wide range of LLMs and AI tools through a single API.
       </p>
       <hr class="govuk-section-break govuk-section-break--xl govuk-section-break--visible">
-      <h2 class="govuk-heading-l">Things we'll do next</h2>
+      <h2 class="govuk-heading-l" id="things-next">Things we'll do next</h2>
       <h3 class="govuk-heading-m">AI gateway user interface</h3>
       <p class="govuk-body">
         We'll have a user interface for the gateway. This will mean easier management and cost attribution.
@@ -42,7 +61,7 @@
         We'll rebuild Find MOJ Data on a new tech stack. It will align to the MOJ tech-radar, on Justice Data Platform infrastructure.
       </p>
       <hr class="govuk-section-break govuk-section-break--xl govuk-section-break--visible">
-      <h2 class="govuk-heading-l">Things we'll do later</h2>
+      <h2 class="govuk-heading-l" id="things-later">Things we'll do later</h2>
       <h3 class="govuk-heading-m">Minimum viable platform</h3>
       <p class="govuk-body">
         We'll build a minimum viable end-to-end data platform. We'll cover the core data journeys: ingest, transform, orchestrate and analyse.
@@ -76,7 +95,7 @@
         We will migrate or refactor the remaining Analytical Platform capabilities. Users will have access to all current functionalities on the new platform.
       </p>
       <hr class="govuk-section-break govuk-section-break--xl govuk-section-break--visible">
-      <h2 class="govuk-heading-l">Things we've done</h2>
+      <h2 class="govuk-heading-l" id="things-done">Things we've done</h2>
       <p class="govuk-body">
         User research and technical feasibility discovery on the new access and permissions model.
       </p>
