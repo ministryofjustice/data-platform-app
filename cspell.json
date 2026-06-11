@@ -19,6 +19,7 @@
     "contrib",
     "cooldown",
     "govuk",
+    "gunicorn",
     "healthcheck",
     "htmx",
     "hsts",
