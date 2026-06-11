@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
 ADDRESS=${ADDRESS:-"0.0.0.0"}
 PORT=${PORT:-"8000"}
