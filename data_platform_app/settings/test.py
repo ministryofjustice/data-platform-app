@@ -9,6 +9,3 @@ PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 
 # Suppress emails during tests
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
-
-DB_NAME = "data_platform_app"
-DB_PASSWORD = "data_platform_app"
