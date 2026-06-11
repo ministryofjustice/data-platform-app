@@ -10,9 +10,10 @@
 
 1. Clone this repository.
 2. Open the project in Visual Studio Code.
-3. Reopen in the devcontainer when prompted.
+3. Add .env file from [1pass](https://ministryofjustice.1password.eu/app#/WEXD5VMFTVBH7LG7FFDWUV7MC4/Vault/WEXD5VMFTVBH7LG7FFDWUV7MC4:skgdudwgk3ojqiwigoxrmpngle:2cjgikrcktdhwpoeleoo4jomr4?itemListId=WEXD5VMFTVBH7LG7FFDWUV7MC4%3Askgdudwgk3ojqiwigoxrmpngle)
+4. Reopen in the devcontainer when prompted.
    - You can also run: `Dev Containers: Reopen in Container` from the command palette.
-4. Wait for the devcontainer setup to complete.
+5. Wait for the devcontainer setup to complete.
    - Dependencies are installed automatically by `.devcontainer/post-create.sh`.
    - If setup was interrupted, run:
 
