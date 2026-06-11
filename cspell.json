@@ -46,6 +46,7 @@
     "openssf",
     "pgdg",
     "pg_isready",
+    "pipefail",
     "psycopg",
     "overengineering",
     "pycache",
