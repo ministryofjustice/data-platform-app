@@ -21,13 +21,13 @@
    make install
    ```
 
-5. Start the app:
+6. Start the app:
 
    ```bash
    make run
    ```
 
-6. Open the local URL shown in the terminal (usually `http://127.0.0.1:8000`).
+7. Open the local URL shown in the terminal (usually `http://127.0.0.1:8000`).
 
 ## Code quality
 
