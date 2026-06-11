@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
+set -euo pipefail
+
 # Start Postgres
 docker compose --file contrib/docker-compose-postgres.yml up --detach
-
-set -euo pipefail
 
 make install
 
