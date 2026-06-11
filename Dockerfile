@@ -38,18 +38,6 @@ RUN --mount=type=cache,target=/root/.cache \
         --no-dev \
         --no-install-project
 
-##### BUILD PYTHON TEST
-
-FROM build-python AS build-python-test
-
-RUN --mount=type=cache,target=/root/.cache \
-    --mount=type=bind,source=uv.lock,target=uv.lock \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync \
-        --locked \
-        --dev \
-        --no-install-project
-
 ##### BUILD NODE
 
 FROM public.ecr.aws/docker/library/node:24.11.1 AS build-node
