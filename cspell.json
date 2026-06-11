@@ -18,6 +18,7 @@
     "color",
     "contrib",
     "cooldown",
+    "gethostname",
     "govuk",
     "gunicorn",
     "healthcheck",
