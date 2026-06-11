@@ -1,3 +1,5 @@
+from django.contrib.auth.decorators import login_not_required
+from django.http import HttpResponse
 from django.views.generic import TemplateView
 
 
@@ -16,3 +18,11 @@ class RoadmapView(TemplateView):
 
 class DataFactoriesView(TemplateView):
     template_name = "data_factories.html"
+
+
+@login_not_required
+def healthcheck(request):
+    """
+    Healthcheck view for the app.
+    """
+    return HttpResponse("OK")

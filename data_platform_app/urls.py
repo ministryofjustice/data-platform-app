@@ -19,13 +19,14 @@ from django.conf import settings
 from django.contrib import admin
 from django.urls import path
 
-from data_platform_app.views import DataFactoriesView, HomeView, RoadmapView
+from data_platform_app.views import DataFactoriesView, HomeView, RoadmapView, healthcheck
 
 urlpatterns = [
     path("", HomeView.as_view(), name="home"),
     path("roadmap/", RoadmapView.as_view(), name="roadmap"),
     path("data-factories/", DataFactoriesView.as_view(), name="data_factories"),
     path("admin/", admin.site.urls),
+    path("healthcheck/", healthcheck, name="healthcheck"),
 ]
 
 if settings.DEBUG and "debug_toolbar" in settings.INSTALLED_APPS:
