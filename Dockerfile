@@ -1,6 +1,6 @@
 ##### BUILD PYTHON
 
-FROM public.ecr.aws/ubuntu/ubuntu:24.04@sha256:ef59d9e82939bbce08973bdffb8761b025f75369fb7d2882cdc4938b5a9e992e AS build-python
+FROM public.ecr.aws/ubuntu/ubuntu:26.04@sha256:215ce47dc5c697ba3bcda7367ac1f6448d039306017d3c6a539dcefd2911efdb AS build-python
 
 SHELL ["/bin/bash", "-e", "-u", "-o", "pipefail", "-c", "-x"]
 
@@ -55,7 +55,7 @@ EOF
 
 ##### FINAL
 
-FROM public.ecr.aws/ubuntu/ubuntu:24.04@sha256:ef59d9e82939bbce08973bdffb8761b025f75369fb7d2882cdc4938b5a9e992e AS runtime
+FROM public.ecr.aws/ubuntu/ubuntu:26.04@sha256:215ce47dc5c697ba3bcda7367ac1f6448d039306017d3c6a539dcefd2911efdb AS runtime
 
 LABEL org.opencontainers.image.vendor="Ministry of Justice" \
       org.opencontainers.image.authors="Data Platform Services (justicedataplatform@justice.gov.uk)" \
