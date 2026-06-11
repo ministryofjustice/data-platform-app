@@ -45,8 +45,11 @@ class TestDataFactoriesView:
         assert "service_navigation_items" in response.context
 
 
-def test_healthcheck_view(client):
-    response = client.get(reverse("healthcheck"))
+class TestHealthcheckView:
+    """Tests for the healthcheck endpoint at '/healthcheck/'"""
 
-    assert response.status_code == 200
-    assert response.content == b"OK"
+    def test_healthcheck_view(self, client):
+        response = client.get(reverse("healthcheck"))
+
+        assert response.status_code == 200
+        assert response.content == b"OK"
