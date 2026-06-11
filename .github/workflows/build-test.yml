@@ -26,9 +26,10 @@ jobs:
         uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
         with:
           file: Dockerfile
+          target: build-python-test
           push: false
           load: true
-          tags: data_platform_app
+          tags: data_platform_app_test
 
       - name: Pull Test Dependencies
         id: pull_test_dependencies
@@ -40,7 +41,7 @@ jobs:
           done
           exit 1
         env:
-          IMAGE_TAG: data_platform_app
+          IMAGE_TAG: data_platform_app_test
 
       - name: Run Python Tests
         id: run_python_tests
@@ -48,4 +49,4 @@ jobs:
           docker compose --file docker-compose-test.yml run --rm interfaces
         env:
           NETWORK: default
-          IMAGE_TAG: data_platform_app
+          IMAGE_TAG: data_platform_app_test
