@@ -1,8 +1,8 @@
 ##### BUILD PYTHON
 
-FROM public.ecr.aws/ubuntu/ubuntu:26.04@sha256:215ce47dc5c697ba3bcda7367ac1f6448d039306017d3c6a539dcefd2911efdb AS build-python
+FROM docker.io/library/ubuntu:26.04@sha256:f3d28607ddd78734bb7f71f117f3c6706c666b8b76cbff7c9ff6e5718d46ff64 AS build-python
 
-SHELL ["/bin/bash", "-e", "-u", "-o", "pipefail", "-c", "-x"]
+SHELL ["/bin/bash", "-e", "-u", "-o", "pipefail", "-c"]
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -10,12 +10,12 @@ RUN <<EOF
 apt-get update --quiet --yes
 apt-get install --quiet --yes \
     --no-install-recommends \
-    python3.14-dev \
-    ca-certificates
+    ca-certificates==20260223 \
+    python3.14-dev==3.14.4-1
 EOF
 
 # Install uv
-COPY --from=ghcr.io/astral-sh/uv:0.11.19 /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.11.21@sha256:ff07b86af50d4d9391d9daf4ff89ce427bc544f9aae87057e69a1cc0aa369946 /uv /usr/local/bin/uv
 
 # - Silence uv complaining about not being able to use hard links,
 # - tell uv to byte-compile packages for faster application startups,
@@ -40,7 +40,7 @@ RUN --mount=type=cache,target=/root/.cache \
 
 ##### BUILD NODE
 
-FROM public.ecr.aws/docker/library/node:24.11.1 AS build-node
+FROM docker.io/library/node:24.16.0@sha256:40ad9f3064e67d6860b4bc3fe1880b2953934fd6320ada990e45fe0efa6badd7 AS build-node
 
 WORKDIR /build
 
@@ -55,7 +55,7 @@ EOF
 
 ##### FINAL
 
-FROM public.ecr.aws/ubuntu/ubuntu:26.04@sha256:215ce47dc5c697ba3bcda7367ac1f6448d039306017d3c6a539dcefd2911efdb AS runtime
+FROM docker.io/library/ubuntu:26.04@sha256:f3d28607ddd78734bb7f71f117f3c6706c666b8b76cbff7c9ff6e5718d46ff64 AS final
 
 LABEL org.opencontainers.image.vendor="Ministry of Justice" \
       org.opencontainers.image.authors="Data Platform Services (justicedataplatform@justice.gov.uk)" \
@@ -63,25 +63,17 @@ LABEL org.opencontainers.image.vendor="Ministry of Justice" \
       org.opencontainers.image.description="Data Platform App image for Justice data Platform" \
       org.opencontainers.image.url="https://github.com/ministryofjustice/data-platform-app"
 
-SHELL ["sh", "-exc"]
-
-# Add the application virtualenv to search path.
-ENV PATH=/app/bin:$PATH
-
-# Don't run your app as root.
+SHELL ["/bin/bash", "-e", "-u", "-o", "pipefail", "-c"]
 
 ENV CONTAINER_USER="dataplatform" \
     CONTAINER_UID="10001" \
     CONTAINER_GROUP="dataplatform" \
     CONTAINER_GID="10001" \
     DEBIAN_FRONTEND="noninteractive" \
-    APP_ROOT="/app"
-
+    APP_ROOT="/app" \
+    PATH="/app/bin:${PATH}"
 
 RUN <<EOF
-#!/usr/bin/env bash
-userdel --remove --force ubuntu
-
 groupadd \
     --gid ${CONTAINER_GID} \
     ${CONTAINER_GROUP}
@@ -94,18 +86,17 @@ useradd \
     ${CONTAINER_USER}
 EOF
 
-
-# See <https://hynek.me/articles/docker-signals/>.
-STOPSIGNAL SIGINT
-
 RUN <<EOF
-#!/usr/bin/env bash
 apt-get update --quiet --yes
+
 apt-get install --quiet --yes \
     --no-install-recommends \
-    python3.14 \
-    ca-certificates
+    ca-certificates==20260223
+    python3.14==3.14.4-1
+
+
 apt-get clean --yes
+
 rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 EOF
 
@@ -137,7 +128,6 @@ RUN mkdir -p /app/staticfiles && chown ${CONTAINER_USER}:${CONTAINER_GROUP} /app
 USER ${CONTAINER_USER}
 WORKDIR ${APP_ROOT}
 
-# collect static using production settings, but ONLY for this command
 RUN python manage.py collectstatic --noinput --settings=data_platform_app.settings.production
 
 EXPOSE 8000
