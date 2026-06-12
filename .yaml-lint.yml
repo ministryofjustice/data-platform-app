@@ -10,3 +10,4 @@ rules:
 
 ignore:
   - "**/chart/templates/*.yaml"
+  - "**/apm.lock.yaml"
