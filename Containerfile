@@ -91,7 +91,7 @@ apt-get update --quiet --yes
 
 apt-get install --quiet --yes \
     --no-install-recommends \
-    ca-certificates=20260223
+    ca-certificates=20260223 \
     python3.14=3.14.4-1
 
 
