@@ -86,7 +86,7 @@ app:
     - name: PYTHONDONTWRITEBYTECODE
       value: "1"
   port: 8000
-  # These are removed while healthcheck endpoint is worked on
+  # Probes hit the app's /healthcheck/ endpoint
   livenessProbe:
     httpGet:
       path: /healthcheck/
