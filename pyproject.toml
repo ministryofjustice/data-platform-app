@@ -20,7 +20,7 @@ dev = [
     "model-bakery==1.23.4",
     "pre-commit==4.6.0",
     "pytest==9.0.3",
-    "ruff==0.15.15",
+    "ruff==0.15.16",
 ]
 
 [tool.ruff]
