@@ -48,7 +48,7 @@ COPY package.json package-lock.json ./
 COPY /scss/ ./scss/
 
 RUN <<EOF
-npm install
+npm ci
 
 npm run css
 EOF
