@@ -26,4 +26,6 @@ services:
       SECRET_KEY: "1234567890"
       ENABLE_DB_SSL: "False"
     entrypoint: pytest
-    command: ./tests --color=yes
+    command: ./tests --color=yes --cov-report=xml:/app/coverage/coverage.xml
+    volumes:
+      - "./coverage:/app/coverage"

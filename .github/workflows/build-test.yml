@@ -13,6 +13,7 @@ jobs:
     name: Build and Test
     runs-on: ubuntu-24.04-arm
     permissions:
+      code-quality: write
       contents: read
     steps:
       - name: Harden Runner
@@ -44,3 +45,11 @@ jobs:
           IMAGE_TAG: data_platform_app
         run: |
           docker compose --file contrib/docker-compose-test.yml run --rm interfaces
+
+      - name: Upload Test Coverage
+        id: upload_test_coverage
+        uses: actions/upload-code-coverage@abb5995db9e0199b0e2bb9dbd136fce4cb1ec4d3 # v1.3.0
+        with:
+          file: contrib/coverage/coverage.xml
+          language: Python
+          label: code-coverage/pytest
