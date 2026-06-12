@@ -16,4 +16,4 @@ jobs:
       contents: read
       id-token: write
       packages: write
-    uses: ministryofjustice/data-platform-github-actions/.github/workflows/chart-release.yml@fix/helm-digest-crane # zizmor: ignore[unpinned-uses] TODO: pin to release, do not merge like this
+    uses: ministryofjustice/data-platform-github-actions/.github/workflows/chart-release.yml@92832dad5ea35a24fa25db98a932020e03a300ce # v4.0.2
