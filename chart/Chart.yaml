@@ -1,6 +1,6 @@
 ---
 apiVersion: v2
-name: data-platform-app
+name: app
 description: Justice Data Platform application
 type: application
 version: 0.0.1
