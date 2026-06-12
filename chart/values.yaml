@@ -91,12 +91,12 @@ app:
     httpGet:
       path: /healthcheck/
       port: app
-      initialDelaySeconds: 30
+    initialDelaySeconds: 30
   readinessProbe:
     httpGet:
       path: /healthcheck/
       port: app
-      initialDelaySeconds: 30
+    initialDelaySeconds: 30
   resources:
     limits:
       cpu: 500m
