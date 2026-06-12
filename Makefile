@@ -1,4 +1,4 @@
-.PHONY: run install build-css build-js build-static lint format lint-templates format-templates test
+.PHONY: run install build-css build-js build-static lint format lint-templates format-templates test db-start
 
 run:
 	uv run python manage.py makemigrations --check
@@ -60,3 +60,6 @@ test:
 	DB_PASSWORD=data_platform_app \
 	DB_NAME=data_platform_app \
 	uv run pytest --failed-first --maxfail=5 $(ARGS)
+
+db-start:
+	docker compose --file contrib/docker-compose-postgres.yml up --detach

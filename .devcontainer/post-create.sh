@@ -3,10 +3,13 @@
 set -euo pipefail
 
 # Start Postgres
-docker compose --file contrib/docker-compose-postgres.yml up --detach
+make db-start
 
+# Install dependencies
 make install
 
 # Run migrations
 uv run python manage.py migrate
+
+# Synchronise Agent Package Manager
 apm install --frozen

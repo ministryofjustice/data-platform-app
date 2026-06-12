@@ -11,10 +11,16 @@ permissions: {}
 jobs:
   build:
     name: Build and Test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
     steps:
+      - name: Harden Runner
+        id: harden_runner
+        uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+
       - name: Checkout
         id: checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -31,22 +37,10 @@ jobs:
           load: true
           tags: data_platform_app
 
-      - name: Pull Test Dependencies
-        id: pull_test_dependencies
-        run: |
-          for i in 1 2 3; do
-            docker compose --file docker-compose-test.yml pull db && exit 0
-            echo "Attempt $i failed, retrying in 10s..."
-            sleep 10
-          done
-          exit 1
-        env:
-          IMAGE_TAG: data_platform_app
-
       - name: Run Python Tests
         id: run_python_tests
-        run: |
-          docker compose --file docker-compose-test.yml run --rm interfaces
         env:
           NETWORK: default
           IMAGE_TAG: data_platform_app
+        run: |
+          docker compose --file contrib/docker-compose-test.yml run --rm interfaces
