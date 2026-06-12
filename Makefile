@@ -56,4 +56,7 @@ format-templates:
 	uv run djlint templates --reformat --profile=django
 
 test:
+	DB_USER=data_platform_app \
+	DB_PASSWORD=data_platform_app \
+	DB_NAME=data_platform_app \
 	uv run pytest --failed-first --maxfail=5 $(ARGS)

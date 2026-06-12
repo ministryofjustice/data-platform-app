@@ -19,11 +19,3 @@ MIDDLEWARE += [  # noqa
 INTERNAL_IPS = [
     "127.0.0.1",
 ]
-
-# TODO switch this to postgres for local development so dev and prod environments are aligned
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",  # noqa
-    }
-}

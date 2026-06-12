@@ -1,10 +1,10 @@
 lockfile_version: '1'
-generated_at: '2026-06-10T14:57:39.902070+00:00'
-apm_version: 0.19.0
+generated_at: '2026-06-12T12:59:47.156764+00:00'
+apm_version: 0.20.0
 dependencies:
 - repo_url: ministryofjustice/data-platform-ai-toolkit
   host: github.com
-  resolved_commit: cbf0782ccb721df7a924773846b2c47658a22d58
+  resolved_commit: 125aa26d61e0920fb85af26131da7832d8e5467c
   resolved_ref: main
   virtual_path: toolkits/software-engineering
   is_virtual: true
@@ -18,7 +18,7 @@ dependencies:
   content_hash: sha256:7bb0e882173dbc5ae14a3b895d003a520079d67cca656ef5b6f11328e8b1ccf6
 - repo_url: ministryofjustice/data-platform-ai-toolkit
   host: github.com
-  resolved_commit: cbf0782ccb721df7a924773846b2c47658a22d58
+  resolved_commit: 125aa26d61e0920fb85af26131da7832d8e5467c
   resolved_ref: main
   virtual_path: toolkits/universal
   is_virtual: true

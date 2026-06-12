@@ -1,0 +1,18 @@
+---
+name: Container Scan
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions: {}
+
+jobs:
+  container-scan:
+    name: Container Scan
+    permissions:
+      contents: read
+      pull-requests: write
+      security-events: write
+    uses: ministryofjustice/data-platform-github-actions/.github/workflows/container-scan.yml@7f9f1fc18fcddd41c08a33be1e4e57cb8065a0cf # v4.0.0

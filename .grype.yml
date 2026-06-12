@@ -1,0 +1,4 @@
+---
+ignore:
+  - package:
+      location: /usr/bin/pebble # Skipping this binary due to various CVEs

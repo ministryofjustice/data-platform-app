@@ -1,0 +1,121 @@
+---
+replicaCount: 1
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  automount: true
+  annotations: {}
+  name: "data-platform-app"
+
+podAnnotations: {}
+podLabels: {}
+podSecurityContext:
+  seccompProfile:
+    type: RuntimeDefault
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: true
+  className: "default"
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-production-http01
+  hosts:
+    - host: development.data-platform.service.justice.gov.uk
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls:
+    - secretName: data-platform-app-tls
+      hosts:
+        - development.data-platform.service.justice.gov.uk
+
+affinity: {}
+nodeSelector: {}
+tolerations: []
+
+app:
+  image:
+    repository: ghcr.io/ministryofjustice/data-platform-app
+    pullPolicy: IfNotPresent
+    tag: ""
+  environment:
+    - name: APP_ENV
+      value: development
+    - name: DJANGO_SETTINGS_MODULE
+      value: data_platform_app.settings.development
+    - name: SECRET_KEY
+      valueFrom:
+        secretKeyRef:
+          name: data-platform-app-secrets
+          key: secret-key
+    - name: SENTRY_DSN
+      valueFrom:
+        secretKeyRef:
+          name: data-platform-app-secrets
+          key: sentry-dsn
+    - name: DB_USER
+      valueFrom:
+        secretKeyRef:
+          name: data-platform-app-rds
+          key: username
+    - name: DB_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: data-platform-app-rds
+          key: password
+    - name: DB_HOST
+      valueFrom:
+        secretKeyRef:
+          name: data-platform-app-rds
+          key: address
+    - name: DB_PORT
+      valueFrom:
+        secretKeyRef:
+          name: data-platform-app-rds
+          key: port
+    - name: DB_NAME
+      value: "data_platform_app"
+    # avoid writing __pycache__ in read-only code paths
+    - name: PYTHONDONTWRITEBYTECODE
+      value: "1"
+  port: 8000
+  # Probes hit the app's /healthcheck/ endpoint
+  livenessProbe:
+    httpGet:
+      path: /healthcheck/
+      port: app
+    initialDelaySeconds: 30
+  readinessProbe:
+    httpGet:
+      path: /healthcheck/
+      port: app
+    initialDelaySeconds: 30
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+  securityContext:
+    capabilities:
+      drop:
+        - ALL
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 10001
+    runAsGroup: 10001
+  volumeMounts:
+    - name: tmp
+      mountPath: /tmp
+  volumes:
+    - name: tmp
+      emptyDir: {}

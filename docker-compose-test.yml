@@ -1,0 +1,29 @@
+---
+services:
+  db:
+    extends:
+      file: docker-compose-postgres.yml
+      service: postgres
+
+  interfaces:
+    image: ${IMAGE_TAG}
+    ports: ["8000:8000"]
+    depends_on:
+      db:
+        condition: service_healthy
+    links: [db]
+    environment:
+      ALLOWED_HOSTS: "localhost 127.0.0.1 0.0.0.0"
+      DB_HOST: "db"
+      DB_NAME: data_platform_app
+      DB_PASSWORD: data_platform_app
+      DB_PORT: 5432
+      DB_USER: data_platform_app
+      DEBUG: "True"
+      DJANGO_SETTINGS_MODULE: "data_platform_app.settings.test"
+      APP_ENV: "test"
+      PYTHONUNBUFFERED: "1"
+      SECRET_KEY: "1234567890"
+      ENABLE_DB_SSL: "False"
+    entrypoint: pytest
+    command: ./tests --color=yes

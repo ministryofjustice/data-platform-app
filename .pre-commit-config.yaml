@@ -9,6 +9,7 @@ repos:
         args: ["--maxkb=1024"]  # allow files up to 1 MB
       - id: check-json
       - id: check-yaml
+        exclude: ^chart/templates/.*\.ya?ml$
       - id: end-of-file-fixer
       - id: trailing-whitespace
 

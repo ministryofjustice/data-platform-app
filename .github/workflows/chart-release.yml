@@ -1,0 +1,19 @@
+---
+name: Chart Release
+
+on:
+  push:
+    tags:
+      - "*"
+
+permissions: {}
+
+jobs:
+  chart-release:
+    name: Chart Release
+    permissions:
+      attestations: write
+      contents: read
+      id-token: write
+      packages: write
+    uses: ministryofjustice/data-platform-github-actions/.github/workflows/chart-release.yml@7f9f1fc18fcddd41c08a33be1e4e57cb8065a0cf # v4.0.0
