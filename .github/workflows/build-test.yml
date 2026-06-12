@@ -45,6 +45,7 @@ jobs:
           IMAGE_TAG: data_platform_app
         run: |
           mkdir --parent contrib/coverage
+          chmod 0777 contrib/coverage
 
           docker compose --file contrib/docker-compose-test.yml run --rm interfaces
 
