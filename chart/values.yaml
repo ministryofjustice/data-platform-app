@@ -82,8 +82,9 @@ app:
           key: port
     - name: DB_NAME
       value: "data_platform_app"
+    # avoid writing __pycache__ in read-only code paths
     - name: PYTHONDONTWRITEBYTECODE
-      value: "1"  # avoid writing __pycache__ in read-only code paths
+      value: "1"
   port: 8000
   # These are removed while healthcheck endpoint is worked on
   livenessProbe:
