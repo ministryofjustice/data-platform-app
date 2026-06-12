@@ -44,6 +44,8 @@ jobs:
           NETWORK: default
           IMAGE_TAG: data_platform_app
         run: |
+          mkdir --parent contrib/coverage
+
           docker compose --file contrib/docker-compose-test.yml run --rm interfaces
 
       - name: Upload Test Coverage
