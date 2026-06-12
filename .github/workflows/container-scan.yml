@@ -15,4 +15,4 @@ jobs:
       contents: read
       pull-requests: write
       security-events: write
-    uses: ministryofjustice/data-platform-github-actions/.github/workflows/container-scan.yml@7f9f1fc18fcddd41c08a33be1e4e57cb8065a0cf # v4.0.0
+    uses: ministryofjustice/data-platform-github-actions/.github/workflows/container-scan.yml@5a267a21c9cf70041a2e096c880d9bfcb717de42 # v4.0.1

@@ -16,7 +16,6 @@ static/
 staticfiles/
 db.sqlite3
 .github/copilot-instructions.md
-.vscode/
 
 # Python-generated files
 __pycache__/
