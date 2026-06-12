@@ -1,0 +1,3 @@
+---
+ignore:
+  - vulnerability: GO-2026-5026-golang.org/x/net
