@@ -16,6 +16,7 @@
     "collectstatic",
     "containerfile",
     "dataplatform",
+    "dbname",
     "djlint",
     "docstrings",
     "dotenv",
