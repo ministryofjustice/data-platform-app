@@ -53,35 +53,38 @@ app:
     - name: SECRET_KEY
       valueFrom:
         secretKeyRef:
-          name: data-platform-app-secrets
+          name: app-secrets
           key: secret-key
     - name: SENTRY_DSN
       valueFrom:
         secretKeyRef:
-          name: data-platform-app-secrets
+          name: app-secrets
           key: sentry-dsn
     - name: DB_USER
       valueFrom:
         secretKeyRef:
-          name: data-platform-app-rds
+          name: app-rds
           key: username
     - name: DB_PASSWORD
       valueFrom:
         secretKeyRef:
-          name: data-platform-app-rds
+          name: app-rds
           key: password
     - name: DB_HOST
       valueFrom:
         secretKeyRef:
-          name: data-platform-app-rds
-          key: address
+          name: app-rds
+          key: host
     - name: DB_PORT
       valueFrom:
         secretKeyRef:
-          name: data-platform-app-rds
+          name: app-rds
           key: port
     - name: DB_NAME
-      value: "data_platform_app"
+      valueFrom:
+        secretKeyRef:
+          name: app-rds
+          key: dbname
     # avoid writing __pycache__ in read-only code paths
     - name: PYTHONDONTWRITEBYTECODE
       value: "1"
