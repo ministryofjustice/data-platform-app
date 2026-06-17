@@ -3,8 +3,8 @@ apiVersion: v2
 name: app
 description: Justice Data Platform application
 type: application
-version: 0.0.3
-appVersion: 0.0.3
+version: 0.0.4
+appVersion: 0.0.4
 icon: https://upload.wikimedia.org/wikipedia/en/thumb/4/4a/Ministry_of_Justice_logo_%28United_Kingdom%29.svg/611px-Ministry_of_Justice_logo_%28United_Kingdom%29.svg.png
 maintainers:
   - name: moj-data-platform-robot
