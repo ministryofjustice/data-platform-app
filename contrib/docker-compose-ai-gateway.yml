@@ -1,0 +1,37 @@
+---
+services:
+  ai-gateway-db:
+    image: public.ecr.aws/docker/library/postgres:18.4
+    restart: always
+    environment:
+      POSTGRES_USER: ai_gateway
+      POSTGRES_PASSWORD: ai_gateway
+      POSTGRES_DB: ai_gateway
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ai_gateway"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  ai-gateway:
+    image: ghcr.io/berriai/litellm:v1.87.0
+    restart: always
+    environment:
+      DATABASE_URL: postgres://ai_gateway:ai_gateway@ai-gateway-db:5432/ai_gateway
+      LITELLM_MASTER_KEY: sk-123456789 # gitleaks:allow
+      LITELLM_SALT_KEY: sk-123456789 # gitleaks:allow
+    ports:
+      - "4000:4000"
+    depends_on:
+      ai-gateway-db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - python3 -c "import urllib.request; urllib.request.urlopen('http://localhost:4000/health/liveliness')"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
