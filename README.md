@@ -99,3 +99,24 @@ If you change frontend assets during development:
    ```bash
    make build-static
    ```
+
+## AI Gateway
+
+To start a local copy of the AI Gateway, run:
+
+```bash
+make start-ai-gateway
+```
+
+You can then access the AI Gateway at <http://localhost:4000>. The username is `admin` and the password is the value of `LITELLM_MASTER_KEY` in [contrib/docker-compose-ai-gateway.yml](./contrib/docker-compose-ai-gateway.yml).
+
+You can also connect to it programmatically using cURL, for example
+
+```bash
+curl \
+  --header "Authorization: Bearer ${LITELLM_MASTER_KEY}" \
+  --request GET \
+  http://localhost:4000/settings
+```
+
+OpenAPI specification is available at <http://localhost:4000/openapi.json>.
