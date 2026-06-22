@@ -20,6 +20,10 @@ class DataFactoriesView(TemplateView):
     template_name = "data_factories.html"
 
 
+class LandingView(TemplateView):
+    template_name = "landing.html"
+
+
 @login_not_required
 def healthcheck(request):
     """
