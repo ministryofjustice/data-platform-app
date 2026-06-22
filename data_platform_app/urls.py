@@ -18,13 +18,22 @@ Including another URLconf
 from django.conf import settings
 from django.contrib import admin
 from django.urls import path
+from django.urls.conf import include
 
-from data_platform_app.views import DataFactoriesView, HomeView, RoadmapView, healthcheck
+from data_platform_app.views import (
+    DataFactoriesView,
+    HomeView,
+    LandingView,
+    RoadmapView,
+    healthcheck,
+)
 
 urlpatterns = [
+    path("projects/", include("projects.urls")),
     path("", HomeView.as_view(), name="home"),
     path("roadmap/", RoadmapView.as_view(), name="roadmap"),
     path("data-factories/", DataFactoriesView.as_view(), name="data_factories"),
+    path("landing/", LandingView.as_view(), name="landing"),
     path("admin/", admin.site.urls),
     path("healthcheck/", healthcheck, name="healthcheck"),
 ]

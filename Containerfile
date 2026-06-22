@@ -121,6 +121,7 @@ COPY --chown=${CONTAINER_USER}:${CONTAINER_GROUP} data_platform_app ${APP_ROOT}/
 COPY --chown=${CONTAINER_USER}:${CONTAINER_GROUP} templates ${APP_ROOT}/templates
 COPY --chown=${CONTAINER_USER}:${CONTAINER_GROUP} tests ${APP_ROOT}/tests
 COPY --chown=${CONTAINER_USER}:${CONTAINER_GROUP} users ${APP_ROOT}/users
+COPY --chown=${CONTAINER_USER}:${CONTAINER_GROUP} projects ${APP_ROOT}/projects
 COPY --chown=${CONTAINER_USER}:${CONTAINER_GROUP} pyproject.toml ${APP_ROOT}/pyproject.toml
 
 RUN mkdir -p /app/staticfiles && chown ${CONTAINER_USER}:${CONTAINER_GROUP} /app/staticfiles
