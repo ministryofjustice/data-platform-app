@@ -53,3 +53,13 @@ class TestHealthcheckView:
 
         assert response.status_code == 200
         assert response.content == b"OK"
+
+
+class TestLandingView:
+    """Tests for the LandingView at '/landing/'."""
+
+    def test_landing_page_renders(self, client):
+        response = client.get(reverse("landing"))
+
+        assert response.status_code == 200
+        assert "landing.html" in [t.name for t in response.templates]

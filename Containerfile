@@ -46,11 +46,13 @@ WORKDIR /build
 
 COPY package.json package-lock.json ./
 COPY /scss/ ./scss/
+COPY /js/ ./js/
 
 RUN <<EOF
 npm ci
 
 npm run css
+npm run build:js
 EOF
 
 ##### FINAL
@@ -111,9 +113,11 @@ COPY --from=build-node --chown=${CONTAINER_USER}:${CONTAINER_GROUP} /build/stati
 COPY --from=build-node --chown=${CONTAINER_USER}:${CONTAINER_GROUP} /build/node_modules/govuk-frontend/dist/govuk/assets/fonts/. ${APP_ROOT}/static/assets/fonts
 COPY --from=build-node --chown=${CONTAINER_USER}:${CONTAINER_GROUP} /build/node_modules/govuk-frontend/dist/govuk/assets/images/. ${APP_ROOT}/static/assets/images
 COPY --from=build-node --chown=${CONTAINER_USER}:${CONTAINER_GROUP} /build/node_modules/govuk-frontend/dist/govuk/govuk-frontend.min.js ${APP_ROOT}/static/assets/js/govuk-frontend.min.js
+COPY --from=build-node --chown=${CONTAINER_USER}:${CONTAINER_GROUP} /build/node_modules/@ministryofjustice/frontend/moj/moj-frontend.min.js ${APP_ROOT}/static/assets/js/moj-frontend.min.js
 COPY --from=build-node --chown=${CONTAINER_USER}:${CONTAINER_GROUP} /build/node_modules/@x-govuk/govuk-prototype-components/dist/govuk-prototype-components.min.js ${APP_ROOT}/static/assets/js/govuk-prototype-components.min.js
 COPY --from=build-node --chown=${CONTAINER_USER}:${CONTAINER_GROUP} /build/node_modules/@x-govuk/govuk-prototype-components/dist/govuk-prototype-components.min.js.map ${APP_ROOT}/static/assets/js/govuk-prototype-components.min.js.map
 COPY --from=build-node --chown=${CONTAINER_USER}:${CONTAINER_GROUP} /build/node_modules/@ministryofjustice/frontend/moj/assets/images/. ${APP_ROOT}/static/assets/images
+COPY --from=build-node --chown=${CONTAINER_USER}:${CONTAINER_GROUP} /build/static/assets/js/app.min.js ${APP_ROOT}/static/assets/js/app.min.js
 
 COPY --chown=${CONTAINER_USER}:${CONTAINER_GROUP} assets/images/. ${APP_ROOT}/static/assets/images
 COPY --chown=${CONTAINER_USER}:${CONTAINER_GROUP} manage.py ${APP_ROOT}/manage.py

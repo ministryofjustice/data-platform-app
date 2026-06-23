@@ -10,12 +10,14 @@
     "govuk-frontend": "6.1.0"
   },
   "devDependencies": {
+    "esbuild": "^0.24.0",
     "prettier": "3.8.3",
     "sass": "1.99.0"
   },
   "scripts": {
     "test": "echo \\\"Error: no test specified\\\" && exit 1",
-    "css": "sass --quiet-deps --load-path=./ --style=compressed scss/app.scss:static/assets/css/app.css"
+    "css": "sass --quiet-deps --load-path=./ --style=compressed scss/app.scss:static/assets/css/app.css",
+    "build:js": "esbuild js/index.js --bundle --format=esm --minify --outfile=static/assets/js/app.min.js"
   },
   "author": "MOJ Data Platform Services",
   "license": "MIT"

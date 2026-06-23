@@ -1,0 +1,48 @@
+{% extends "base/base.html" %}
+{% load static %}
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      <h2 class="govuk-heading-l">{{ project.name }}</h2>
+    </div>
+    <!-- Sidebar -->
+    <div class="govuk-grid-column-one-quarter">
+      <nav class="moj-side-navigation govuk-!-padding-top-0"
+           aria-label="Project sections">
+        <ul class="moj-side-navigation__list">
+          <li class="moj-side-navigation__item moj-side-navigation__item--active">
+            <a href="{% url 'projects:project_detail' project.slug %}"
+               aria-current="location">Overview</a>
+          </li>
+          <li class="moj-side-navigation__item">
+            <a href="#">AI gateway</a>
+          </li>
+          <li class="moj-side-navigation__item">
+            <a href="#">Project Members</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+    <!-- Main content -->
+    <div class="govuk-grid-column-three-quarters">
+      <h3 class="govuk-heading-m">Project ID</h3>
+      <span id="copy-alert" class="govuk-visually-hidden" aria-live="polite"></span>
+      <span id="project-id" class="govuk-body">{{ project.id }}</span>
+      <button class="govuk-button copy-button govuk-!-margin-bottom-0 govuk-!-margin-left-2"
+              type="button"
+              data-module="copy-button"
+              data-text-selector="#project-id"
+              data-success-message="Project ID copied">Copy</button>
+      <hr class="govuk-section-break govuk-section-break--xl govuk-section-break--visible">
+      <h3 class="govuk-heading-m">Business Unit</h3>
+      <p class="govuk-body">{{ project.business_unit.name }}</p>
+      <hr class="govuk-section-break govuk-section-break--xl govuk-section-break--visible">
+      <h3 class="govuk-heading-m">About this project</h3>
+      <p class="govuk-body">{{ project.description }}</p>
+      <hr class="govuk-section-break govuk-section-break--xl govuk-section-break--visible">
+      <h3 class="govuk-heading-m">Project owner</h3>
+      <p class="govuk-body">{{ project.created_by.full_name }}</p>
+      <p class="govuk-body">Created {{ project.created|date:"d F Y" }}</p>
+    </div>
+  </div>
+{% endblock content %}

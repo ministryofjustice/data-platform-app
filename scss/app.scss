@@ -7,6 +7,7 @@
   $moj-assets-path: $govuk-assets-path
 );
 @use "node_modules/@x-govuk/govuk-prototype-components/src/x-govuk";
+@use "components/copy-button/copy-button";
 
 $masthead-background-color: #381a62;
 
@@ -66,4 +67,11 @@ $masthead-background-color: #381a62;
 
 .moj-button:hover {
   background-color: govuk-colour("blue", $variant: "shade-25");
+}
+
+.project-link {
+  font-weight: bold;
+  text-decoration: none;
+  font-size: 24px;
+  line-height: 32px;
 }

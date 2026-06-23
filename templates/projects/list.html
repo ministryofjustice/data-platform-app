@@ -13,6 +13,16 @@
         Create a project to get access to a wide range of large language models and AI tools through the AI gateway API.
       </p>
     </div>
-    <!-- Display projects here -->
+    {% if user_projects %}
+      {% for project in user_projects %}
+        <div class="govuk-grid-column-one-half govuk-!-margin-bottom-3">
+          <div class="info-panel">
+            <a href="{% url 'projects:project_detail' project.slug %}"
+               class="govuk-link project-link">{{ project.name }}</a>
+            <p class="govuk-body">{{ project.description }}</p>
+          </div>
+        </div>
+      {% endfor %}
+    {% endif %}
   </div>
 {% endblock content %}
