@@ -11,7 +11,10 @@ class ProjectListView(ListView):
     model = Project
 
     def get_queryset(self):
-        # set PK to whatever user you've created in db
+        """
+        set PK to whatever user you've created in db.
+        Code will be deleted once user auth is implemented
+        """
         # pk = 4
         # user = User.objects.get(pk=pk)
         # return user.projects.all()
@@ -25,6 +28,7 @@ class ProjectDetailView(DetailView):
     model = Project
 
     def get_queryset(self):
+        # TODO: filter by user permissions to ensure the user has access to the project
         return Project.objects.select_related("business_unit", "created_by").prefetch_related(
             "users", "user_permissions__user"
         )

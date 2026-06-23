@@ -7,9 +7,13 @@ def project(db, user):
     """A project created by a user."""
     from model_bakery import baker
 
-    return baker.make(
+    project = baker.make(
         "projects.Project", name="Example Project", slug="example-slug", created_by=user
     )
+
+    baker.make("projects.ProjectUserPermissions", project=project, user=user, role="admin")
+
+    return project
 
 
 class TestListView:
