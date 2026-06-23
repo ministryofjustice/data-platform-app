@@ -11,10 +11,10 @@ class ProjectUserPermissions(TimeStampedModel):
     )
     user = models.ForeignKey("users.User", on_delete=models.CASCADE)
     role = models.CharField(max_length=30)
-    history = HistoricalRecords(table_name="data_platform_app_project_user_permissions_history")
+    history = HistoricalRecords(table_name="user_permissions_history")
 
     class Meta:
-        db_table = "data_platform_app_project_user_permissions"
+        db_table = "project_user_permissions"
         verbose_name_plural = "project user permissions"
 
 
@@ -44,6 +44,8 @@ class Project(TimeStampedModel):
         on_delete=models.SET_NULL,
         null=True,
     )
+
+    history = HistoricalRecords(table_name="project_history")
 
     def __str__(self):
         return self.name
