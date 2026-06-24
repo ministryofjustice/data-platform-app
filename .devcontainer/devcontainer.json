@@ -8,7 +8,8 @@
       "version": "24"
     },
     "./features/src/postgresql": {},
-    "ghcr.io/ministryofjustice/devcontainer-feature/apm:": {}
+    "ghcr.io/ministryofjustice/devcontainer-feature/apm:": {},
+    "ghcr.io/ministryofjustice/devcontainer-feature/kubernetes:": {}
   },
   "customizations": {
     "vscode": {
