@@ -2,7 +2,6 @@ from django.views.generic.detail import DetailView
 from django.views.generic.list import ListView
 
 from projects.models import Project
-from users.models import User
 
 
 # Create your views here.
@@ -16,9 +15,9 @@ class ProjectListView(ListView):
         set PK to whatever user you've created in db.
         Code will be deleted once user auth is implemented
         """
-        pk = 4
-        user = User.objects.get(pk=pk)
-        return user.projects.all()
+        # pk = 4
+        # user = User.objects.get(pk=pk)
+        # return user.projects.all()
         # Once entra in - this line will be used to get the projects for the logged in user
         return self.request.user.projects.all()
 
