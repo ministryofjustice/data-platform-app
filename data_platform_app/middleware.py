@@ -1,6 +1,9 @@
 from ipaddress import ip_address
 
+import structlog
 from django.conf import settings
+
+logger = structlog.get_logger(__name__)
 
 
 class AllowElbHealthcheckIpHostMiddleware:
@@ -31,11 +34,27 @@ class AllowElbHealthcheckIpHostMiddleware:
     def __call__(self, request):
         if request.path == "/healthcheck/" and self._is_elb_healthchecker(request):
             host = request.META.get("HTTP_HOST", "")
+            forwarded_host = request.META.get("HTTP_X_FORWARDED_HOST", "")
+            logger.info(
+                "elb healthcheck headers before",
+                host=host,
+                forwarded_host=forwarded_host,
+            )
+            rewrote = False
             host_only = host.split(":", 1)[0]
             if self._is_ip(host_only):
                 # Prevent forwarded host from taking precedence.
                 request.META.pop("HTTP_X_FORWARDED_HOST", None)
                 request.META["HTTP_HOST"] = self.canonical_host
+                rewrote = True
+
+            logger.info(
+                "elb healthcheck headers after",
+                host=request.META.get("HTTP_HOST", ""),
+                forwarded_host=request.META.get("HTTP_X_FORWARDED_HOST", ""),
+                rewrote_host=rewrote,
+                canonical_host=self.canonical_host,
+            )
         return self.get_response(request)
 
     @staticmethod

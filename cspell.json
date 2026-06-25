@@ -66,6 +66,7 @@
     "querysets",
     "runserver",
     "staticfiles",
+    "structlog",
     "teardown",
     "testpaths",
     "tmproj",
