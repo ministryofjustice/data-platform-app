@@ -6,7 +6,7 @@ from django.conf import settings
 class AllowElbHealthcheckIpHostMiddleware:
     """
     Keep strict host validation for normal traffic.
-    For ALB health checks on /healthcheck/, rewrite IP Host headers
+    For ELB health checks on /healthcheck/, rewrite IP Host headers
     to a canonical allowed host.
     """
 
