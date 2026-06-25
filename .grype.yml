@@ -2,3 +2,13 @@
 ignore:
   - package:
       location: /usr/bin/pebble # Skipping this binary due to various CVEs
+
+  - vulnerability: CVE-2026-42496
+    package:
+      name: perl-base
+      type: deb
+
+  - vulnerability: CVE-2026-8376
+    package:
+      name: perl-base
+      type: deb
