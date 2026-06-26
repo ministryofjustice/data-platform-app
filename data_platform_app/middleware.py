@@ -4,8 +4,7 @@ from django.http import HttpResponse
 class AllowElbHealthcheckIpHostMiddleware:
     """
     Keep strict host validation for normal traffic.
-    For ELB health checks on /healthcheck/, rewrite IP Host headers
-    to a canonical allowed host.
+    For ELB health checks on /healthcheck/, allow the request to pass.
     """
 
     def __init__(self, get_response):
