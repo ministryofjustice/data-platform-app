@@ -172,7 +172,7 @@ LOGGING = {
         "level": LOG_LEVEL,
     },
     "loggers": {
-        "dashboard_service": {
+        "data_platform_app": {
             "handlers": ["console"],
             "level": LOG_LEVEL,
             "propagate": False,
