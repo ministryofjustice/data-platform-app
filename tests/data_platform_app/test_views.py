@@ -64,7 +64,7 @@ class TestHealthcheckView:
     def test_healthcheck_with_mismatched_host_header(self, client):
         """Test healthcheck with Host header that doesn't match ALLOWED_HOSTS"""
         # Simulate ELB sending a request with an internal IP or non-matching host
-        response = client.get(reverse("healthcheck"), HTTP_HOST="10.199.133.59")
+        response = client.get(reverse("healthcheck"), HTTP_HOST="10.199.132.60")
 
         assert response.status_code == 400
 
@@ -72,7 +72,7 @@ class TestHealthcheckView:
         """Test healthcheck with realistic ELB request headers"""
         response = client.get(
             reverse("healthcheck"),
-            HTTP_HOST="10.199.133.59",
+            HTTP_HOST="10.199.132.60",
             HTTP_USER_AGENT="ELB-HealthChecker/2.0",
         )
 

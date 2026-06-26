@@ -6,5 +6,4 @@ ALLOWED_HOSTS += [  # noqa: F405
     "development.data-platform.service.justice.gov.uk",
     "preproduction.data-platform.service.justice.gov.uk",
     "test.data-platform.service.justice.gov.uk",
-    ".elb.amazonaws.com",
 ]
