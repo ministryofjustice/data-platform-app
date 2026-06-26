@@ -73,6 +73,8 @@
       <h3 class="govuk-heading-m">Project owner</h3>
       <p class="govuk-body">{{ project.created_by.full_name }}</p>
       <p class="govuk-body">Created {{ project.created|date:"d F Y" }}</p>
+      <a href="{% url 'projects:project_delete' project.slug %}"
+         class="govuk-link">Remove this project</a>
     </div>
   </div>
 {% endblock content %}

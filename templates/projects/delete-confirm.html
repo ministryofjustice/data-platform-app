@@ -1,0 +1,28 @@
+{% extends "base/base.html" %}
+{% load static %}
+{% block back_link %}
+  <a href="{% url 'projects:project_detail' project.slug %}"
+     class="govuk-back-link">Back to project</a>
+{% endblock back_link %}
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <span class="govuk-caption-xl">{{ project.name }}</span>
+      <h1 class="govuk-heading-xl">Remove project</h1>
+      <h2 class="govuk-heading-m">Are you sure you want to remove this project?</h2>
+      <p class="govuk-body">You are about to remove this project and revoke all AI gateway keys associated with it.</p>
+      <form method="post"
+            action="{% url 'projects:project_delete' project.slug %}">
+        {% csrf_token %}
+        <div class="govuk-button-group">
+          <button type="submit"
+                  class="govuk-button govuk-button--warning govuk-!-margin-right-2">
+            Remove
+          </button>
+          <a href="{% url 'projects:project_detail' project.slug %}"
+             class="govuk-link">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock content %}

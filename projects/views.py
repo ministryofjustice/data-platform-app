@@ -1,7 +1,10 @@
+from django.urls.base import reverse_lazy
 from django.views.generic.detail import DetailView
+from django.views.generic.edit import DeleteView
 from django.views.generic.list import ListView
 
 from projects.models import Project
+from users.models import User
 
 
 # Create your views here.
@@ -15,9 +18,9 @@ class ProjectListView(ListView):
         set PK to whatever user you've created in db.
         Code will be deleted once user auth is implemented
         """
-        # pk = 4
-        # user = User.objects.get(pk=pk)
-        # return user.projects.all()
+        pk = 4
+        user = User.objects.get(pk=pk)
+        return user.projects.all()
         # Once entra in - this line will be used to get the projects for the logged in user
         return self.request.user.projects.all()
 
@@ -37,3 +40,15 @@ class ProjectDetailView(DetailView):
         context = super().get_context_data(**kwargs)
         context["success_message"] = self.request.session.pop("success_message", None)
         return context
+
+
+class ProjectDeleteView(DeleteView):
+    """
+    Will need additional checks for user permissions to ensure
+    the user has access to delete the project.
+    """
+
+    template_name = "projects/delete-confirm.html"
+    context_object_name = "project"
+    model = Project
+    success_url = reverse_lazy("projects:projects_list")
