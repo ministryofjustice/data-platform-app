@@ -1,9 +1,10 @@
+from django.db.models import Prefetch
 from django.urls.base import reverse_lazy
 from django.views.generic.detail import DetailView
 from django.views.generic.edit import DeleteView
 from django.views.generic.list import ListView
 
-from projects.models import Project
+from projects.models import Project, ProjectUserPermissions
 from users.models import User
 
 
@@ -34,6 +35,26 @@ class ProjectDetailView(DetailView):
         # TODO: filter by user permissions to ensure the user has access to the project
         return Project.objects.select_related("business_unit", "created_by").prefetch_related(
             "users", "user_permissions__user"
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["success_message"] = self.request.session.pop("success_message", None)
+        return context
+
+
+class ProjectUsersDetailView(DetailView):
+    template_name = "projects/user-list.html"
+    context_object_name = "project"
+    model = Project
+
+    def get_queryset(self):
+        # TODO: filter by user permissions to ensure the user has access to the project
+        return Project.objects.prefetch_related(
+            Prefetch(
+                "user_permissions",
+                queryset=ProjectUserPermissions.objects.select_related("user"),
+            )
         )
 
     def get_context_data(self, **kwargs):

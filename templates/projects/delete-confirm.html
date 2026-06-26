@@ -1,5 +1,8 @@
 {% extends "base/base.html" %}
 {% load static %}
+{% block title %}
+  Remove {{ project.name }} - Justice Data Platform | Ministry of Justice
+{% endblock title %}
 {% block back_link %}
   <a href="{% url 'projects:project_detail' project.slug %}"
      class="govuk-back-link">Back to project</a>
