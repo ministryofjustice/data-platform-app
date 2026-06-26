@@ -11,7 +11,7 @@ class AllowElbHealthcheckIpHostMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        if request.path == "/healthcheck/" and self._is_elb_healthchecker(request):
+        if request.path.rstrip("/") == "/healthcheck" and self._is_elb_healthchecker(request):
             return HttpResponse("OK")
 
         return self.get_response(request)
