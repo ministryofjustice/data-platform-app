@@ -1,0 +1,104 @@
+{% extends "base/base.html" %}
+{% block back_link %}
+  <a href="{% url 'projects:create_project' %}" class="govuk-back-link">Back</a>
+{% endblock back_link %}
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      {% if errors.add_members_now or errors.member_email %}
+        <div class="govuk-error-summary" data-module="govuk-error-summary">
+          <div class="govuk-error-summary__body">
+            <h2 class="govuk-error-summary__title">There is a problem</h2>
+            <ul class="govuk-list govuk-error-summary__list">
+              {% if errors.add_members_now %}
+                <li>
+                  <a href="#add-members-now">{{ errors.add_members_now }}</a>
+                </li>
+              {% endif %}
+              {% if errors.member_email %}
+                <li>
+                  <a href="#member-email">{{ errors.member_email }}</a>
+                </li>
+              {% endif %}
+            </ul>
+          </div>
+        </div>
+      {% endif %}
+      <h1 class="govuk-heading-xl">Add Members</h1>
+      <h2 class="govuk-heading-m">Do you want to add project members now?</h2>
+      <div id="add-members-hint" class="govuk-hint">You can also add members later</div>
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="govuk-form-group{% if errors.add_members_now %} govuk-form-group--error{% endif %}">
+          {% if errors.add_members_now %}
+            <p class="govuk-error-message">
+              <span class="govuk-visually-hidden">Error:</span> {{ errors.add_members_now }}
+            </p>
+          {% endif %}
+          <div class="govuk-radios govuk-radios--inline"
+               data-module="govuk-radios"
+               id="add-members-now">
+            <div class="govuk-radios__item">
+              <input class="govuk-radios__input"
+                     id="add-members-now-yes"
+                     name="add_members_now"
+                     type="radio"
+                     value="yes"
+                     data-aria-controls="conditional-add-members-now"
+                     {% if form_data.add_members_now == "yes" %}checked{% endif %}>
+              <label class="govuk-label govuk-radios__label" for="add-members-now-yes">Yes</label>
+            </div>
+            <div class="govuk-radios__item">
+              <input class="govuk-radios__input"
+                     id="add-members-now-no"
+                     name="add_members_now"
+                     type="radio"
+                     value="no"
+                     {% if form_data.add_members_now == "no" %}checked{% endif %}>
+              <label class="govuk-label govuk-radios__label" for="add-members-now-no">No</label>
+            </div>
+          </div>
+          <div class="govuk-radios__conditional{% if form_data.add_members_now != "yes" %} govuk-radios__conditional--hidden{% endif %}"
+               id="conditional-add-members-now">
+            <div class="govuk-form-group{% if errors.member_email %} govuk-form-group--error{% endif %}">
+              <h3 class="govuk-heading-s">Email</h3>
+              <div id="add-members-email-hint" class="govuk-hint">Enter an email address to add a member</div>
+              {% if errors.member_email %}
+                <p class="govuk-error-message">
+                  <span class="govuk-visually-hidden">Error:</span> {{ errors.member_email }}
+                </p>
+              {% endif %}
+              {% if project_data.members %}
+                <ul class="govuk-list govuk-list--bullet">
+                  {% for m in project_data.members %}<li>{{ m }}</li>{% endfor %}
+                </ul>
+              {% endif %}
+              <input class="govuk-input govuk-!-width-two-thirds{% if errors.member_email %} govuk-input--error{% endif %}"
+                     id="member-email"
+                     name="member_email"
+                     type="email"
+                     value="{{ form_data.member_email }}"
+                     autocomplete="email">
+            </div>
+            <div class="moj-button-action">
+              <button type="submit"
+                      name="action"
+                      value="add_another"
+                      class="govuk-button govuk-button--secondary moj-add-another__add-button govuk-!-margin-bottom-4"
+                      data-module="govuk-button">Add another</button>
+            </div>
+          </div>
+        </div>
+        <div class="govuk-button-group">
+          <button type="submit"
+                  name="action"
+                  value="continue"
+                  class="govuk-button"
+                  data-module="govuk-button">Continue</button>
+          <a class="govuk-link govuk-link--no-visited-state"
+             href="{% url 'projects:projects_list' %}">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock content %}

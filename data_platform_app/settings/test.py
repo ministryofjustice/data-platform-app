@@ -9,3 +9,6 @@ PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 
 # Suppress emails during tests
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+
+LOGIN_URL = "/admin/login/"
+LOGIN_REDIRECT_URL = "/projects/"

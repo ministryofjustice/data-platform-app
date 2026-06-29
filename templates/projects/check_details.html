@@ -1,0 +1,77 @@
+{% extends "base/base.html" %}
+{% block back_link %}
+  <a href="{% url 'projects:add_members' %}" class="govuk-back-link">Back</a>
+{% endblock back_link %}
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h1 class="govuk-heading-xl">Check details</h1>
+      <dl class="govuk-summary-list">
+        <div class="govuk-summary-list__row">
+          <dt class="govuk-summary-list__key">Project name</dt>
+          <dd class="govuk-summary-list__value">
+            {{ project_data.name }}
+          </dd>
+          <dd class="govuk-summary-list__actions">
+            <a class="govuk-link" href="{% url 'projects:create_project' %}">
+              Change<span class="govuk-visually-hidden">project name</span>
+            </a>
+          </dd>
+        </div>
+        <div class="govuk-summary-list__row">
+          <dt class="govuk-summary-list__key">Business unit</dt>
+          <dd class="govuk-summary-list__value">
+            {{ project_data.business_unit }}
+          </dd>
+          <dd class="govuk-summary-list__actions">
+            <a class="govuk-link" href="{% url 'projects:create_project' %}">
+              Change<span class="govuk-visually-hidden">business unit</span>
+            </a>
+          </dd>
+        </div>
+        <div class="govuk-summary-list__row">
+          <dt class="govuk-summary-list__key">Description</dt>
+          <dd class="govuk-summary-list__value">
+            {% if project_data.description %}
+              {{ project_data.description }}
+            {% else %}
+              <span class="govuk-body-s">Not provided</span>
+            {% endif %}
+          </dd>
+          <dd class="govuk-summary-list__actions">
+            <a class="govuk-link" href="{% url 'projects:create_project' %}">
+              Change<span class="govuk-visually-hidden">description</span>
+            </a>
+          </dd>
+        </div>
+        <div class="govuk-summary-list__row">
+          <dt class="govuk-summary-list__key">Members</dt>
+          <dd class="govuk-summary-list__value">
+            {% if project_data.members %}
+              <ul class="govuk-list">
+                {% for member in project_data.members %}
+                  <li>{{ member }}</li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              <span class="govuk-body-s">No members added</span>
+            {% endif %}
+          </dd>
+          <dd class="govuk-summary-list__actions">
+            <a class="govuk-link" href="{% url 'projects:add_members' %}">
+              Change<span class="govuk-visually-hidden">members</span>
+            </a>
+          </dd>
+        </div>
+      </dl>
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="govuk-button-group">
+          <button class="govuk-button" data-module="govuk-button" type="submit">Create project</button>
+          <a class="govuk-link govuk-link--no-visited-state"
+             href="{% url 'projects:projects_list' %}">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock content %}

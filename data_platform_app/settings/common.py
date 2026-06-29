@@ -48,6 +48,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "data_platform_app.request_id.RequestIdMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -133,3 +134,49 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Django looks in these locations for additional static assets to collect
 STATICFILES_DIRS = [BASE_DIR / "static"]
+
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "filters": {
+        "request_id": {
+            "()": "data_platform_app.request_id.RequestIdLoggingFilter",
+        }
+    },
+    "formatters": {
+        "standard": {
+            "format": (
+                "%(asctime)s %(levelname)s [%(name)s] [request_id=%(request_id)s] %(message)s"
+            ),
+        }
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "filters": ["request_id"],
+            "formatter": "standard",
+        }
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "data_platform_app": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "projects": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "root": {
+            "handlers": ["console"],
+            "level": "WARNING",
+        },
+    },
+}

@@ -1,0 +1,98 @@
+{% extends "base/base.html" %}
+{% block back_link %}
+  <a href="{% url 'projects:projects_list' %}" class="govuk-back-link">Back to projects</a>
+{% endblock back_link %}
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      {% if errors.name or errors.business_unit or errors.description %}
+        <div class="govuk-error-summary" data-module="govuk-error-summary">
+          <div class="govuk-error-summary__body">
+            <h2 class="govuk-error-summary__title">There is a problem</h2>
+            <ul class="govuk-list govuk-error-summary__list">
+              {% if errors.name %}
+                <li>
+                  <a href="#project-name">{{ errors.name }}</a>
+                </li>
+              {% endif %}
+              {% if errors.business_unit %}
+                <li>
+                  <a href="#business-unit">{{ errors.business_unit }}</a>
+                </li>
+              {% endif %}
+              {% if errors.description %}
+                <li>
+                  <a href="#description">{{ errors.description }}</a>
+                </li>
+              {% endif %}
+            </ul>
+          </div>
+        </div>
+      {% endif %}
+      <h1 class="govuk-heading-xl">Create a project</h1>
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="govuk-form-group{% if errors.name %} govuk-form-group--error{% endif %}">
+          <label class="govuk-label govuk-label--m" for="project-name">Name</label>
+          <div class="govuk-hint" id="project-name-hint">Enter a meaningful name for this project</div>
+          {% if errors.name %}
+            <p class="govuk-error-message" id="project-name-error">
+              <span class="govuk-visually-hidden">Error:</span> {{ errors.name }}
+            </p>
+          {% endif %}
+          <input class="govuk-input{% if errors.name %} govuk-input--error{% endif %}"
+                 id="project-name"
+                 name="name"
+                 type="text"
+                 value="{{ form_data.name }}"
+                 required
+                 aria-describedby="project-name-hint{% if errors.name %} project-name-error{% endif %}">
+        </div>
+        <div class="govuk-form-group{% if errors.business_unit %} govuk-form-group--error{% endif %}">
+          <label class="govuk-label govuk-label--m" for="business-unit">Business unit</label>
+          <div class="govuk-hint" id="business-unit-hint">
+            Select the associated business unit for this project
+          </div>
+          {% if errors.business_unit %}
+            <p class="govuk-error-message" id="business-unit-error">
+              <span class="govuk-visually-hidden">Error:</span> {{ errors.business_unit }}
+            </p>
+          {% endif %}
+          <select class="govuk-select{% if errors.business_unit %} govuk-select--error{% endif %}"
+                  id="business-unit"
+                  name="business_unit"
+                  required
+                  aria-describedby="business-unit-hint{% if errors.business_unit %} business-unit-error{% endif %}">
+            <option value="">No business unit selected</option>
+            {% for business_unit in business_units %}
+              <option value="{{ business_unit }}"
+                      {% if form_data.business_unit == business_unit %} selected{% endif %}>{{ business_unit }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="govuk-form-group{% if errors.description %} govuk-form-group--error{% endif %}">
+          <label class="govuk-label govuk-label--m" for="description">Description</label>
+          <div class="govuk-hint" id="description-hint">
+            Enter a short description of the project purpose
+          </div>
+          {% if errors.description %}
+            <p class="govuk-error-message" id="description-error">
+              <span class="govuk-visually-hidden">Error:</span> {{ errors.description }}
+            </p>
+          {% endif %}
+          <textarea class="govuk-textarea{% if errors.description %} govuk-textarea--error{% endif %}"
+                    id="description"
+                    name="description"
+                    rows="5"
+                    required
+                    aria-describedby="description-hint{% if errors.description %} description-error{% endif %}">{{ form_data.description }}</textarea>
+        </div>
+        <div class="govuk-button-group">
+          <button class="govuk-button" data-module="govuk-button" type="submit">Continue</button>
+          <a class="govuk-link govuk-link--no-visited-state"
+             href="{% url 'projects:projects_list' %}">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock content %}
