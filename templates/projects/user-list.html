@@ -12,7 +12,7 @@
       <div class="govuk-grid-column-full">
         <div role="region"
              class="moj-alert moj-alert--success moj-alert--with-heading"
-             aria-label="success: File uploaded successfully"
+             aria-label="success: User removed from project"
              data-module="moj-alert">
           <div>
             <svg class="moj-alert__icon"
@@ -27,7 +27,9 @@
           </div>
           <div class="moj-alert__content">
             <h2 class="moj-alert__heading">{{ success_message.heading }}</h2>
-            {{ success_message.message }}
+            {% if success_message.message %}
+              <p>{{ success_message.message }}</p>
+            {% endif %}
           </div>
           <div class="moj-alert__action">
             <button class="moj-alert__dismiss" hidden>Dismiss</button>
@@ -79,7 +81,8 @@
               <tr class="govuk-table__row">
                 <td class="govuk-table__cell govuk-!-font-weight-bold">{{ permission.user.full_name }}</td>
                 <td class="govuk-table__cell govuk-!-text-align-right">
-                  <a href="#" class="govuk-link">Remove</a>
+                  <a href="{% url 'projects:project_user_remove' project.slug permission.user.id %}"
+                     class="govuk-link">Remove member</a>
                 </td>
               </tr>
             {% endfor %}

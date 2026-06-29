@@ -1,10 +1,14 @@
 from django.db.models import Prefetch
+from django.shortcuts import get_object_or_404
+from django.urls import reverse
 from django.urls.base import reverse_lazy
 from django.views.generic.detail import DetailView
 from django.views.generic.edit import DeleteView
 from django.views.generic.list import ListView
 
 from projects.models import Project, ProjectUserPermissions
+
+# from users.models import User
 
 
 # Create your views here.
@@ -72,3 +76,34 @@ class ProjectDeleteView(DeleteView):
     context_object_name = "project"
     model = Project
     success_url = reverse_lazy("projects:projects_list")
+
+
+class ProjectRemoveUserView(DeleteView):
+    """
+    Will need additional checks for user permissions to ensure
+    the user has access to delete the project.
+    """
+
+    template_name = "projects/user-remove-confirm.html"
+    context_object_name = "membership"
+    model = ProjectUserPermissions
+
+    def get_object(self, queryset=None):
+        # Ensures the membership belongs to the project in the URL.
+        return get_object_or_404(
+            ProjectUserPermissions.objects.select_related("project", "user"),
+            project__slug=self.kwargs["slug"],
+            user_id=self.kwargs["user_id"],
+        )
+
+    def get_success_url(self):
+        return reverse("projects:project_users", kwargs={"slug": self.kwargs["slug"]})
+
+    def delete(self, request, *args, **kwargs):
+        membership = self.get_object()
+        user_name = membership.user.full_name
+        response = super().delete(request, *args, **kwargs)
+        self.request.session["success_message"] = {
+            "heading": f"You have removed {user_name} from this project",
+        }
+        return response
