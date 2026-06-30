@@ -30,6 +30,7 @@
     "govuk",
     "gunicorn",
     "healthcheck",
+    "healthchecker",
     "hgignore",
     "htmx",
     "hsts",
