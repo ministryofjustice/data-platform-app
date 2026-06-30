@@ -12,6 +12,7 @@
     "addopts",
     "asgi",
     "automount",
+    "autoselect",
     "berriai",
     "businessunit",
     "bzrignore",
