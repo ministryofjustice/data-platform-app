@@ -16,7 +16,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "djlint==1.39.0",
+    "djlint==1.39.2",
     "django-debug-toolbar==6.3.0",
     "model-bakery==1.23.5",
     "pre-commit==4.6.0",
