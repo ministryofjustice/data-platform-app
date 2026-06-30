@@ -67,7 +67,7 @@
         <a class="govuk-button govuk-button--secondary"
            href="{% url 'projects:project_users_add' project.slug %}">Add a member</a>
       </div>
-      {% if project.user_permissions %}
+      {% if project.user_permissions.all %}
         <table class="govuk-table">
           <thead class="govuk-table__head">
             <tr class="govuk-table__row">
