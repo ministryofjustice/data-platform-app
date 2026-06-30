@@ -12,7 +12,7 @@
       <div class="govuk-grid-column-full">
         <div role="region"
              class="moj-alert moj-alert--success moj-alert--with-heading"
-             aria-label="success: User removed from project"
+             aria-label="success: project membership update"
              data-module="moj-alert">
           <div>
             <svg class="moj-alert__icon"
@@ -64,7 +64,8 @@
         <h2 class="govuk-heading-m">Project members</h2>
       </div>
       <div class="govuk-grid-column-one-third govuk-!-padding-right-0 govuk-!-text-align-right">
-        <a class="govuk-button govuk-button--secondary" href="#">Add a member</a>
+        <a class="govuk-button govuk-button--secondary"
+           href="{% url 'projects:project_users_add' project.slug %}">Add a member</a>
       </div>
       {% if project.user_permissions %}
         <table class="govuk-table">

@@ -16,6 +16,12 @@ class ProjectUserPermissions(TimeStampedModel):
     class Meta:
         db_table = "project_user_permissions"
         verbose_name_plural = "project user permissions"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["project", "user"],
+                name="uniq_project_user_membership",
+            )
+        ]
 
 
 class BusinessUnit(TimeStampedModel):

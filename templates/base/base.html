@@ -61,20 +61,6 @@
     {% include 'base/footer.html' %}
     {% block scripts %}
     {% endblock scripts %}
-    <script type="module" src="{% static 'assets/js/govuk-frontend.min.js' %}"></script>
-    <script type="module">
-        import {
-            initAll
-        } from "{% static 'assets/js/govuk-frontend.min.js' %}"
-        initAll()
-    </script>
-    <script type="module" src="{% static 'assets/js/moj-frontend.min.js' %}"></script>
-    <script type="module">
-        import {
-            initAll
-        } from "{% static 'assets/js/moj-frontend.min.js' %}"
-        initAll()
-    </script>
     <script type="module">
         import App from "{% static 'assets/js/app.min.js' %}";
         document.addEventListener('DOMContentLoaded', function() {

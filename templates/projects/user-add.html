@@ -1,0 +1,65 @@
+{% extends "base/base.html" %}
+{% block title %}
+  Add members - {{ project.name }} - Justice Data Platform | Ministry of Justice
+{% endblock title %}
+{% block back_link %}
+  <a href="{% url 'projects:project_users' project.slug %}"
+     class="govuk-back-link">Back to project members</a>
+{% endblock back_link %}
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      {% if formset.non_form_errors %}
+        <div class="govuk-error-summary" data-module="govuk-error-summary">
+          <div role="alert">
+            <h2 class="govuk-error-summary__title">There is a problem</h2>
+            <div class="govuk-error-summary__body">
+              <ul class="govuk-list govuk-error-summary__list">
+                {% for error in formset.non_form_errors %}
+                  <li>{{ error }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+          </div>
+        </div>
+      {% endif %}
+      <h1 class="govuk-heading-l">Add member</h1>
+      <form method="post" novalidate>
+        {% csrf_token %}
+        {{ formset.management_form }}
+        <div class="moj-add-another" data-module="moj-add-another">
+          {% for form in formset %}
+            <div class="moj-add-another__item">
+              <legend class="govuk-fieldset__legend moj-add-another__title govuk-fieldset__legend--m">
+                Email
+              </legend>
+              <div class="govuk-form-group{% if form.user.errors %} govuk-form-group--error{% endif %}">
+                <label class="govuk-label" for="{{ form.user.id_for_label }}">Enter an email address to add a project member</label>
+                {% if form.user.errors %}
+                  {% for error in form.user.errors %}
+                    <p class="govuk-error-message">
+                      <span class="govuk-visually-hidden">Error:</span>
+                      {{ error }}
+                    </p>
+                  {% endfor %}
+                {% endif %}
+                {{ form.user }}
+              </div>
+              {% if formset.total_form_count > 1 %}
+                <button type="button"
+                        class="govuk-button govuk-button--secondary moj-add-another__remove-button">
+                  Remove
+                </button>
+              {% endif %}
+            </div>
+          {% endfor %}
+          <button type="button"
+                  class="govuk-button govuk-button--secondary moj-add-another__add-button">
+            Add another member
+          </button>
+        </div>
+        <button type="submit" class="govuk-button">Continue</button>
+      </form>
+    </div>
+  </div>
+{% endblock content %}
