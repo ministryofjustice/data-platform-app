@@ -26,6 +26,7 @@
     "color",
     "contrib",
     "cooldown",
+    "Formset",
     "gethostname",
     "govuk",
     "gunicorn",

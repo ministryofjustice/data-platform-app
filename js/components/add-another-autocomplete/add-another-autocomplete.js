@@ -13,12 +13,14 @@ const AddAnotherAutocomplete = {
         return;
       }
 
-      const itemCount = container.querySelectorAll(".moj-add-another__item").length;
+      const itemCount = container.querySelectorAll(
+        ".moj-add-another__item",
+      ).length;
       totalFormsField.value = String(itemCount);
     };
 
     const addAnotherContainers = document.querySelectorAll(
-      '.moj-add-another[data-module="moj-add-another"]'
+      '.moj-add-another[data-module="moj-add-another"]',
     );
 
     addAnotherContainers.forEach((container) => {
@@ -26,7 +28,9 @@ const AddAnotherAutocomplete = {
 
       container.addEventListener("click", (event) => {
         const addButton = event.target.closest(".moj-add-another__add-button");
-        const removeButton = event.target.closest(".moj-add-another__remove-button");
+        const removeButton = event.target.closest(
+          ".moj-add-another__remove-button",
+        );
 
         if (!addButton && !removeButton) {
           return;
@@ -46,7 +50,9 @@ const AddAnotherAutocomplete = {
             return;
           }
 
-          const select = newItem.querySelector('select[data-module="autocomplete"]');
+          const select = newItem.querySelector(
+            'select[data-module="autocomplete"]',
+          );
           if (!select) {
             return;
           }
@@ -54,7 +60,7 @@ const AddAnotherAutocomplete = {
           // Remove cloned autocomplete UI so the new row starts empty.
           newItem
             .querySelectorAll(
-              ".autocomplete__wrapper, .autocomplete__hint, .autocomplete__status"
+              ".autocomplete__wrapper, .autocomplete__hint, .autocomplete__status",
             )
             .forEach((element) => element.remove());
 
