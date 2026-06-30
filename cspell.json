@@ -32,6 +32,7 @@
     "govuk",
     "gunicorn",
     "healthcheck",
+    "healthchecker",
     "hgignore",
     "historicalprojectuserpermissions",
     "htmx",

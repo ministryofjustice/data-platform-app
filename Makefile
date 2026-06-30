@@ -40,6 +40,7 @@ build-static:
 	rm -rf static/
 	$(MAKE) build-css
 	$(MAKE) build-js
+	uv run python manage.py collectstatic --noinput
 
 lint:
 	ruff format --check
