@@ -80,6 +80,7 @@
     "userdel",
     "venv",
     "virtualenv",
+    "whitenoise",
     "wsgi",
     "xlink",
     "zizmor"
