@@ -76,8 +76,10 @@ class ProjectCreateForm(forms.Form):
         strip=True,
         error_messages={"required": "Enter a project name"},
     )
-    business_unit = forms.ChoiceField(
-        choices=(),
+    business_unit = forms.ModelChoiceField(
+        queryset=BusinessUnit.objects.none(),
+        to_field_name="name",
+        empty_label="No business unit selected",
         error_messages={
             "required": "Select a business unit",
             "invalid_choice": "Select a valid business unit",
@@ -92,7 +94,4 @@ class ProjectCreateForm(forms.Form):
     def __init__(self, *args, **kwargs):
         """Populate business unit choices from the database."""
         super().__init__(*args, **kwargs)
-        business_units = BusinessUnit.objects.order_by("name").values_list("name", flat=True)
-        self.fields["business_unit"].choices = [("", "No business unit selected")] + [
-            (business_unit, business_unit) for business_unit in business_units
-        ]
+        self.fields["business_unit"].queryset = BusinessUnit.objects.order_by("name")

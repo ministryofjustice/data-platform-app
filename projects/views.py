@@ -25,11 +25,6 @@ def _unique_project_slug(name: str) -> str:
     return slug
 
 
-def _business_unit_code(name: str) -> str:
-    """Generate a code for a business unit based on its name."""
-    return slugify(name).replace("-", "_")[:20] or "unknown"
-
-
 class ListView(LoginRequiredMixin, TemplateView):
     template_name = "projects/list.html"
 
@@ -104,19 +99,22 @@ class CreateProjectView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         """Store validated form data in session and continue the wizard."""
+        business_unit = form.cleaned_data["business_unit"]
+
         # Store validated data, preserving any members added on a previous visit
         existing_project_data = self.request.session.get("project_data", {})
         self.request.session["project_data"] = {
             **existing_project_data,
             "name": form.cleaned_data["name"],
-            "business_unit": form.cleaned_data["business_unit"],
+            "business_unit": business_unit.name,
+            "business_unit_id": business_unit.id,
             "description": form.cleaned_data["description"],
         }
 
         logger.info(
             "project_flow.create.saved",
             user_id=self.request.user.id,
-            business_unit=form.cleaned_data["business_unit"],
+            business_unit=business_unit.name,
             members_count=len(self.request.session["project_data"].get("members", [])),
         )
 
@@ -209,7 +207,8 @@ class AddMembersView(LoginRequiredMixin, TemplateView):
 def _get_complete_project_data(session: dict) -> dict | None:
     """Return validated project data from the session, or None if required fields are missing."""
     data = session.get("project_data", {})
-    if data.get("name") and data.get("business_unit") and data.get("description"):
+    has_business_unit = data.get("business_unit_id") or data.get("business_unit")
+    if data.get("name") and has_business_unit and data.get("description"):
         return data
     return None
 
@@ -235,16 +234,34 @@ class CheckDetailsView(LoginRequiredMixin, TemplateView):
             return redirect(reverse("projects:create_project"))
 
         name = project_data["name"].strip()
-        business_unit_name = project_data["business_unit"].strip()
         description = project_data["description"].strip()
         member_emails = project_data.get("members", [])
 
-        with transaction.atomic():
-            business_unit, _ = BusinessUnit.objects.get_or_create(
-                name=business_unit_name,
-                defaults={"code": _business_unit_code(business_unit_name)},
-            )
+        business_unit_id = project_data.get("business_unit_id")
+        if business_unit_id is not None:
+            try:
+                business_unit = BusinessUnit.objects.get(pk=business_unit_id)
+            except BusinessUnit.DoesNotExist:
+                logger.error(
+                    "project_flow.check_details.invalid_business_unit",
+                    user_id=request.user.id,
+                    business_unit_id=business_unit_id,
+                )
+                return redirect(reverse("projects:create_project"))
+        else:
+            # Backward-compatible fallback for older sessions created before business_unit_id.
+            business_unit_name = str(project_data.get("business_unit", "")).strip()
+            try:
+                business_unit = BusinessUnit.objects.get(name=business_unit_name)
+            except BusinessUnit.DoesNotExist:
+                logger.error(
+                    "project_flow.check_details.invalid_business_unit",
+                    user_id=request.user.id,
+                    business_unit=business_unit_name,
+                )
+                return redirect(reverse("projects:create_project"))
 
+        with transaction.atomic():
             project = Project.objects.create(
                 name=name,
                 description=description,
