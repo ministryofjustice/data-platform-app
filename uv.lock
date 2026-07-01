@@ -108,6 +108,7 @@ dependencies = [
     { name = "django-simple-history" },
     { name = "django-structlog" },
     { name = "gunicorn" },
+    { name = "model-bakery" },
     { name = "psycopg", extra = ["binary"] },
     { name = "pytest-cov" },
     { name = "pytest-django" },
@@ -119,7 +120,6 @@ dependencies = [
 dev = [
     { name = "django-debug-toolbar" },
     { name = "djlint" },
-    { name = "model-bakery" },
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "ruff" },
@@ -132,6 +132,7 @@ requires-dist = [
     { name = "django-simple-history", specifier = "==3.11.0" },
     { name = "django-structlog", specifier = "==9.0.1" },
     { name = "gunicorn", specifier = "==26.0.0" },
+    { name = "model-bakery", specifier = "==1.23.5" },
     { name = "psycopg", extras = ["binary"], specifier = "==3.3.4" },
     { name = "pytest-cov", specifier = "==7.1.0" },
     { name = "pytest-django", specifier = "==4.12.0" },
@@ -143,7 +144,6 @@ requires-dist = [
 dev = [
     { name = "django-debug-toolbar", specifier = "==6.3.0" },
     { name = "djlint", specifier = "==1.39.0" },
-    { name = "model-bakery", specifier = "==1.23.5" },
     { name = "pre-commit", specifier = "==4.6.0" },
     { name = "pytest", specifier = "==9.0.3" },
     { name = "ruff", specifier = "==0.15.16" },

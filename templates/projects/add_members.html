@@ -25,7 +25,7 @@
         </div>
       {% endif %}
       <h1 class="govuk-heading-xl">Add Members</h1>
-      <h2 class="govuk-heading-m">Do you want to add project members now?</h2>
+      <h2 id="add-members-question" class="govuk-heading-m">Do you want to add project members now?</h2>
       <div id="add-members-hint" class="govuk-hint">You can also add members later</div>
       <form method="post" novalidate>
         {% csrf_token %}
@@ -96,7 +96,7 @@
                   class="govuk-button"
                   data-module="govuk-button">Continue</button>
           <a class="govuk-link govuk-link--no-visited-state"
-             href="{% url 'projects:projects_list' %}">Cancel</a>
+             href="{% url 'projects:cancel_create' %}">Cancel</a>
         </div>
       </form>
     </div>

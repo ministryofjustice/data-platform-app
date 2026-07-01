@@ -1,36 +1,17 @@
-from uuid import uuid4
-
 import structlog
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.core.exceptions import ValidationError
-from django.core.validators import validate_email
 from django.db import transaction
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils.text import slugify
-from django.views.generic.base import TemplateView
+from django.views.generic.base import TemplateView, View
+from django.views.generic.edit import CreateView
 
-from projects.forms import ProjectCreateForm
+from projects.forms import AddMembersForm, ProjectCreateForm
 from projects.models import BusinessUnit, Project, ProjectMember
 from users.models import User
 
 logger = structlog.get_logger(__name__)
-PROJECT_JOURNEY_ID_SESSION_KEY = "project_journey_id"
-
-
-def get_project_journey_id(request):
-    """Return the stable journey identifier for the project wizard."""
-    journey_id = request.session.get(PROJECT_JOURNEY_ID_SESSION_KEY)
-    if not journey_id:
-        journey_id = uuid4().hex
-        request.session[PROJECT_JOURNEY_ID_SESSION_KEY] = journey_id
-
-    return journey_id
-
-
-def clear_project_journey_id(request):
-    """Remove the journey identifier when the wizard completes."""
-    request.session.pop(PROJECT_JOURNEY_ID_SESSION_KEY, None)
 
 
 def _unique_project_slug(name: str) -> str:
@@ -53,8 +34,25 @@ class ListView(LoginRequiredMixin, TemplateView):
     template_name = "projects/list.html"
 
 
-class CreateProjectView(LoginRequiredMixin, TemplateView):
+class CancelProjectCreationView(LoginRequiredMixin, View):
+    def get(self, request, *args, **kwargs):
+        """Clear in-progress project flow session state and return to list."""
+        had_project_data = "project_data" in request.session
+
+        request.session.pop("project_data", None)
+
+        logger.info(
+            "project_flow.cancelled",
+            user_id=request.user.id,
+            had_project_data=had_project_data,
+        )
+
+        return redirect(reverse("projects:projects_list"))
+
+
+class CreateProjectView(LoginRequiredMixin, CreateView):
     template_name = "projects/create.html"
+    form_class = ProjectCreateForm
 
     def _build_context(self, form: ProjectCreateForm) -> dict:
         """Build template context from a bound or unbound form."""
@@ -78,31 +76,37 @@ class CreateProjectView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         """Populate form fields from session data when the page is loaded."""
         context = super().get_context_data(**kwargs)
-        session_data = self.request.session.get("project_data", {})
-        form = ProjectCreateForm(initial=session_data)
+        form = context["form"]
         context.update(self._build_context(form))
         return context
 
-    def post(self, request, *args, **kwargs):
-        """Validate via ProjectCreateForm and store clean data in session."""
-        journey_id = get_project_journey_id(request)
-        form = ProjectCreateForm(request.POST)
+    def get_initial(self):
+        """Pre-populate the form from any in-progress session data."""
+        return self.request.session.get("project_data", {})
 
-        if not form.is_valid():
-            # form.errors already contains the declared error messages
-            logger.info(
-                "project_flow.create.validation_failed",
-                user_id=request.user.id,
-                journey_id=journey_id,
-                fields=sorted(form.errors.keys()),
-            )
-            context = super().get_context_data(**kwargs)
-            context.update(self._build_context(form))
-            return self.render_to_response(context)
+    def get_form_kwargs(self):
+        """
+        Remove the instance kwarg that CreateView adds,
+        since this is a plain Form not ModelForm.
+        """
+        kwargs = super().get_form_kwargs()
+        kwargs.pop("instance", None)
+        return kwargs
 
+    def form_invalid(self, form):
+        """Log failed validation and re-render the current step."""
+        logger.info(
+            "project_flow.create.validation_failed",
+            user_id=self.request.user.id,
+            fields=sorted(form.errors.keys()),
+        )
+        return self.render_to_response(self.get_context_data(form=form))
+
+    def form_valid(self, form):
+        """Store validated form data in session and continue the wizard."""
         # Store validated data, preserving any members added on a previous visit
-        existing_project_data = request.session.get("project_data", {})
-        request.session["project_data"] = {
+        existing_project_data = self.request.session.get("project_data", {})
+        self.request.session["project_data"] = {
             **existing_project_data,
             "name": form.cleaned_data["name"],
             "business_unit": form.cleaned_data["business_unit"],
@@ -111,10 +115,9 @@ class CreateProjectView(LoginRequiredMixin, TemplateView):
 
         logger.info(
             "project_flow.create.saved",
-            user_id=request.user.id,
-            journey_id=journey_id,
+            user_id=self.request.user.id,
             business_unit=form.cleaned_data["business_unit"],
-            members_count=len(request.session["project_data"].get("members", [])),
+            members_count=len(self.request.session["project_data"].get("members", [])),
         )
 
         return redirect(reverse("projects:add_members"))
@@ -126,9 +129,12 @@ class AddMembersView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         """Add project and form data from session to context."""
         context = super().get_context_data(**kwargs)
-        context["project_data"] = self.request.session.get("project_data", {})
+        project_data = self.request.session.get("project_data", {})
+        members = project_data.get("members", [])
+
+        context["project_data"] = project_data
         context["form_data"] = {
-            "add_members_now": "",
+            "add_members_now": "yes" if members else "",
             "member_email": "",
         }
         context["errors"] = {
@@ -139,89 +145,39 @@ class AddMembersView(LoginRequiredMixin, TemplateView):
 
     def post(self, request, *args, **kwargs):
         """Handle add-members decision and optional member email."""
-        journey_id = get_project_journey_id(request)
-        action = request.POST.get("action", "continue").strip()
-        add_members_now = request.POST.get("add_members_now", "").strip()
-        member_email = request.POST.get("member_email", "").strip()
-
-        if action not in {"add_another", "continue"}:
-            action = "continue"
-
-        errors = {}
-
-        if add_members_now not in {"yes", "no"}:
-            errors["add_members_now"] = "Choose Yes or No"
-        elif action == "add_another" and add_members_now != "yes":
-            errors["add_members_now"] = "Select Yes to add another member"
-
-        if add_members_now == "yes":
-            if not member_email:
-                errors["member_email"] = "Enter a valid email address"
-            else:
-                try:
-                    validate_email(member_email)
-                except ValidationError:
-                    errors["member_email"] = "Enter a valid email address"
-
-        if errors:
-            logger.info(
-                "project_flow.add_members.validation_failed",
-                user_id=request.user.id,
-                journey_id=journey_id,
-                action=action,
-                add_members_now=add_members_now or "unset",
-                fields=sorted(errors.keys()),
-            )
-            context = self.get_context_data(**kwargs)
-            context["errors"] = errors
-            context["form_data"] = {
-                "add_members_now": add_members_now,
-                "member_email": member_email,
-            }
-            return self.render_to_response(context)
-
         project_data = request.session.get("project_data", {})
         members = project_data.get("members", [])
 
+        form = AddMembersForm(request.POST, existing_members=members)
+
+        if not form.is_valid():
+            logger.info(
+                "project_flow.add_members.validation_failed",
+                user_id=request.user.id,
+                action=request.POST.get("action") or "continue",
+                add_members_now=request.POST.get("add_members_now") or "unset",
+                fields=sorted(form.errors.keys()),
+            )
+            context = self.get_context_data(**kwargs)
+            context["errors"] = {
+                "add_members_now": form.errors.get("add_members_now", [""])[0],
+                "member_email": form.errors.get("member_email", [""])[0],
+            }
+            context["form_data"] = {
+                "add_members_now": request.POST.get("add_members_now", ""),
+                "member_email": request.POST.get("member_email", ""),
+            }
+            return self.render_to_response(context)
+
+        add_members_now = form.cleaned_data["add_members_now"]
+        member_email = form.cleaned_data.get("member_email", "")
+        action = form.cleaned_data["action"]
+
         if add_members_now == "yes":
-            members_lower = {m.casefold() for m in members}
-            if member_email.casefold() in members_lower:
-                errors["member_email"] = "This member has already been added"
-                logger.info(
-                    "project_flow.add_members.duplicate_rejected",
-                    user_id=request.user.id,
-                    journey_id=journey_id,
-                    members_count=len(members),
-                )
-                context = self.get_context_data(**kwargs)
-                context["errors"] = errors
-                context["form_data"] = {
-                    "add_members_now": add_members_now,
-                    "member_email": member_email,
-                }
-                return self.render_to_response(context)
-
-            if len(members) >= 20:
-                errors["member_email"] = "You can only add up to 20 members"
-                logger.info(
-                    "project_flow.add_members.limit_rejected",
-                    user_id=request.user.id,
-                    journey_id=journey_id,
-                    members_count=len(members),
-                )
-                context = self.get_context_data(**kwargs)
-                context["errors"] = errors
-                context["form_data"] = {
-                    "add_members_now": add_members_now,
-                    "member_email": member_email,
-                }
-                return self.render_to_response(context)
-
             members.append(member_email)
             logger.info(
                 "project_flow.add_members.member_added",
                 user_id=request.user.id,
-                journey_id=journey_id,
                 members_count=len(members),
             )
 
@@ -232,7 +188,6 @@ class AddMembersView(LoginRequiredMixin, TemplateView):
             logger.info(
                 "project_flow.add_members.add_another",
                 user_id=request.user.id,
-                journey_id=journey_id,
                 members_count=len(members),
             )
             context = self.get_context_data(**kwargs)
@@ -245,11 +200,18 @@ class AddMembersView(LoginRequiredMixin, TemplateView):
         logger.info(
             "project_flow.add_members.continue",
             user_id=request.user.id,
-            journey_id=journey_id,
             members_count=len(members),
         )
 
         return redirect(reverse("projects:check_details"))
+
+
+def _get_complete_project_data(session: dict) -> dict | None:
+    """Return validated project data from the session, or None if required fields are missing."""
+    data = session.get("project_data", {})
+    if data.get("name") and data.get("business_unit") and data.get("description"):
+        return data
+    return None
 
 
 class CheckDetailsView(LoginRequiredMixin, TemplateView):
@@ -263,24 +225,19 @@ class CheckDetailsView(LoginRequiredMixin, TemplateView):
 
     def post(self, request, *args, **kwargs):
         """Handle final project creation."""
-        journey_id = get_project_journey_id(request)
-        project_data = request.session.get("project_data", {})
+        project_data = _get_complete_project_data(request.session)
 
-        name = project_data.get("name", "").strip()
-        business_unit_name = project_data.get("business_unit", "").strip()
-        description = project_data.get("description", "").strip()
-        member_emails = project_data.get("members", [])
-
-        if not name or not business_unit_name or not description:
+        if project_data is None:
             logger.error(
                 "project_flow.check_details.missing_data",
                 user_id=request.user.id,
-                journey_id=journey_id,
-                name_present=bool(name),
-                business_unit_present=bool(business_unit_name),
-                description_present=bool(description),
             )
             return redirect(reverse("projects:create_project"))
+
+        name = project_data["name"].strip()
+        business_unit_name = project_data["business_unit"].strip()
+        description = project_data["description"].strip()
+        member_emails = project_data.get("members", [])
 
         with transaction.atomic():
             business_unit, _ = BusinessUnit.objects.get_or_create(
@@ -311,18 +268,15 @@ class CheckDetailsView(LoginRequiredMixin, TemplateView):
         logger.info(
             "project_flow.check_details.project_created",
             user_id=request.user.id,
-            journey_id=journey_id,
             project_id=project.id,
             members_count=len(member_emails),
             linked_members_count=linked_member_count,
         )
 
         request.session.pop("project_data", None)
-        clear_project_journey_id(request)
 
         logger.info(
             "project_flow.check_details.session_cleared",
             user_id=request.user.id,
-            journey_id=journey_id,
         )
         return redirect(reverse("projects:projects_list"))

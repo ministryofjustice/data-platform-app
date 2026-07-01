@@ -2,7 +2,6 @@ import pytest
 from django.urls import reverse
 
 from projects.models import BusinessUnit, Project, ProjectMember
-from projects.views import PROJECT_JOURNEY_ID_SESSION_KEY
 from users.models import User
 
 
@@ -14,6 +13,22 @@ def authenticated_client(client, user):
 
 class TestCreateProjectView:
     pytestmark = pytest.mark.django_db
+
+    def test_cancel_clears_project_data(self, client):
+        session = client.session
+        session["project_data"] = {
+            "name": "Draft Project",
+            "business_unit": "HMPPS",
+            "description": "Draft description",
+            "members": ["person@example.com"],
+        }
+        session.save()
+
+        response = client.get(reverse("projects:cancel_create"))
+
+        assert response.status_code == 302
+        assert response.url == reverse("projects:projects_list")
+        assert "project_data" not in client.session
 
     def test_create_project_page_renders(self, client):
         response = client.get(reverse("projects:create_project"))
@@ -56,7 +71,7 @@ class TestCreateProjectView:
         assert response.status_code == 302
         assert response.url == reverse("projects:add_members")
 
-    def test_post_sets_journey_id_in_session(self, client):
+    def test_post_does_not_require_journey_id_in_session(self, client):
         response = client.post(
             reverse("projects:create_project"),
             {
@@ -67,9 +82,7 @@ class TestCreateProjectView:
         )
 
         assert response.status_code == 302
-        journey_id = client.session[PROJECT_JOURNEY_ID_SESSION_KEY]
-
-        assert journey_id
+        assert response.url == reverse("projects:add_members")
 
     def test_post_with_invalid_business_unit_shows_error(self, client):
         response = client.post(
@@ -110,6 +123,21 @@ class TestCreateProjectView:
 
 class TestAddMembersView:
     pytestmark = pytest.mark.django_db
+
+    def test_get_prefills_yes_when_members_exist_in_session(self, client):
+        session = client.session
+        session["project_data"] = {
+            "name": "Project One",
+            "business_unit": "HMPPS",
+            "description": "Description",
+            "members": ["person@example.com"],
+        }
+        session.save()
+
+        response = client.get(reverse("projects:add_members"))
+
+        assert response.status_code == 200
+        assert response.context["form_data"]["add_members_now"] == "yes"
 
     def test_add_members_page_renders(self, client):
         response = client.get(reverse("projects:add_members"))
@@ -171,7 +199,7 @@ class TestAddMembersView:
         assert response.url == reverse("projects:check_details")
         assert client.session["project_data"].get("members", []) == []
 
-    def test_post_preserves_journey_id_across_add_members_steps(self, client):
+    def test_post_preserves_members_across_add_members_steps(self, client):
         client.post(
             reverse("projects:create_project"),
             {
@@ -180,7 +208,6 @@ class TestAddMembersView:
                 "description": "Description",
             },
         )
-        journey_id = client.session[PROJECT_JOURNEY_ID_SESSION_KEY]
 
         response = client.post(
             reverse("projects:add_members"),
@@ -191,7 +218,7 @@ class TestAddMembersView:
         )
 
         assert response.status_code == 302
-        assert client.session[PROJECT_JOURNEY_ID_SESSION_KEY] == journey_id
+        assert client.session["project_data"]["members"] == ["person@example.com"]
 
     def test_post_yes_adds_member_and_redirects(self, client):
         session = client.session
@@ -273,7 +300,7 @@ class TestCheckDetailsView:
         assert "Description text" in response.content.decode()
         assert "person@example.com" in response.content.decode()
 
-    def test_post_clears_journey_id_when_flow_completes(self, client):
+    def test_post_clears_project_data_when_flow_completes(self, client):
         existing_member = User.objects.create_user(
             username="existing.member",
             email="existing.member@example.com",
@@ -287,13 +314,11 @@ class TestCheckDetailsView:
             "description": "Description text",
             "members": ["existing.member@example.com", "new.member@example.com"],
         }
-        session[PROJECT_JOURNEY_ID_SESSION_KEY] = "journey-123"
         session.save()
 
         response = client.post(reverse("projects:check_details"))
 
         assert response.status_code == 302
-        assert PROJECT_JOURNEY_ID_SESSION_KEY not in client.session
         assert "project_data" not in client.session
 
         project = Project.objects.get(name="Project Blue Book")
