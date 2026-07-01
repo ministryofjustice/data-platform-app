@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 import os
 from pathlib import Path
 
+import structlog
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -38,6 +40,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django_structlog",
     "users",
     "projects",
     "simple_history",
@@ -49,6 +52,7 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "data_platform_app.request_id.RequestIdMiddleware",
+    "django_structlog.middlewares.RequestMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -136,32 +140,38 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 
 
+_FOREIGN_PRE_CHAIN = [
+    structlog.contextvars.merge_contextvars,
+    structlog.stdlib.add_log_level,
+    structlog.stdlib.add_logger_name,
+    structlog.processors.TimeStamper(fmt="iso"),
+]
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
-    "filters": {
-        "request_id": {
-            "()": "data_platform_app.request_id.RequestIdLoggingFilter",
-        }
-    },
     "formatters": {
-        "standard": {
-            "format": (
-                "%(asctime)s %(levelname)s [%(name)s] [request_id=%(request_id)s] %(message)s"
-            ),
-        }
+        "console": {
+            "()": "structlog.stdlib.ProcessorFormatter",
+            "processor": structlog.dev.ConsoleRenderer(),
+            "foreign_pre_chain": _FOREIGN_PRE_CHAIN,
+        },
     },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
-            "filters": ["request_id"],
-            "formatter": "standard",
-        }
+            "formatter": "console",
+        },
     },
     "loggers": {
         "django": {
             "handlers": ["console"],
             "level": "WARNING",
+            "propagate": False,
+        },
+        "django_structlog": {
+            "handlers": ["console"],
+            "level": "INFO",
             "propagate": False,
         },
         "data_platform_app": {
@@ -174,9 +184,27 @@ LOGGING = {
             "level": "INFO",
             "propagate": False,
         },
-        "root": {
+        "": {
             "handlers": ["console"],
             "level": "WARNING",
         },
     },
 }
+
+structlog.configure(
+    processors=[
+        structlog.contextvars.merge_contextvars,
+        structlog.stdlib.filter_by_level,
+        structlog.stdlib.add_logger_name,
+        structlog.stdlib.add_log_level,
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
+        structlog.processors.UnicodeDecoder(),
+        structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+    ],
+    context_class=dict,
+    logger_factory=structlog.stdlib.LoggerFactory(),
+    wrapper_class=structlog.stdlib.BoundLogger,
+    cache_logger_on_first_use=True,
+)

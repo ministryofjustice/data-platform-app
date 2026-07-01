@@ -47,3 +47,24 @@ class Project(TimeStampedModel):
 
     def __str__(self):
         return self.name
+
+
+class ProjectMember(TimeStampedModel):
+    project = models.ForeignKey("Project", on_delete=models.CASCADE, related_name="member_emails")
+    email = models.EmailField()
+    user = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="project_member_records",
+    )
+
+    class Meta:
+        db_table = "data_platform_app_project_member"
+        constraints = [
+            models.UniqueConstraint(fields=["project", "email"], name="unique_project_member")
+        ]
+
+    def __str__(self):
+        return self.email

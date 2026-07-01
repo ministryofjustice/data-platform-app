@@ -1,7 +1,9 @@
 import pytest
 from django.urls import reverse
 
-from projects.views import BUSINESS_UNITS, PROJECT_JOURNEY_ID_SESSION_KEY
+from projects.models import BusinessUnit, Project, ProjectMember
+from projects.views import PROJECT_JOURNEY_ID_SESSION_KEY
+from users.models import User
 
 
 @pytest.fixture(autouse=True)
@@ -21,10 +23,26 @@ class TestCreateProjectView:
 
     def test_context_contains_expected_business_units(self, client):
         response = client.get(reverse("projects:create_project"))
+        expected_business_units = list(
+            BusinessUnit.objects.order_by("name").values_list("name", flat=True)
+        )
 
-        assert response.context["business_units"] == sorted(BUSINESS_UNITS)
+        assert response.context["business_units"] == expected_business_units
 
-    @pytest.mark.parametrize("business_unit", BUSINESS_UNITS)
+    @pytest.mark.parametrize(
+        "business_unit",
+        [
+            "CICA",
+            "Central Digital",
+            "HMCTS",
+            "HMPPS",
+            "LAA",
+            "OCTO",
+            "OPG",
+            "Technology Services",
+            "YJB",
+        ],
+    )
     def test_post_with_allowed_business_unit_redirects(self, client, business_unit):
         response = client.post(
             reverse("projects:create_project"),
@@ -256,12 +274,18 @@ class TestCheckDetailsView:
         assert "person@example.com" in response.content.decode()
 
     def test_post_clears_journey_id_when_flow_completes(self, client):
+        existing_member = User.objects.create_user(
+            username="existing.member",
+            email="existing.member@example.com",
+            password="unsafe-test-password",
+        )
+
         session = client.session
         session["project_data"] = {
             "name": "Project Blue Book",
             "business_unit": "HMPPS",
             "description": "Description text",
-            "members": ["person@example.com"],
+            "members": ["existing.member@example.com", "new.member@example.com"],
         }
         session[PROJECT_JOURNEY_ID_SESSION_KEY] = "journey-123"
         session.save()
@@ -270,3 +294,15 @@ class TestCheckDetailsView:
 
         assert response.status_code == 302
         assert PROJECT_JOURNEY_ID_SESSION_KEY not in client.session
+        assert "project_data" not in client.session
+
+        project = Project.objects.get(name="Project Blue Book")
+        business_unit = BusinessUnit.objects.get(name="HMPPS")
+
+        assert project.business_unit == business_unit
+        assert project.description == "Description text"
+
+        members = ProjectMember.objects.filter(project=project)
+        assert members.count() == 2
+        assert members.filter(email="existing.member@example.com", user=existing_member).exists()
+        assert members.filter(email="new.member@example.com", user__isnull=True).exists()
