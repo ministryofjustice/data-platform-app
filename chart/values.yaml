@@ -85,6 +85,24 @@ app:
         secretKeyRef:
           name: app-rds
           key: dbname
+    # Microsoft Entra ID (Azure AD) login via django-azure-auth
+    - name: AZURE_REDIRECT_URI
+      value: https://development.data-platform.service.justice.gov.uk/sso/callback/
+    - name: AZURE_AUTHORITY
+      valueFrom:
+        secretKeyRef:
+          name: app-secrets
+          key: azure-authority
+    - name: AZURE_CLIENT_ID
+      valueFrom:
+        secretKeyRef:
+          name: app-secrets
+          key: azure-client-id
+    - name: AZURE_CLIENT_SECRET
+      valueFrom:
+        secretKeyRef:
+          name: app-secrets
+          key: azure-client-secret
     # avoid writing __pycache__ in read-only code paths
     - name: PYTHONDONTWRITEBYTECODE
       value: "1"

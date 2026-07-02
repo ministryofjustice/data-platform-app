@@ -76,6 +76,44 @@ For initial development, we are using SQLite locally.
 
 When we move toward deployment, we will switch local development to PostgreSQL so that development and production environments are aligned.
 
+## Authentication (Microsoft Entra ID)
+
+Users sign in with Microsoft Entra ID (OAuth 2.0 / OpenID Connect), via
+[django-azure-auth](https://github.com/Weird-Sheep-Labs/django-azure-auth).
+
+Entra ID is the **sole authentication provider in every environment** — there is
+no separate local login, so running the app locally requires real Entra
+credentials, set as environment variables (e.g. in your `.env`):
+
+| Variable              | Description                                                |
+| --------------------- | ---------------------------------------------------------- |
+| `AZURE_CLIENT_ID`     | Application (client) ID from the Entra app registration.   |
+| `AZURE_CLIENT_SECRET` | Client secret from the Entra app registration.             |
+| `AZURE_AUTHORITY`     | `https://login.microsoftonline.com/<tenant-id>`.           |
+| `AZURE_REDIRECT_URI`  | Reply URL registered in Entra, ending in `/sso/callback/`. |
+
+The test suite needs no tenant: tests use `force_login`, and `settings/test.py`
+supplies dummy credentials so the app boots without one.
+
+### Enforcement
+
+Login is enforced centrally by Django's `LoginRequiredMiddleware` (deny by
+default): every view requires an authenticated user unless it is explicitly
+marked `@login_not_required`. The allowlist is the public product pages (home,
+roadmap, data factories) and the auth flow itself (`login`, `logout` and the
+Entra `callback`, which must stay open because the user is still anonymous while
+signing in).
+
+Sessions have an absolute 8-hour lifetime (`SESSION_COOKIE_AGE`), so a user who
+loses Entra access is forced back through the provider within a working day.
+While their Entra session is still valid this re-login is a silent SSO redirect.
+
+### Admin access
+
+Admin access is granted manually. To do this locally, sign in via Entra once to
+create your `User`, then promote it with `make manage shell`. In real
+environments you will need to speak to an existing admin.
+
 ## Static assets
 
 Static assets are built as part of `make install` (this runs `make build-static`).
