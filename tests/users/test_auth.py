@@ -20,6 +20,11 @@ class TestUserMappingFn:
             "username": "Jane Doe",
         }
 
+    def test_lowercases_email(self):
+        mapped = user_mapping_fn(oid="abc", mail="Jane.Doe@Example.COM")
+
+        assert mapped == {"email": "jane.doe@example.com"}
+
     def test_ignores_unmapped_attributes(self):
         mapped = user_mapping_fn(
             oid="abc",

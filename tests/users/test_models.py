@@ -32,6 +32,24 @@ class TestUserModel:
         assert user.pk is not None
         assert user.check_password("unsafe-test-password") is True
 
+    def test_create_user_lowercases_email(self):
+        user = User.objects.create_user(
+            oid="4a1b2c3d-1234-5678-9abc-def012345678",
+            email="Jane.Doe@Example.COM",
+        )
+
+        assert user.email == "jane.doe@example.com"
+
+    def test_save_lowercases_email(self):
+        user = User(
+            oid="4a1b2c3d-1234-5678-9abc-def012345678",
+            email="Jane.Doe@Example.COM",
+        )
+
+        user.save()
+
+        assert user.email == "jane.doe@example.com"
+
     def test_create_superuser_sets_staff_and_superuser_flags(self):
         user = User.objects.create_superuser(
             oid="4a1b2c3d-1234-5678-9abc-def012345678",

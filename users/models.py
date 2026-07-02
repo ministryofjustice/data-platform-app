@@ -18,7 +18,7 @@ class UserManager(BaseUserManager):
     def _create_user(self, oid, password=None, **extra_fields):
         if not oid:
             raise ValueError("Users must have an oid")
-        email = self.normalize_email(extra_fields.pop("email", ""))
+        email = self.normalize_email(extra_fields.pop("email", "")).lower()
         user = self.model(oid=oid, email=email, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
@@ -67,3 +67,8 @@ class User(AbstractUser):
 
     def __str__(self) -> str:
         return self.username or self.email or str(self.oid)
+
+    def save(self, *args, **kwargs):
+        if self.email:
+            self.email = self.email.lower()
+        super().save(*args, **kwargs)

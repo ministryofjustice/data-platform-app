@@ -24,8 +24,11 @@ def user_mapping_fn(**attributes: Any) -> dict[str, str]:
         "surname": "last_name",
         "displayName": "username",
     }
-    return {
+    mapped_fields = {
         field: attributes[attribute]
         for attribute, field in field_by_attribute.items()
         if attributes.get(attribute)
     }
+    if email := mapped_fields.get("email"):
+        mapped_fields["email"] = email.lower()
+    return mapped_fields
