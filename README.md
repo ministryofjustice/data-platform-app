@@ -90,7 +90,7 @@ credentials, set as environment variables (e.g. in your `.env`):
 | `AZURE_CLIENT_ID`     | Application (client) ID from the Entra app registration.  |
 | `AZURE_CLIENT_SECRET` | Client secret from the Entra app registration.            |
 | `AZURE_AUTHORITY`     | `https://login.microsoftonline.com/<tenant-id>`.          |
-| `AZURE_REDIRECT_URI`  | Reply URL registered in Entra, ending in `/sso/callback`. |
+| `AZURE_REDIRECT_URI`  | Reply URL registered in Entra, ending in `/sso/callback/`. |
 
 The test suite needs no tenant: tests use `force_login`, and `settings/test.py`
 supplies dummy credentials so the app boots without one.

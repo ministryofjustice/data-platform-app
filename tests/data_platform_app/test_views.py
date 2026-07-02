@@ -46,7 +46,7 @@ class TestDataFactoriesView:
 
 
 class TestLandingView:
-    """Tests for the login-protected LandingView at '/landing/'."""
+    """Tests for the login-protected LandingView."""
 
     def test_redirects_anonymous_user_to_login(self, client):
         response = client.get(reverse("landing"))

@@ -87,7 +87,7 @@ app:
           key: dbname
     # Microsoft Entra ID (Azure AD) login via django-azure-auth
     - name: AZURE_REDIRECT_URI
-      value: https://development.data-platform.service.justice.gov.uk/sso/callback
+      value: https://development.data-platform.service.justice.gov.uk/sso/callback/
     - name: AZURE_AUTHORITY
       valueFrom:
         secretKeyRef:

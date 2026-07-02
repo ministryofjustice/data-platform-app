@@ -13,7 +13,7 @@ AZURE_AUTH = {
     **AZURE_AUTH,  # noqa: F405
     "CLIENT_ID": "test-client-id",
     "CLIENT_SECRET": "test-client-secret",
-    "REDIRECT_URI": "http://testserver/sso/callback",
+    "REDIRECT_URI": "http://testserver/sso/callback/",
     "AUTHORITY": "https://login.microsoftonline.com/test-tenant-id",
 }
 AUTHENTICATION_BACKENDS = ["django.contrib.auth.backends.ModelBackend"]
