@@ -10,7 +10,7 @@ class UserAdmin(BaseUserAdmin):
 
     ordering = ("email",)
     list_display = ("oid", "username", "email", "is_staff")
-    search_fields = ("oid", "username", "first_name", "last_name", "email")
+    search_fields = ("oid__iexact", "username", "first_name", "last_name", "email")
     fieldsets = (
         (None, {"fields": ("oid", "password")}),
         ("Personal info", {"fields": ("username", "first_name", "last_name", "email")}),

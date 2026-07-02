@@ -95,8 +95,6 @@ credentials, set as environment variables (e.g. in your `.env`):
 The test suite needs no tenant: tests use `force_login`, and `settings/test.py`
 supplies dummy credentials so the app boots without one.
 
-### Admin access
-
 ### Enforcement
 
 Login is enforced centrally by Django's `LoginRequiredMiddleware` (deny by
@@ -112,8 +110,9 @@ While their Entra session is still valid this re-login is a silent SSO redirect.
 
 ### Admin access
 
-then promote it with `make manage shell`. In real environments you will need to speak to an existing
-admin.
+Admin access is granted manually. To do this locally, sign in via Entra once to
+create your `User`, then promote it with `make manage shell`. In real
+environments you will need to speak to an existing admin.
 
 ## Static assets
 

@@ -1,5 +1,4 @@
 from django.contrib.auth.base_user import BaseUserManager
-from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
@@ -21,7 +20,7 @@ class UserManager(BaseUserManager):
             raise ValueError("Users must have an oid")
         email = self.normalize_email(extra_fields.pop("email", ""))
         user = self.model(oid=oid, email=email, **extra_fields)
-        user.password = make_password(password)
+        user.set_password(password)
         user.save(using=self._db)
         return user
 

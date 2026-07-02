@@ -13,6 +13,10 @@ def user_mapping_fn(**attributes: Any) -> dict[str, str]:
 
     Only attributes present in the token/profile are returned, so a missing
     claim never overwrites an existing value with empty data.
+
+    ``oid`` is intentionally omitted because ``django-azure-auth`` supplies it
+    separately as the user's login identity via ``USERNAME_ATTRIBUTE`` /
+    ``USERNAME_FIELD``.
     """
     field_by_attribute = {
         "mail": "email",

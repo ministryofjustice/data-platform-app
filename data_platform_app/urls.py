@@ -40,7 +40,7 @@ urlpatterns = [
     path("healthcheck/", healthcheck, name="healthcheck"),
     path("login/", login_not_required(azure_auth_login), name="login"),
     path("logout/", login_not_required(azure_auth_logout), name="logout"),
-    path("sso/callback", login_not_required(azure_auth_callback), name="auth_callback"),
+    path("sso/callback/", login_not_required(azure_auth_callback), name="auth_callback"),
 ]
 
 if settings.DEBUG and "debug_toolbar" in settings.INSTALLED_APPS:
