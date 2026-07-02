@@ -4,11 +4,9 @@ SECRET_KEY = "test-secret-key-not-for-production"
 
 DEBUG = False
 
-# Microsoft Entra is the only auth provider, but the test suite must never hit
-# it: tests authenticate with client.force_login, which bypasses the provider.
-# Supply dummy AZURE_AUTH credentials so azure_auth imports/boots without a real
-# tenant, and use the default ModelBackend so force_login/admin_client stay
-# deterministic regardless of any AZURE_* values in the developer's environment.
+# Pin AZURE_AUTH to dummy values and use ModelBackend so the suite is deterministic
+# regardless of any AZURE_* values in the developer's environment. No test exercises
+# the provider views, so real credentials are never read.
 AZURE_AUTH = {
     **AZURE_AUTH,  # noqa: F405
     "CLIENT_ID": "test-client-id",
