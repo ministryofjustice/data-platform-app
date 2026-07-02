@@ -32,6 +32,7 @@
     "govuk",
     "gunicorn",
     "healthcheck",
+    "healthchecker",
     "hgignore",
     "hmcts",
     "hmpps",
@@ -83,6 +84,7 @@
     "userdel",
     "venv",
     "virtualenv",
+    "whitenoise",
     "wsgi",
     "xlink",
     "zizmor"
