@@ -10,7 +10,15 @@
     <div class="moj-header__content">
       <nav class="moj-header__navigation" aria-label="Account navigation">
         <ul class="moj-header__navigation-list">
-          <li class="moj-header__navigation-item"></li>
+          {% if user.is_authenticated %}
+            <li class="moj-header__navigation-item">
+              <a class="moj-header__link" href="{% url 'logout' %}">Sign out</a>
+            </li>
+          {% else %}
+            <li class="moj-header__navigation-item">
+              <a class="moj-header__link" href="{% url 'login' %}">Sign in</a>
+            </li>
+          {% endif %}
         </ul>
       </nav>
     </div>

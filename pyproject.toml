@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "django==6.0.6",
+    "django-azure-auth==2.6.0",
     "django-extensions==4.1",
     "django-simple-history==3.11.0",
     "gunicorn==26.0.0",

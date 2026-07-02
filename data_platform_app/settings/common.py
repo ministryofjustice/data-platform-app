@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 import os
 from pathlib import Path
 
+from django.urls import reverse_lazy
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -52,6 +54,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.auth.middleware.LoginRequiredMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -144,3 +147,23 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Django looks in these locations for additional static assets to collect
 STATICFILES_DIRS = [BASE_DIR / "static"]
+
+
+# Authentication
+INSTALLED_APPS += ["azure_auth"]
+AUTHENTICATION_BACKENDS = ["azure_auth.backends.AzureBackend"]
+
+LOGIN_URL = reverse_lazy("login")
+LOGIN_REDIRECT_URL = reverse_lazy("home")
+
+SESSION_COOKIE_AGE = 8 * 60 * 60
+
+AZURE_AUTH = {
+    "CLIENT_ID": os.environ.get("AZURE_CLIENT_ID"),
+    "CLIENT_SECRET": os.environ.get("AZURE_CLIENT_SECRET"),
+    "REDIRECT_URI": os.environ.get("AZURE_REDIRECT_URI"),
+    "SCOPES": ["User.Read"],
+    "AUTHORITY": os.environ.get("AZURE_AUTHORITY"),
+    "USERNAME_ATTRIBUTE": "oid",
+    "USER_MAPPING_FN": "users.auth.user_mapping_fn",
+}
