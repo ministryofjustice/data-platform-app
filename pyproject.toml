@@ -20,11 +20,11 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "djlint==1.39.2",
+    "djlint==1.39.4",
     "django-debug-toolbar==7.0.0",
     "pre-commit==4.6.0",
     "pytest==9.0.3",
-    "ruff==0.15.18",
+    "ruff==0.15.19",
 ]
 
 [tool.ruff]
