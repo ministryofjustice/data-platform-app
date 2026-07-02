@@ -154,7 +154,7 @@ INSTALLED_APPS += ["azure_auth"]
 AUTHENTICATION_BACKENDS = ["azure_auth.backends.AzureBackend"]
 
 LOGIN_URL = reverse_lazy("login")
-LOGIN_REDIRECT_URL = reverse_lazy("home")
+LOGIN_REDIRECT_URL = reverse_lazy("landing")
 
 SESSION_COOKIE_AGE = 8 * 60 * 60
 
