@@ -1,0 +1,85 @@
+{% extends "base/base.html" %}
+{% load static %}
+{% block title %}
+  {{ project.name }} - Justice Data Platform | Ministry of Justice
+{% endblock title %}
+{% block back_link %}
+  <a href="{% url 'projects:projects_list' %}" class="govuk-back-link">Back to projects</a>
+{% endblock back_link %}
+{% block content %}
+  <div class="govuk-grid-row">
+    {% if success_message %}
+      <div class="govuk-grid-column-full">
+        <div role="region"
+             class="moj-alert moj-alert--success moj-alert--with-heading"
+             aria-label="success: Project created successfully"
+             data-module="moj-alert">
+          <div>
+            <svg class="moj-alert__icon"
+                 role="presentation"
+                 focusable="false"
+                 xmlns="http://www.w3.org/2000/svg"
+                 viewBox="0 0 30 30"
+                 height="30"
+                 width="30">
+              <path d="M11.2869 24.6726L2.00415 15.3899L4.62189 12.7722L11.2869 19.4186L25.3781 5.32739L27.9958 7.96369L11.2869 24.6726Z" fill="currentColor" />
+            </svg>
+          </div>
+          <div class="moj-alert__content">
+            <h2 class="moj-alert__heading">{{ success_message.heading }}</h2>
+            {% if success_message.message %}
+              <p>{{ success_message.message }}</p>
+            {% endif %}
+          </div>
+          <div class="moj-alert__action">
+            <button class="moj-alert__dismiss" hidden>Dismiss</button>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+    <div class="govuk-grid-column-full">
+      <h2 class="govuk-heading-l">{{ project.name }}</h2>
+    </div>
+    <!-- Sidebar -->
+    <div class="govuk-grid-column-one-quarter">
+      <nav class="moj-side-navigation govuk-!-padding-top-0"
+           aria-label="Project sections">
+        <ul class="moj-side-navigation__list">
+          <li class="moj-side-navigation__item moj-side-navigation__item--active">
+            <a href="{% url 'projects:project_detail' project.slug %}"
+               aria-current="location">Overview</a>
+          </li>
+          <li class="moj-side-navigation__item">
+            <a href="#">AI gateway</a>
+          </li>
+          <li class="moj-side-navigation__item">
+            <a href="{% url 'projects:project_users' project.slug %}">Project Members</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+    <!-- Main content -->
+    <div class="govuk-grid-column-three-quarters">
+      <h3 class="govuk-heading-m">Project ID</h3>
+      <span id="copy-alert" class="govuk-visually-hidden" aria-live="polite"></span>
+      <span id="project-id" class="govuk-body">{{ project.id }}</span>
+      <button class="govuk-button copy-button govuk-!-margin-bottom-0 govuk-!-margin-left-2"
+              type="button"
+              data-module="copy-button"
+              data-text-selector="#project-id"
+              data-success-message="Project ID copied">Copy</button>
+      <hr class="govuk-section-break govuk-section-break--xl govuk-section-break--visible">
+      <h3 class="govuk-heading-m">Business Unit</h3>
+      <p class="govuk-body">{{ project.business_unit.name }}</p>
+      <hr class="govuk-section-break govuk-section-break--xl govuk-section-break--visible">
+      <h3 class="govuk-heading-m">About this project</h3>
+      <p class="govuk-body">{{ project.description }}</p>
+      <hr class="govuk-section-break govuk-section-break--xl govuk-section-break--visible">
+      <h3 class="govuk-heading-m">Project owner</h3>
+      <p class="govuk-body">{{ project.created_by.full_name }}</p>
+      <p class="govuk-body">Created {{ project.created|date:"d F Y" }}</p>
+      <a href="{% url 'projects:project_delete' project.slug %}"
+         class="govuk-link">Remove this project</a>
+    </div>
+  </div>
+{% endblock content %}

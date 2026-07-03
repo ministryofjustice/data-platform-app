@@ -28,7 +28,11 @@ build-js:
 	npm ci
 	rm -rf static/assets/js
 	mkdir -p static/assets/js
+	npm run build:js
 	cp node_modules/govuk-frontend/dist/govuk/govuk-frontend.min.js static/assets/js/govuk-frontend.min.js
+	cp node_modules/govuk-frontend/dist/govuk/govuk-frontend.min.js.map static/assets/js/govuk-frontend.min.js.map
+	cp node_modules/@ministryofjustice/frontend/moj/moj-frontend.min.js static/assets/js/moj-frontend.min.js
+	cp node_modules/@ministryofjustice/frontend/moj/moj-frontend.min.js.map static/assets/js/moj-frontend.min.js.map
 	cp node_modules/@x-govuk/govuk-prototype-components/dist/govuk-prototype-components.min.js static/assets/js/govuk-prototype-components.min.js
 	cp node_modules/@x-govuk/govuk-prototype-components/dist/govuk-prototype-components.min.js.map static/assets/js/govuk-prototype-components.min.js.map
 

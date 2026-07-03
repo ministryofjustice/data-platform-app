@@ -40,6 +40,13 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractUser):
+    """Custom user model for future extension."""
+
+    @property
+    def full_name(self) -> str:
+        """Return the user's full name."""
+        return f"{self.first_name} {self.last_name}".strip()
+
     """User identified by the Microsoft Entra object id (``oid``).
 
     ``oid`` is the login identity (``USERNAME_FIELD``): it is immutable in Entra,
