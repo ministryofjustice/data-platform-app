@@ -26,11 +26,7 @@ class ProjectListView(ListView):
         set PK to whatever user you've created in db.
         Code will be deleted once user auth is implemented
         """
-        # pk = 4
-        # user = User.objects.get(pk=pk)
-        # return user.projects.all()
-        # Once entra in - this line will be used to get the projects for the logged in user
-        return self.request.user.projects.all()
+        return self.request.user.projects.distinct()
 
 
 class ProjectDetailView(DetailView):
@@ -39,9 +35,11 @@ class ProjectDetailView(DetailView):
     model = Project
 
     def get_queryset(self):
-        # TODO: filter by user permissions to ensure the user has access to the project
-        return Project.objects.select_related("business_unit", "created_by").prefetch_related(
-            "users", "user_permissions__user"
+        return (
+            Project.objects.filter(user_permissions__user=self.request.user)
+            .select_related("business_unit", "created_by")
+            .prefetch_related("users", "user_permissions__user")
+            .distinct()
         )
 
     def get_context_data(self, **kwargs):
@@ -56,12 +54,15 @@ class ProjectUsersDetailView(DetailView):
     model = Project
 
     def get_queryset(self):
-        # TODO: filter by user permissions to ensure the user has access to the project
-        return Project.objects.prefetch_related(
-            Prefetch(
-                "user_permissions",
-                queryset=ProjectUserPermissions.objects.select_related("user"),
+        return (
+            Project.objects.filter(user_permissions__user=self.request.user)
+            .prefetch_related(
+                Prefetch(
+                    "user_permissions",
+                    queryset=ProjectUserPermissions.objects.select_related("user"),
+                )
             )
+            .distinct()
         )
 
     def get_context_data(self, **kwargs):
@@ -82,11 +83,17 @@ class ProjectDeleteView(DeleteView):
     model = Project
     success_url = reverse_lazy("projects:projects_list")
 
+    def get_queryset(self):
+        return Project.objects.filter(user_permissions__user=self.request.user).distinct()
+
 
 class ProjectAddUsersBaseView(View):
     def get_project(self):
         if not hasattr(self, "_project"):
-            self._project = get_object_or_404(Project, slug=self.kwargs["slug"])
+            self._project = get_object_or_404(
+                Project.objects.filter(user_permissions__user=self.request.user).distinct(),
+                slug=self.kwargs["slug"],
+            )
         return self._project
 
     def get_selected_user_ids(self):
@@ -206,9 +213,10 @@ class ProjectRemoveUserView(DeleteView):
     model = ProjectUserPermissions
 
     def get_object(self, queryset=None):
-        # Ensures the membership belongs to the project in the URL.
         return get_object_or_404(
-            ProjectUserPermissions.objects.select_related("project", "user"),
+            ProjectUserPermissions.objects.select_related("project", "user")
+            .filter(project__user_permissions__user=self.request.user)
+            .distinct(),
             project__slug=self.kwargs["slug"],
             user_id=self.kwargs["user_id"],
         )

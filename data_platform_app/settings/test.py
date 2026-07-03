@@ -21,3 +21,8 @@ PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 
 # Suppress emails during tests
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+
+# Use non-manifest static storage in tests so static lookups do not require collectstatic.
+STORAGES["staticfiles"] = {  # type: ignore[index]  # noqa: F405
+    "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+}

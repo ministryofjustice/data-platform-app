@@ -18,15 +18,13 @@ def project(db, user):
     return project
 
 
-class TestListView:
-    """Tests for the ProjectListView at '/projects/'."""
+@pytest.fixture
+def non_project_user(db):
+    """A user who is not part of any project."""
 
-    def test_list_page_renders(self, client, user):
-        client.force_login(user)
-        response = client.get(reverse("projects:projects_list"))
+    non_project_user = baker.make("users.User", email="non_project_user@example.com")
 
-        assert response.status_code == 200
-        assert "projects/list.html" in [t.name for t in response.templates]
+    return non_project_user
 
 
 class TestDetailView:
@@ -39,6 +37,12 @@ class TestDetailView:
         assert response.status_code == 200
         assert "projects/detail.html" in [t.name for t in response.templates]
 
+    def test_detail_page_fail(self, client, non_project_user, project):
+        client.force_login(non_project_user)
+        response = client.get(reverse("projects:project_detail", args=[project.slug]))
+
+        assert response.status_code == 404
+
 
 class TestProjectDeleteView:
     """Tests for the ProjectDeleteView at '/projects/<slug>/delete'."""
@@ -49,6 +53,12 @@ class TestProjectDeleteView:
 
         assert response.status_code == 200
         assert "projects/delete-confirm.html" in [t.name for t in response.templates]
+
+    def test_delete_page_fail(self, client, non_project_user, project):
+        client.force_login(non_project_user)
+        response = client.get(reverse("projects:project_delete", args=[project.slug]))
+
+        assert response.status_code == 404
 
     def test_delete_project(self, client, user, project):
         client.force_login(user)
@@ -70,6 +80,14 @@ class TestProjectRemoveUserView:
         assert response.status_code == 200
         assert "projects/user-remove-confirm.html" in [t.name for t in response.templates]
 
+    def test_remove_user_page_fail(self, client, non_project_user, project):
+        client.force_login(non_project_user)
+        response = client.get(
+            reverse("projects:project_user_remove", args=[project.slug, non_project_user.id])
+        )
+
+        assert response.status_code == 404
+
     def test_remove_user(self, client, user, project):
         client.force_login(user)
         response = client.post(
@@ -90,6 +108,13 @@ class TestProjectAddUsersFlow:
 
         assert response.status_code == 200
         assert "projects/user-add.html" in [t.name for t in response.templates]
+
+    def test_add_users_page_fail(self, client, non_project_user, project):
+        client.force_login(non_project_user)
+
+        response = client.get(reverse("projects:project_users_add", args=[project.slug]))
+
+        assert response.status_code == 404
 
     def test_add_users_page_context_contains_formset(self, client, user, project):
         client.force_login(user)
