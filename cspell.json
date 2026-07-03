@@ -27,6 +27,7 @@
     "color",
     "contrib",
     "cooldown",
+    "forloop",
     "Formset",
     "gethostname",
     "govuk",
