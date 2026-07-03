@@ -427,4 +427,4 @@ class TestProjectCreateFlow:
             role="admin",
         ).exists()
         assert "project_create" not in client.session
-        assert client.session["project_user_add_selection"] == {}
+        assert "project_user_add_selection" not in client.session

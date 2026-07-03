@@ -31,14 +31,26 @@ class TestServiceNavigationItems:
         assert "Data factories" in names
         assert "Home" not in names
 
-    @pytest.mark.parametrize("path", ["/app/", "/app/projects/"])
-    def test_returns_app_only_nav_for_app_routes(self, rf, user, path):
+    @pytest.mark.parametrize(
+        ("path", "expected_active_name"),
+        [
+            ("/app/", "Home"),
+            ("/app/projects/", "Projects"),
+        ],
+    )
+    def test_returns_app_only_nav_for_app_routes(self, rf, user, path, expected_active_name):
         request = rf.get(path)
         request.user = user
 
         items = _service_navigation_items_for_request(request)
 
-        assert items == [{"name": "Home", "url": "/app/", "active": True}]
+        assert [item["name"] for item in items] == ["Home", "Projects"]
+
+        for item in items:
+            if item["name"] == expected_active_name:
+                assert item["active"] is True
+            else:
+                assert "active" not in item
 
     def test_each_item_has_name_and_url(self, rf, anonymous_user):
         request = rf.get("/")
@@ -49,31 +61,32 @@ class TestServiceNavigationItems:
         for item in items:
             assert "name" in item
             assert "url" in item
-            assert "active" in item
 
     @pytest.mark.parametrize(
-        "path",
+        ("path", "expected_active_name"),
         [
-            "/roadmap/",
-            "/roadmap/2025/",
-            "/data-factories/",
-            "/data-factories/analytics/",
-            "/app/",
-            "/app/projects/",
-            "/other/",
+            ("/roadmap/", "Roadmap"),
+            ("/roadmap/2025/", "Roadmap"),
+            ("/data-factories/", "Data factories"),
+            ("/data-factories/analytics/", "Data factories"),
+            ("/app/", "Home"),
+            ("/app/projects/", "Projects"),
+            ("/other/", None),
         ],
     )
-    def test_active_flag_set_for_matching_path_prefix(self, rf, anonymous_user, path):
+    def test_active_flag_set_for_matching_path_prefix(
+        self, rf, anonymous_user, path, expected_active_name
+    ):
         request = rf.get(path)
         request.user = anonymous_user
 
         items = _service_navigation_items_for_request(request)
 
         for item in items:
-            if path.startswith(item["url"]):
+            if item["name"] == expected_active_name:
                 assert item["active"] is True
-                continue
-            assert item["active"] is False
+            else:
+                assert "active" not in item
 
 
 class TestServiceNavigationContextProcessor:
