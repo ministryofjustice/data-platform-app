@@ -4,7 +4,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.forms import BaseFormSet, formset_factory
 
-from projects.models import ProjectUserPermissions
+from projects.models import Project, ProjectUserPermissions
 from users.models import User
 
 
@@ -16,19 +16,14 @@ class ProjectAddMemberForm(forms.Form):
         empty_label="Select an email address",
     )
 
-    def __init__(self, *args, project, **kwargs):
+    def __init__(self, *args, project=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.project = project
-        self.fields["user"].queryset = (
-            User.objects.exclude(
-                projects=self.project,
-            )
-            .exclude(
-                email="",
-            )
-            .order_by("email")
-            .distinct()
-        )
+        queryset = User.objects.exclude(email="").order_by("email").distinct()
+        if self.project is not None:
+            queryset = queryset.exclude(projects=self.project)
+
+        self.fields["user"].queryset = queryset
         self.fields["user"].label_from_instance = lambda user: user.email
 
         prefix_template = "members-%index%"
@@ -50,7 +45,7 @@ class ProjectAddMemberForm(forms.Form):
 
 
 class BaseProjectAddMemberFormSet(BaseFormSet):
-    def __init__(self, *args, project, **kwargs):
+    def __init__(self, *args, project=None, **kwargs):
         self.project = project
         self.selected_user_ids: list[int] = []
         super().__init__(*args, **kwargs)
@@ -76,14 +71,15 @@ class BaseProjectAddMemberFormSet(BaseFormSet):
         if duplicate_user_ids:
             raise ValidationError("You cannot add the same user more than once.")
 
-        existing_memberships = ProjectUserPermissions.objects.filter(
-            project=self.project,
-            user_id__in=selected_user_ids,
-        )
-        if existing_memberships.exists():
-            raise ValidationError(
-                "One or more selected users are already members of this project."
+        if self.project is not None:
+            existing_memberships = ProjectUserPermissions.objects.filter(
+                project=self.project,
+                user_id__in=selected_user_ids,
             )
+            if existing_memberships.exists():
+                raise ValidationError(
+                    "One or more selected users are already members of this project."
+                )
 
         self.selected_user_ids = selected_user_ids
 
@@ -101,4 +97,29 @@ def build_project_add_member_formset(*, project, data=None, initial=None, extra=
         prefix="members",
         form_kwargs={"project": project},
         project=project,
+    )
+
+
+class ProjectCreateForm(forms.ModelForm):
+    class Meta:
+        model = Project
+        fields = ["name", "description", "business_unit"]
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "govuk-input"}),
+            "description": forms.Textarea(attrs={"class": "govuk-textarea", "rows": 5}),
+            "business_unit": forms.Select(attrs={"class": "govuk-select"}),
+        }
+        labels = {
+            "business_unit": "Business unit",
+        }
+
+
+class ProjectCreateAddUsersDecisionForm(forms.Form):
+    add_user = forms.ChoiceField(
+        label="Do you want to add project members now?",
+        choices=(("yes", "Yes"), ("no", "No")),
+        widget=forms.RadioSelect,
+        error_messages={
+            "required": "Select yes if you want to add project members now.",
+        },
     )

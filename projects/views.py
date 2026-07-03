@@ -3,19 +3,65 @@ from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.urls.base import reverse_lazy
+from django.utils.text import slugify
 from django.views.generic.base import View
 from django.views.generic.detail import DetailView
 from django.views.generic.edit import DeleteView, FormView
 from django.views.generic.list import ListView
 
-from projects.forms import build_project_add_member_formset
-from projects.models import Project, ProjectUserPermissions
+from projects.forms import (
+    ProjectCreateAddUsersDecisionForm,
+    ProjectCreateForm,
+    build_project_add_member_formset,
+)
+from projects.models import BusinessUnit, Project, ProjectUserPermissions
 from users.models import User
 
 ADD_USER_SESSION_KEY = "project_user_add_selection"
+PROJECT_CREATE_SESSION_KEY = "project_create"
+USER_BUCKET_SESSION_KEY = "project_create_user_add"
 
 
-# Create your views here.
+def clear_project_create_session(request):
+    request.session.pop(PROJECT_CREATE_SESSION_KEY, None)
+    request.session.pop(ADD_USER_SESSION_KEY, None)
+
+
+class ProjectUserSelectionSessionMixin:
+    def get_project(self):
+        return None
+
+    def get_user_bucket_key(self):
+        raise NotImplementedError
+
+    def get_selected_user_ids(self):
+        session_map = self.request.session.get(ADD_USER_SESSION_KEY, {})
+        return [int(user_id) for user_id in session_map.get(self.get_user_bucket_key(), [])]
+
+    def set_selected_user_ids(self, user_ids):
+        session_map = self.request.session.get(ADD_USER_SESSION_KEY, {})
+        session_map[self.get_user_bucket_key()] = list(user_ids)
+        self.request.session[ADD_USER_SESSION_KEY] = session_map
+
+    def clear_selected_user_ids(self):
+        session_map = self.request.session.get(ADD_USER_SESSION_KEY, {})
+        session_map.pop(self.get_user_bucket_key(), None)
+        self.request.session[ADD_USER_SESSION_KEY] = session_map
+
+
+class ExistingProjectMixin:
+    def get_project(self):
+        if not hasattr(self, "_project"):
+            self._project = get_object_or_404(
+                Project.objects.filter(user_permissions__user=self.request.user).distinct(),
+                slug=self.kwargs["slug"],
+            )
+        return self._project
+
+    def get_user_bucket_key(self):
+        return f"project:{self.get_project().id}"
+
+
 class ProjectListView(ListView):
     template_name = "projects/list.html"
     context_object_name = "user_projects"
@@ -27,6 +73,12 @@ class ProjectListView(ListView):
         Code will be deleted once user auth is implemented
         """
         return self.request.user.projects.distinct()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        clear_project_create_session(self.request)
+        context["success_message"] = self.request.session.pop("success_message", None)
+        return context
 
 
 class ProjectDetailView(DetailView):
@@ -46,6 +98,168 @@ class ProjectDetailView(DetailView):
         context = super().get_context_data(**kwargs)
         context["success_message"] = self.request.session.pop("success_message", None)
         return context
+
+
+class ProjectCreateView(FormView):
+    template_name = "projects/create.html"
+    form_class = ProjectCreateForm
+
+    def get_initial(self):
+        project_data = self.request.session.get(PROJECT_CREATE_SESSION_KEY, {})
+        return {
+            "name": project_data.get("name", ""),
+            "description": project_data.get("description", ""),
+            "business_unit": project_data.get("business_unit_id"),
+        }
+
+    def form_valid(self, form):
+        cleaned = form.cleaned_data
+        self.request.session[PROJECT_CREATE_SESSION_KEY] = {
+            "name": cleaned["name"],
+            "description": cleaned["description"],
+            "business_unit_id": cleaned["business_unit"].id,
+        }
+        return redirect(self.get_success_url())
+
+    def get_success_url(self):
+        return reverse("projects:project_create_add_users")
+
+
+class ProjectUserSelectionFormView(ProjectUserSelectionSessionMixin, FormView):
+    template_name = "projects/user-add.html"
+
+    def get_success_url(self):
+        raise NotImplementedError
+
+    def get_form(self, form_class=None):
+        data = self.request.POST if self.request.method == "POST" else None
+        initial = None
+        extra = 1
+
+        if self.request.method == "GET":
+            selected_user_ids = self.get_selected_user_ids()
+            if selected_user_ids:
+                initial = [{"user": user_id} for user_id in selected_user_ids]
+                extra = 0
+
+        return build_project_add_member_formset(
+            project=self.get_project(),
+            data=data,
+            initial=initial,
+            extra=extra,
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["formset"] = context["form"]
+        context["project"] = self.get_project()
+        return context
+
+    def form_valid(self, form):
+        self.set_selected_user_ids(form.selected_user_ids)
+        return redirect(self.get_success_url())
+
+
+class ProjectCreateAddUsersView(ProjectUserSelectionFormView):
+    template_name = "projects/create-user-add.html"
+
+    def get_user_bucket_key(self):
+        return USER_BUCKET_SESSION_KEY
+
+    def get_success_url(self):
+        return reverse("projects:project_create_confirm")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["project"] = self.request.session.get(PROJECT_CREATE_SESSION_KEY, {})
+        context.setdefault("decision_form", self.get_decision_form())
+        return context
+
+    def get_decision_form(self):
+        data = self.request.POST if self.request.method == "POST" else None
+        initial = None
+        if self.request.method == "GET" and self.get_selected_user_ids():
+            initial = {"add_user": "yes"}
+        return ProjectCreateAddUsersDecisionForm(data=data, initial=initial)
+
+    def form_invalid(self, form):
+        return self.render_to_response(
+            self.get_context_data(form=form, decision_form=self.get_decision_form())
+        )
+
+    def post(self, request, *args, **kwargs):
+        decision_form = self.get_decision_form()
+        if not decision_form.is_valid():
+            formset = self.get_form()
+            return self.render_to_response(
+                self.get_context_data(form=formset, decision_form=decision_form)
+            )
+
+        if decision_form.cleaned_data["add_user"] == "no":
+            self.clear_selected_user_ids()
+            return redirect("projects:project_create_confirm")
+
+        return super().post(request, *args, **kwargs)
+
+
+class ProjectCreateConfirmView(ProjectUserSelectionSessionMixin, View):
+    template_name = "projects/create-confirm.html"
+
+    def get_user_bucket_key(self):
+        return USER_BUCKET_SESSION_KEY
+
+    def get_selected_users(self):
+        selected_user_ids = self.get_selected_user_ids()
+        return User.objects.filter(id__in=selected_user_ids).order_by("email")
+
+    def get(self, request, *args, **kwargs):
+        project_data = self.request.session.get(PROJECT_CREATE_SESSION_KEY, {})
+        business_unit_id = project_data.get("business_unit_id")
+        business_unit = get_object_or_404(BusinessUnit, pk=business_unit_id)
+        selected_users = list(self.get_selected_users())
+
+        context = {
+            "project": project_data,
+            "business_unit": business_unit,
+            "selected_users": selected_users,
+        }
+        return render(request, self.template_name, context)
+
+    def post(self, request, *args, **kwargs):
+        project_data = self.request.session.get(PROJECT_CREATE_SESSION_KEY, {})
+        with transaction.atomic():
+            project = Project.objects.create(
+                name=project_data["name"],
+                description=project_data["description"],
+                business_unit_id=project_data["business_unit_id"],
+                created_by=self.request.user,
+                slug=slugify(project_data["name"]),
+            )
+            selected_user_ids = self.get_selected_user_ids()
+
+            # ensure the owner is included
+            owner_user_id = self.request.user.id
+            if owner_user_id not in selected_user_ids:
+                selected_user_ids.append(owner_user_id)
+
+            ProjectUserPermissions.objects.bulk_create(
+                [
+                    ProjectUserPermissions(
+                        project=project,
+                        user_id=user_id,
+                        role="admin",
+                    )
+                    for user_id in selected_user_ids
+                ],
+                ignore_conflicts=True,
+            )
+
+        clear_project_create_session(self.request)
+        request.session["success_message"] = {
+            "heading": "Project created",
+        }
+
+        return redirect("projects:project_detail", slug=project.slug)
 
 
 class ProjectUsersDetailView(DetailView):
@@ -86,6 +300,13 @@ class ProjectDeleteView(DeleteView):
     def get_queryset(self):
         return Project.objects.filter(user_permissions__user=self.request.user).distinct()
 
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        self.request.session["success_message"] = {
+            "heading": "Project deleted",
+        }
+        return response
+
 
 class ProjectAddUsersBaseView(View):
     def get_project(self):
@@ -110,32 +331,8 @@ class ProjectAddUsersBaseView(View):
         self.request.session.pop(ADD_USER_SESSION_KEY, None)
 
 
-class ProjectAddUsersView(ProjectAddUsersBaseView, FormView):
+class ProjectAddUsersView(ExistingProjectMixin, ProjectUserSelectionFormView):
     template_name = "projects/user-add.html"
-
-    def get_form(self, form_class=None):
-        data = self.request.POST if self.request.method == "POST" else None
-        initial = None
-        extra = 1
-
-        if self.request.method == "GET":
-            selected_user_ids = self.get_selected_user_ids()
-            if selected_user_ids:
-                initial = [{"user": user_id} for user_id in selected_user_ids]
-                extra = 0
-
-        return build_project_add_member_formset(
-            project=self.get_project(),
-            data=data,
-            initial=initial,
-            extra=extra,
-        )
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["project"] = self.get_project()
-        context["formset"] = context["form"]
-        return context
 
     def get_success_url(self):
         return reverse(
@@ -143,12 +340,8 @@ class ProjectAddUsersView(ProjectAddUsersBaseView, FormView):
             kwargs={"slug": self.get_project().slug},
         )
 
-    def form_valid(self, form):
-        self.set_selected_user_ids(form.selected_user_ids)
-        return redirect(self.get_success_url())
 
-
-class ProjectAddUsersConfirmView(ProjectAddUsersBaseView):
+class ProjectAddUsersConfirmView(ExistingProjectMixin, ProjectUserSelectionSessionMixin, View):
     template_name = "projects/user-add-confirm.html"
 
     def get_selected_users(self):

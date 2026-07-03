@@ -131,7 +131,7 @@ class TestProjectAddUsersFlow:
 
         session = client.session
         session["project_user_add_selection"] = {
-            str(project.id): [selected_user_one.id, selected_user_two.id]
+            f"project:{project.id}": [selected_user_one.id, selected_user_two.id]
         }
         session.save()
 
@@ -206,7 +206,7 @@ class TestProjectAddUsersFlow:
         selected_user = baker.make("users.User", email="member.three@example.com")
         client.force_login(user)
         session = client.session
-        session["project_user_add_selection"] = {str(project.id): [selected_user.id]}
+        session["project_user_add_selection"] = {f"project:{project.id}": [selected_user.id]}
         session.save()
 
         response = client.get(reverse("projects:project_users_add_confirm", args=[project.slug]))
@@ -220,7 +220,7 @@ class TestProjectAddUsersFlow:
         selected_user = baker.make("users.User", email="member.four@example.com")
         client.force_login(user)
         session = client.session
-        session["project_user_add_selection"] = {str(project.id): [selected_user.id]}
+        session["project_user_add_selection"] = {f"project:{project.id}": [selected_user.id]}
         session.save()
 
         response = client.post(reverse("projects:project_users_add_confirm", args=[project.slug]))
@@ -249,3 +249,182 @@ class TestProjectsListView:
         response = client.get(reverse("projects:projects_list"))
 
         assert response.status_code == 200
+
+
+class TestProjectCreateFlow:
+    """Tests for ProjectCreateView, ProjectCreateAddUsersView, and ProjectCreateConfirmView."""
+
+    def test_create_page_renders(self, client, user):
+        client.force_login(user)
+
+        response = client.get(reverse("projects:project_create"))
+
+        assert response.status_code == 200
+        assert "projects/create.html" in [t.name for t in response.templates]
+
+    def test_create_page_repopulates_from_session(self, client, user):
+        business_unit = baker.make("projects.BusinessUnit")
+        client.force_login(user)
+
+        session = client.session
+        session["project_create"] = {
+            "name": "Session Project",
+            "description": "Saved description",
+            "business_unit_id": business_unit.id,
+        }
+        session.save()
+
+        response = client.get(reverse("projects:project_create"))
+
+        assert response.status_code == 200
+        form = response.context["form"]
+        assert form.initial["name"] == "Session Project"
+        assert form.initial["description"] == "Saved description"
+        assert form.initial["business_unit"] == business_unit.id
+
+    def test_create_post_stores_session_and_redirects(self, client, user):
+        business_unit = baker.make("projects.BusinessUnit")
+        client.force_login(user)
+
+        response = client.post(
+            reverse("projects:project_create"),
+            data={
+                "name": "Create Wizard Project",
+                "description": "Project description",
+                "business_unit": business_unit.id,
+            },
+        )
+
+        assert response.status_code == 302
+        assert response.url == reverse("projects:project_create_add_users")
+
+        session = client.session
+        assert session["project_create"] == {
+            "name": "Create Wizard Project",
+            "description": "Project description",
+            "business_unit_id": business_unit.id,
+        }
+
+    def test_create_add_users_page_renders(self, client, user):
+        client.force_login(user)
+
+        response = client.get(reverse("projects:project_create_add_users"))
+
+        assert response.status_code == 200
+        assert "projects/create-user-add.html" in [t.name for t in response.templates]
+        assert "decision_form" in response.context
+        assert "formset" in response.context
+
+    def test_create_add_users_shows_decision_error_when_missing(self, client, user):
+        client.force_login(user)
+
+        response = client.post(reverse("projects:project_create_add_users"), data={})
+
+        assert response.status_code == 200
+        assert "Select yes if you want to add project members now." in response.content.decode()
+
+    def test_create_add_users_no_redirects_and_clears_selection(self, client, user):
+        selected_user = baker.make("users.User", email="skip.member@example.com")
+        client.force_login(user)
+
+        session = client.session
+        session["project_user_add_selection"] = {"project_create_user_add": [selected_user.id]}
+        session.save()
+
+        response = client.post(
+            reverse("projects:project_create_add_users"),
+            data={"add_user": "no"},
+        )
+
+        assert response.status_code == 302
+        assert response.url == reverse("projects:project_create_confirm")
+
+        session = client.session
+        assert session["project_user_add_selection"] == {}
+
+    def test_create_add_users_yes_submits_and_stores_selection(self, client, user):
+        selected_user = baker.make("users.User", email="create.member@example.com")
+        client.force_login(user)
+
+        response = client.post(
+            reverse("projects:project_create_add_users"),
+            data={
+                "add_user": "yes",
+                "members-TOTAL_FORMS": "1",
+                "members-INITIAL_FORMS": "0",
+                "members-MIN_NUM_FORMS": "0",
+                "members-MAX_NUM_FORMS": "1000",
+                "members-0-user": str(selected_user.id),
+            },
+        )
+
+        assert response.status_code == 302
+        assert response.url == reverse("projects:project_create_confirm")
+
+        session = client.session
+        assert session["project_user_add_selection"]["project_create_user_add"] == [
+            selected_user.id
+        ]
+
+    def test_create_add_users_prefills_yes_when_selection_exists(self, client, user):
+        selected_user = baker.make("users.User", email="existing.selection@example.com")
+        client.force_login(user)
+
+        session = client.session
+        session["project_user_add_selection"] = {"project_create_user_add": [selected_user.id]}
+        session.save()
+
+        response = client.get(reverse("projects:project_create_add_users"))
+
+        assert response.status_code == 200
+        decision_form = response.context["decision_form"]
+        assert decision_form["add_user"].value() == "yes"
+
+    def test_create_confirm_page_renders_project_data_and_members(self, client, user):
+        business_unit = baker.make("projects.BusinessUnit", name="Data Unit")
+        selected_user = baker.make("users.User", email="confirm.member@example.com")
+        client.force_login(user)
+
+        session = client.session
+        session["project_create"] = {
+            "name": "Confirm Project",
+            "description": "Confirm description",
+            "business_unit_id": business_unit.id,
+        }
+        session["project_user_add_selection"] = {"project_create_user_add": [selected_user.id]}
+        session.save()
+
+        response = client.get(reverse("projects:project_create_confirm"))
+
+        assert response.status_code == 200
+        assert "projects/create-confirm.html" in [t.name for t in response.templates]
+        assert "Confirm Project" in response.content.decode()
+        assert business_unit.name in response.content.decode()
+        assert selected_user.email in response.content.decode()
+
+    def test_create_confirm_post_creates_project_and_memberships(self, client, user):
+        business_unit = baker.make("projects.BusinessUnit")
+        selected_user = baker.make("users.User", email="create.final@example.com")
+        client.force_login(user)
+
+        session = client.session
+        session["project_create"] = {
+            "name": "Final Creation Project",
+            "description": "Final description",
+            "business_unit_id": business_unit.id,
+        }
+        session["project_user_add_selection"] = {"project_create_user_add": [selected_user.id]}
+        session.save()
+
+        response = client.post(reverse("projects:project_create_confirm"))
+
+        project = Project.objects.get(name="Final Creation Project")
+        assert response.status_code == 302
+        assert response.url == reverse("projects:project_detail", args=[project.slug])
+        assert ProjectUserPermissions.objects.filter(
+            project=project,
+            user=selected_user,
+            role="admin",
+        ).exists()
+        assert "project_create" not in client.session
+        assert client.session["project_user_add_selection"] == {}

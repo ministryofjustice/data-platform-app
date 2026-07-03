@@ -1,0 +1,118 @@
+{% extends "base/base.html" %}
+{% block title %}
+  Create a project - add users - Justice Data Platform | Ministry of Justice
+{% endblock title %}
+{% block back_link %}
+  <a href="{% url 'projects:project_create' %}" class="govuk-back-link">Back</a>
+{% endblock back_link %}
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      {% if decision_form.errors or form.total_error_count %}
+        <div class="govuk-error-summary" data-module="govuk-error-summary">
+          <div role="alert">
+            <h2 class="govuk-error-summary__title">There is a problem</h2>
+            <div class="govuk-error-summary__body">
+              <ul class="govuk-list govuk-error-summary__list">
+                {% for error in decision_form.non_field_errors %}
+                  <li>{{ error }}</li>
+                {% endfor %}
+                {% for error in decision_form.add_user.errors %}
+                  <li>
+                    <a href="#{{ decision_form.add_user.id_for_label }}">{{ error }}</a>
+                  </li>
+                {% endfor %}
+                {% for error in form.non_form_errors %}
+                  <li>{{ error }}</li>
+                {% endfor %}
+                {% for member_form in form %}
+                  {% for error in member_form.user.errors %}
+                    <li>
+                      <a href="#{{ member_form.user.id_for_label }}">{{ error }}</a>
+                    </li>
+                  {% endfor %}
+                {% endfor %}
+              </ul>
+            </div>
+          </div>
+        </div>
+      {% endif %}
+      <h1 class="govuk-heading-l">Add members</h1>
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="govuk-form-group{% if decision_form.add_user.errors %} govuk-form-group--error{% endif %}">
+          <fieldset class="govuk-fieldset" aria-describedby="changedName-hint">
+            <legend class="govuk-fieldset__legend govuk-fieldset__legend--l"></legend>
+            <h3 class="govuk-heading-m">Do you want to add project members now?</h3>
+            <div class="govuk-hint">You can also add members later</div>
+            {% for error in decision_form.add_user.errors %}
+              <p class="govuk-error-message">
+                <span class="govuk-visually-hidden">Error:</span>
+                {{ error }}
+              </p>
+            {% endfor %}
+            <div class="govuk-radios govuk-radios--inline" data-module="govuk-radios">
+              <div class="govuk-radios__item">
+                <input class="govuk-radios__input"
+                       id="add_user_yes"
+                       name="add_user"
+                       type="radio"
+                       value="yes"
+                       data-aria-controls="conditional-yes"
+                       {% if decision_form.add_user.value == 'yes' %}checked{% endif %}>
+                <label class="govuk-label govuk-radios__label" for="add_user_yes">Yes</label>
+              </div>
+              <div class="govuk-radios__item">
+                <input class="govuk-radios__input"
+                       id="add_user_no"
+                       name="add_user"
+                       type="radio"
+                       value="no"
+                       {% if decision_form.add_user.value == 'no' %}checked{% endif %}>
+                <label class="govuk-label govuk-radios__label" for="add_user_no">No</label>
+              </div>
+            </div>
+            <div class="govuk-radios__conditional govuk-radios__conditional--hidden"
+                 id="conditional-yes">
+              {{ formset.management_form }}
+              <div class="moj-add-another" data-module="moj-add-another">
+                {% for form in formset %}
+                  <div class="moj-add-another__item">
+                    <legend class="govuk-fieldset__legend moj-add-another__title govuk-fieldset__legend--m">
+                      Email
+                    </legend>
+                    <div class="govuk-form-group{% if form.user.errors %} govuk-form-group--error{% endif %}">
+                      <label class="govuk-label" for="{{ form.user.id_for_label }}">Enter an email address to add a project member</label>
+                      {% if form.user.errors %}
+                        {% for error in form.user.errors %}
+                          <p class="govuk-error-message">
+                            <span class="govuk-visually-hidden">Error:</span>
+                            {{ error }}
+                          </p>
+                        {% endfor %}
+                      {% endif %}
+                      {{ form.user }}
+                    </div>
+                    {% if formset.total_form_count > 1 %}
+                      <button type="button"
+                              class="govuk-button govuk-button--secondary moj-add-another__remove-button">
+                        Remove
+                      </button>
+                    {% endif %}
+                  </div>
+                {% endfor %}
+                <button type="button"
+                        class="govuk-button govuk-button--secondary moj-add-another__add-button govuk-!-margin-top-2">
+                  Add another member
+                </button>
+              </div>
+            </fieldset>
+          </div>
+          <div class="govuk-button-group">
+            <button type="submit" class="govuk-button">Continue</button>
+            <a href="{% url 'projects:projects_list' %}" class="govuk-link">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  {% endblock content %}
