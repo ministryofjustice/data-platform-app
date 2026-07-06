@@ -81,7 +81,7 @@
                     <legend class="govuk-fieldset__legend moj-add-another__title govuk-fieldset__legend--m">
                       Email
                     </legend>
-                    <div class="govuk-form-group{% if form.user.errors or formset.non_form_errors %} govuk-form-group--error{% endif %}">
+                    <div class="govuk-form-group{% if form.user.errors or formset.non_form_errors and forloop.first %} govuk-form-group--error{% endif %}">
                       <label class="govuk-label" for="{{ form.user.id_for_label }}">Enter an email address to add a project member</label>
                       {% if formset.non_form_errors and forloop.first %}
                         {% for error in formset.non_form_errors %}
