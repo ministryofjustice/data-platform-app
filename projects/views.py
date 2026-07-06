@@ -322,6 +322,7 @@ class ProjectDeleteView(DeleteView):
             user_permissions__user=self.request.user,
             user_permissions__role="admin",
         ).distinct()
+
     def form_valid(self, form):
         response = super().form_valid(form)
         self.request.session["success_message"] = {
