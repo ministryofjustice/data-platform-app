@@ -331,29 +331,6 @@ class ProjectDeleteView(DeleteView):
         return response
 
 
-class ProjectAddUsersBaseView(View):
-    def get_project(self):
-        if not hasattr(self, "_project"):
-            self._project = get_object_or_404(
-                Project.objects.filter(user_permissions__user=self.request.user).distinct(),
-                slug=self.kwargs["slug"],
-            )
-        return self._project
-
-    def get_selected_user_ids(self):
-        project_id_map = self.request.session.get(ADD_USER_SESSION_KEY, {})
-        selected_user_ids = project_id_map.get(str(self.get_project().id), [])
-        return [int(user_id) for user_id in selected_user_ids]
-
-    def set_selected_user_ids(self, user_ids):
-        project_id_map = self.request.session.get(ADD_USER_SESSION_KEY, {})
-        project_id_map[str(self.get_project().id)] = user_ids
-        self.request.session[ADD_USER_SESSION_KEY] = project_id_map
-
-    def clear_selected_user_ids(self):
-        self.request.session.pop(ADD_USER_SESSION_KEY, None)
-
-
 class ProjectAddUsersView(ExistingProjectMixin, ProjectUserSelectionFormView):
     template_name = "projects/user-add.html"
 
