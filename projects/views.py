@@ -182,6 +182,21 @@ class ProjectCreateAddUsersView(ProjectUserSelectionFormView):
             initial = {"add_user": "yes"}
         return ProjectCreateAddUsersDecisionForm(data=data, initial=initial)
 
+    def get_unbound_formset(self):
+        initial = None
+        extra = 1
+        selected_user_ids = self.get_selected_user_ids()
+        if selected_user_ids:
+            initial = [{"user": user_id} for user_id in selected_user_ids]
+            extra = 0
+
+        return build_project_add_member_formset(
+            project=self.get_project(),
+            data=None,
+            initial=initial,
+            extra=extra,
+        )
+
     def form_invalid(self, form):
         return self.render_to_response(
             self.get_context_data(form=form, decision_form=self.get_decision_form())
@@ -190,9 +205,11 @@ class ProjectCreateAddUsersView(ProjectUserSelectionFormView):
     def post(self, request, *args, **kwargs):
         decision_form = self.get_decision_form()
         if not decision_form.is_valid():
-            formset = self.get_form()
             return self.render_to_response(
-                self.get_context_data(form=formset, decision_form=decision_form)
+                self.get_context_data(
+                    form=self.get_unbound_formset(),
+                    decision_form=decision_form,
+                )
             )
 
         if decision_form.cleaned_data["add_user"] == "no":
