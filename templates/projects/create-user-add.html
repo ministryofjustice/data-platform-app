@@ -41,10 +41,10 @@
       <form method="post" novalidate>
         {% csrf_token %}
         <div class="govuk-form-group{% if decision_form.add_user.errors %} govuk-form-group--error{% endif %}">
-          <fieldset class="govuk-fieldset" aria-describedby="changedName-hint">
+          <fieldset class="govuk-fieldset" aria-describedby="add-user-hint">
             <legend class="govuk-fieldset__legend govuk-fieldset__legend--l"></legend>
             <h3 class="govuk-heading-m">Do you want to add project members now?</h3>
-            <div class="govuk-hint">You can also add members later</div>
+            <div class="govuk-hint" id="add-user-hint">You can also add members later</div>
             {% for error in decision_form.add_user.errors %}
               <p class="govuk-error-message">
                 <span class="govuk-visually-hidden">Error:</span>
