@@ -53,7 +53,10 @@ class ExistingProjectMixin:
     def get_project(self):
         if not hasattr(self, "_project"):
             self._project = get_object_or_404(
-                Project.objects.filter(user_permissions__user=self.request.user).distinct(),
+                Project.objects.filter(
+                    user_permissions__user=self.request.user,
+                    user_permissions__role="admin",
+                ).distinct(),
                 slug=self.kwargs["slug"],
             )
         return self._project
