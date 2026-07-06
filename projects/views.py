@@ -318,8 +318,10 @@ class ProjectDeleteView(DeleteView):
     success_url = reverse_lazy("projects:projects_list")
 
     def get_queryset(self):
-        return Project.objects.filter(user_permissions__user=self.request.user).distinct()
-
+        return Project.objects.filter(
+            user_permissions__user=self.request.user,
+            user_permissions__role="admin",
+        ).distinct()
     def form_valid(self, form):
         response = super().form_valid(form)
         self.request.session["success_message"] = {
