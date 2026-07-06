@@ -35,7 +35,7 @@ class BusinessUnit(TimeStampedModel):
 class Project(TimeStampedModel):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField()
-    slug = models.SlugField(unique=True)
+    slug = models.SlugField(max_length=120, unique=True)
     users = models.ManyToManyField(
         "users.User",
         related_name="projects",
