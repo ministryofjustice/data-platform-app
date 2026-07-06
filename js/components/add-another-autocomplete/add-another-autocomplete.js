@@ -65,12 +65,16 @@ const AddAnotherAutocomplete = {
             .forEach((element) => element.remove());
 
           // Remove copied validation state from cloned rows.
-          newItem.querySelectorAll(".govuk-error-message").forEach((element) => {
-            element.remove();
-          });
-          newItem.querySelectorAll(".govuk-form-group--error").forEach((element) => {
-            element.classList.remove("govuk-form-group--error");
-          });
+          newItem
+            .querySelectorAll(".govuk-error-message")
+            .forEach((element) => {
+              element.remove();
+            });
+          newItem
+            .querySelectorAll(".govuk-form-group--error")
+            .forEach((element) => {
+              element.classList.remove("govuk-form-group--error");
+            });
 
           select.value = "";
           select.selectedIndex = 0;
