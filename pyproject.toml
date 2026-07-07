@@ -10,6 +10,7 @@ dependencies = [
     "django-extensions==4.1",
     "django-simple-history==3.11.0",
     "gunicorn==26.0.0",
+    "httpx==0.28.1",
     "model-bakery==1.23.5",
     "python-dotenv==1.2.2",
     "psycopg[binary]==3.3.4",
@@ -54,7 +55,7 @@ select = [
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "data_platform_app.settings.test"
-addopts = "-v --tb=auto --cov=data_platform_app --cov=users --cov=projects --cov-branch --cov-report=term-missing --cov-report=xml --cov-fail-under=90"
+addopts = "-v --tb=auto --cov=data_platform_app --cov=users --cov=projects --cov=ai_gateway --cov-branch --cov-report=term-missing --cov-report=xml --cov-fail-under=90"
 testpaths = ["tests"]
 
 [tool.coverage.run]

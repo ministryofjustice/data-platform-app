@@ -148,6 +148,17 @@ make start-ai-gateway
 
 You can then access the AI Gateway at <http://localhost:4000>. The username is `admin` and the password is the value of `LITELLM_MASTER_KEY` in [contrib/docker-compose-ai-gateway.yml](./contrib/docker-compose-ai-gateway.yml).
 
+To have this Django app use your local gateway, add these variables to your `.env`:
+
+```bash
+AI_GATEWAY_URL=http://localhost:4000
+AI_GATEWAY_MASTER_KEY=sk-123456789: # gitleaks:allow
+```
+
+`AI_GATEWAY_MASTER_KEY` must match the gateway's `LITELLM_MASTER_KEY` value. If you changed it in Docker compose or your environment, use that value instead.
+
+After updating `.env`, restart the Django app (`make run`) so the new settings are loaded.
+
 You can also connect to it programmatically using cURL, for example
 
 ```bash

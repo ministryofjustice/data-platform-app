@@ -1,0 +1,33 @@
+{% extends "base/base.html" %}
+{% load static %}
+{% block title %}
+  AI gateway key generated - {{ project.name }} - Justice Data Platform | Ministry of Justice
+{% endblock title %}
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <span class="govuk-caption-xl">{{ project.name }}</span>
+      <h1 class="govuk-heading-xl">Key generated</h1>
+      <div class="govuk-warning-text">
+        <span class="govuk-warning-text__icon" aria-hidden="true">!</span>
+        <strong class="govuk-warning-text__text">
+          <span class="govuk-visually-hidden">Warning</span>
+          Copy this key now. For security it will not be shown again.
+        </strong>
+      </div>
+      <span id="copy-alert" class="govuk-visually-hidden" aria-live="polite"></span>
+      <p class="govuk-body">
+        <code id="generated-key">{{ plaintext_key }}</code>
+      </p>
+      <button class="govuk-button copy-button"
+              type="button"
+              data-module="copy-button"
+              data-text-selector="#generated-key"
+              data-success-message="Key copied">Copy key</button>
+      <p class="govuk-body">
+        <a href="{% url 'ai_gateway:key_list' project.slug %}"
+           class="govuk-link">Return to AI gateway keys</a>
+      </p>
+    </div>
+  </div>
+{% endblock content %}

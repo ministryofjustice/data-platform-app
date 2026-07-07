@@ -1,0 +1,58 @@
+{% extends "base/base.html" %}
+{% load static %}
+{% block title %}
+  Generate an AI gateway key - {{ project.name }} - Justice Data Platform | Ministry of Justice
+{% endblock title %}
+{% block back_link %}
+  <a href="{% url 'ai_gateway:key_list' project.slug %}"
+     class="govuk-back-link">Back to AI gateway keys</a>
+{% endblock back_link %}
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <span class="govuk-caption-xl">{{ project.name }}</span>
+      <h1 class="govuk-heading-xl">Generate a key</h1>
+      <p class="govuk-body">
+        This generates a new AI gateway key for this project. The key is shown only once, so
+        copy it somewhere safe before leaving the page.
+      </p>
+      {% if form.errors %}
+        <div class="govuk-error-summary" data-module="govuk-error-summary">
+          <div role="alert">
+            <h2 class="govuk-error-summary__title">There is a problem</h2>
+            <div class="govuk-error-summary__body">
+              <ul class="govuk-list govuk-error-summary__list">
+                {% for error in form.name.errors %}
+                  <li><a href="#id_name">{{ error }}</a></li>
+                {% endfor %}
+              </ul>
+            </div>
+          </div>
+        </div>
+      {% endif %}
+      <form method="post" action="{% url 'ai_gateway:key_create' project.slug %}">
+        {% csrf_token %}
+        <div class="govuk-form-group{% if form.name.errors %} govuk-form-group--error{% endif %}">
+          <label class="govuk-label" for="id_name">Key name</label>
+          <div id="name-hint" class="govuk-hint">Use a unique, recognisable name for this project.</div>
+          {% for error in form.name.errors %}
+            <p id="name-error" class="govuk-error-message">
+              <span class="govuk-visually-hidden">Error:</span> {{ error }}
+            </p>
+          {% endfor %}
+          <input class="govuk-input govuk-!-width-two-thirds{% if form.name.errors %} govuk-input--error{% endif %}"
+                 id="id_name"
+                 name="name"
+                 type="text"
+                 value="{{ form.name.value|default:'' }}"
+                 aria-describedby="name-hint{% if form.name.errors %} name-error{% endif %}">
+        </div>
+        <div class="govuk-button-group">
+          <button type="submit" class="govuk-button">Generate key</button>
+          <a href="{% url 'ai_gateway:key_list' project.slug %}"
+             class="govuk-link">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock content %}

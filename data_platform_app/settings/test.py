@@ -22,6 +22,12 @@ PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 # Suppress emails during tests
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 
+# Dummy AI Gateway credentials so the suite is deterministic regardless of the
+# developer's environment. Tests stub the HTTP boundary, so these are never used
+# to make real calls.
+AI_GATEWAY_URL = "http://ai-gateway.test"
+AI_GATEWAY_MASTER_KEY = "sk-test-master-key"  # gitleaks:allow
+
 # Use non-manifest static storage in tests so static lookups do not require collectstatic.
 STORAGES["staticfiles"] = {  # type: ignore[index]  # noqa: F405
     "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
