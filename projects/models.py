@@ -1,3 +1,5 @@
+import uuid
+
 from django.db import models
 from django_extensions.db.models import TimeStampedModel
 from simple_history.models import HistoricalRecords
@@ -36,6 +38,7 @@ class Project(TimeStampedModel):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField()
     slug = models.SlugField(max_length=120, unique=True)
+    uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False, db_index=True)
     users = models.ManyToManyField(
         "users.User",
         related_name="projects",

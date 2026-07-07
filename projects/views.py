@@ -277,6 +277,7 @@ class ProjectCreateConfirmView(ProjectUserSelectionSessionMixin, View):
         clear_project_create_session(self.request)
         request.session["success_message"] = {
             "heading": "Project created",
+            "message": "You can now generate keys for the AI gateway API",
         }
 
         return redirect("projects:project_detail", slug=project.slug)
