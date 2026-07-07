@@ -58,6 +58,7 @@ class TestKeyServiceCreateKey:
         key = Key.objects.get(project=project)
         assert key.name == "primary-key"
         assert key.litellm_alias == alias_sent
+        assert key.litellm_secret == PLAINTEXT_KEY
         assert key.litellm_token == "tok-1"
         assert key.masked_key != PLAINTEXT_KEY
         assert PLAINTEXT_KEY not in key.masked_key

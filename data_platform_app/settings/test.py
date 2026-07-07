@@ -1,3 +1,5 @@
+from cryptography.fernet import Fernet
+
 from .common import *  # noqa: F401, F403
 
 SECRET_KEY = "test-secret-key-not-for-production"
@@ -32,3 +34,5 @@ AI_GATEWAY_MASTER_KEY = "sk-test-master-key"  # gitleaks:allow
 STORAGES["staticfiles"] = {  # type: ignore[index]  # noqa: F405
     "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
 }
+
+FIELD_ENCRYPTION_KEYS = [Fernet.generate_key().decode()]

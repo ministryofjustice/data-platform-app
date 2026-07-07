@@ -58,6 +58,7 @@ class KeyService:
             project=project,
             name=name,
             litellm_alias=litellm_alias,
+            litellm_secret=plaintext_key,
             litellm_token=data.get("token", ""),
             masked_key=self._mask_key(plaintext_key),
             created_by=created_by,

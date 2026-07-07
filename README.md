@@ -157,6 +157,23 @@ AI_GATEWAY_MASTER_KEY=sk-123456789: # gitleaks:allow
 
 `AI_GATEWAY_MASTER_KEY` must match the gateway's `LITELLM_MASTER_KEY` value. If you changed it in Docker compose or your environment, use that value instead.
 
+The app stores each generated key's secret encrypted at rest (Fernet), so you must
+also set a `FIELD_ENCRYPTION_KEY`. Generate one with:
+
+```bash
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
+Then add it to your `.env`:
+
+```bash
+FIELD_ENCRYPTION_KEY=your-generated-fernet-key
+```
+
+To rotate the encryption key later, set `FIELD_ENCRYPTION_KEY` to a comma-separated
+list with the new key first (e.g. `new-key,old-key`); all keys are tried when
+decrypting, while only the first is used to encrypt.
+
 After updating `.env`, restart the Django app (`make run`) so the new settings are loaded.
 
 You can also connect to it programmatically using cURL, for example

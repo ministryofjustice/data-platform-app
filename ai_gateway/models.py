@@ -2,6 +2,8 @@ from django.db import models
 from django_extensions.db.models import TimeStampedModel
 from simple_history.models import HistoricalRecords
 
+from ai_gateway.fields import EncryptedTextField
+
 
 class Team(TimeStampedModel):
     project = models.OneToOneField(
@@ -26,6 +28,7 @@ class Key(TimeStampedModel):
         related_name="ai_gateway_keys",
     )
     name = models.CharField(max_length=255)
+    litellm_secret = EncryptedTextField()
     litellm_alias = models.CharField(max_length=512, unique=True)
     litellm_token = models.CharField(max_length=255)
     masked_key = models.CharField(max_length=64)
@@ -34,7 +37,10 @@ class Key(TimeStampedModel):
         on_delete=models.SET_NULL,
         null=True,
     )
-    history = HistoricalRecords(table_name="ai_gateway_key_history")
+    history = HistoricalRecords(
+        table_name="ai_gateway_key_history",
+        excluded_fields=["litellm_secret"],
+    )
 
     class Meta:
         db_table = "ai_gateway_key"

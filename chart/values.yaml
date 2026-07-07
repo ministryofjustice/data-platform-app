@@ -103,6 +103,11 @@ app:
         secretKeyRef:
           name: app-secrets
           key: azure-client-secret
+    - name: FIELD_ENCRYPTION_KEY
+      valueFrom:
+        secretKeyRef:
+          name: app-secrets
+          key: field-encryption-key
     # avoid writing __pycache__ in read-only code paths
     - name: PYTHONDONTWRITEBYTECODE
       value: "1"

@@ -28,6 +28,7 @@
     "color",
     "contrib",
     "cooldown",
+    "fernet",
     "forloop",
     "Formset",
     "gethostname",
