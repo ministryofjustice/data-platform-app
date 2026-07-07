@@ -31,6 +31,7 @@ $masthead-background-color: #381a62;
 
 .govuk-service-navigation--inverse {
   background-color: $masthead-background-color;
+  -webkit-backface-visibility: hidden;
 
   .govuk-width-container {
     border-color: govuk-colour("white");
@@ -55,9 +56,9 @@ $masthead-background-color: #381a62;
 
 .masthead-image {
   display: block;
-  max-width: 80%;
+  max-width: 90%;
   height: auto;
-  margin-top: govuk-spacing(8);
+  margin-top: govuk-spacing(7);
 }
 
 .moj-button {
