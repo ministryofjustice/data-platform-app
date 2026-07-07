@@ -32,6 +32,7 @@ $masthead-background-color: #381a62;
 .govuk-service-navigation--inverse {
   background-color: $masthead-background-color;
   -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 
   .govuk-width-container {
     border-color: govuk-colour("white");
