@@ -89,7 +89,8 @@
                             {{ error }}
                           </p>
                         {% endfor %}
-                      {% elif form.user.errors %}
+                      {% endif %}
+                      {% if form.user.errors %}
                         {% for error in form.user.errors %}
                           <p class="govuk-error-message">
                             <span class="govuk-visually-hidden">Error:</span>
