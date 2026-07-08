@@ -25,13 +25,19 @@ function enhance(wrapper) {
   addSelect.setAttribute("aria-label", "Add a model");
 
   if (nativeSelect.id) {
-    addSelect.id = `${nativeSelect.id}__add`;
+    const nativeSelectId = nativeSelect.id;
 
-    // Keep the visible enhanced control associated with the existing label.
-    const label = wrapper.querySelector(`label[for="${nativeSelect.id}"]`);
-    if (label) {
-      label.setAttribute("for", addSelect.id);
-    }
+    // Preserve the original field id on the visible enhanced control so
+    // error-summary anchors (for example #id_models) still target it.
+    addSelect.id = nativeSelectId;
+    nativeSelect.id = `${nativeSelectId}__native`;
+  }
+
+  if (nativeSelect.getAttribute("aria-describedby")) {
+    addSelect.setAttribute(
+      "aria-describedby",
+      nativeSelect.getAttribute("aria-describedby"),
+    );
   }
 
   const control = document.createElement("div");

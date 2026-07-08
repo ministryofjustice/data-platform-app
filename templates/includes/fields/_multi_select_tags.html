@@ -3,16 +3,16 @@
   <select multiple>). Enhanced client-side by the app-multi-select-tags component.
 
   Expects:
-    field  - a bound MultipleChoiceField
-    label  - the field label text
-    hint   - optional hint text
+    field - a bound MultipleChoiceField
 {% endcomment %}
 <div class="govuk-form-group{% if field.errors %} govuk-form-group--error{% endif %}"
      data-module="app-multi-select-tags">
-  <label class="govuk-label" for="{{ field.id_for_label }}">{{ label }}</label>
-  {% if hint %}<div id="{{ field.name }}-hint" class="govuk-hint">{{ hint }}</div>{% endif %}
+  {% include "includes/fields/_label.html" with field=field attrs=field.field.widget.attrs only %}
+  {% if field.help_text %}
+    <div id="{{ field.html_name }}-hint" class="govuk-hint">{{ field.help_text }}</div>
+  {% endif %}
   {% for error in field.errors %}
-    <p id="{{ field.name }}-error" class="govuk-error-message">
+    <p id="{{ field.html_name }}-error" class="govuk-error-message">
       <span class="govuk-visually-hidden">Error:</span> {{ error }}
     </p>
   {% endfor %}
@@ -20,7 +20,7 @@
           id="{{ field.id_for_label }}"
           name="{{ field.html_name }}"
           multiple
-          aria-describedby="{% if hint %}{{ field.name }}-hint{% endif %}{% if field.errors %} {{ field.name }}-error{% endif %}">
+          aria-describedby="{% if field.help_text %}{{ field.html_name }}-hint{% endif %}{% if field.errors %} {{ field.html_name }}-error{% endif %}">
     {% for value, label_text in field.field.choices %}
       <option value="{{ value }}"
               {% if field.value and value in field.value %}selected{% endif %}>{{ label_text }}</option>

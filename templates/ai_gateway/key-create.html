@@ -1,7 +1,7 @@
 {% extends "base/base.html" %}
 {% load static %}
 {% block title %}
-  Generate an AI gateway key - {{ project.name }} - Justice Data Platform | Ministry of Justice
+  Create an AI gateway key - {{ project.name }} - Justice Data Platform | Ministry of Justice
 {% endblock title %}
 {% block back_link %}
   <a href="{% url 'ai_gateway:key_list' project.slug %}"
@@ -11,63 +11,13 @@
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-two-thirds">
       <h1 class="govuk-heading-xl">Create a key</h1>
-      {% if form.errors %}
-        <div class="govuk-error-summary" data-module="govuk-error-summary">
-          <div role="alert">
-            <h2 class="govuk-error-summary__title">There is a problem</h2>
-            <div class="govuk-error-summary__body">
-              <ul class="govuk-list govuk-error-summary__list">
-                {% for error in form.name.errors %}
-                  <li><a href="#id_name">{{ error }}</a></li>
-                {% endfor %}
-                {% for error in form.models.errors %}
-                  <li><a href="#id_models">{{ error }}</a></li>
-                {% endfor %}
-              </ul>
-            </div>
-          </div>
-        </div>
-      {% endif %}
+      {% include "includes/forms/_error_summary.html" with form=form only %}
       <form method="post" action="{% url 'ai_gateway:key_create' project.slug %}">
         {% csrf_token %}
-        <div class="govuk-form-group{% if form.name.errors %} govuk-form-group--error{% endif %}">
-          <label class="govuk-label" for="id_name">Key name</label>
-          <div id="name-hint" class="govuk-hint">Use a unique, recognisable name for this project.</div>
-          {% for error in form.name.errors %}
-            <p id="name-error" class="govuk-error-message">
-              <span class="govuk-visually-hidden">Error:</span> {{ error }}
-            </p>
-          {% endfor %}
-          <input class="govuk-input govuk-!-width-two-thirds{% if form.name.errors %} govuk-input--error{% endif %}"
-                 id="id_name"
-                 name="name"
-                 type="text"
-                 value="{{ form.name.value|default:'' }}"
-                 aria-describedby="name-hint{% if form.name.errors %} name-error{% endif %}">
-        </div>
-        <div class="govuk-form-group{% if form.models.errors %} govuk-form-group--error{% endif %}">
-          <label class="govuk-label" for="id_models">Models</label>
-          <div id="models-hint" class="govuk-hint">Select the models this key can access.</div>
-          {% for error in form.models.errors %}
-            <p id="models-error" class="govuk-error-message">
-              <span class="govuk-visually-hidden">Error:</span> {{ error }}
-            </p>
-          {% endfor %}
-          <select class="govuk-select{% if form.models.errors %} govuk-select--error{% endif %}"
-                  id="id_models"
-                  name="models"
-                  multiple
-                  aria-describedby="models-hint{% if form.models.errors %} models-error{% endif %}">
-            {% for value, label in form.models.field.choices %}
-              <option value="{{ value }}"
-                      {% if form.models.value and value in form.models.value %}selected{% endif %}>
-                {{ label }}
-              </option>
-            {% endfor %}
-          </select>
-        </div>
+        {% include "includes/fields/_multi_select_tags.html" with field=form.models only %}
+        {% include "includes/fields/_text_input.html" with field=form.name only %}
         <div class="govuk-button-group">
-          <button type="submit" class="govuk-button">Generate key</button>
+          <button type="submit" class="govuk-button">Create</button>
           <a href="{% url 'ai_gateway:key_list' project.slug %}"
              class="govuk-link">Cancel</a>
         </div>

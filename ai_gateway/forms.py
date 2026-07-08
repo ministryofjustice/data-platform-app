@@ -5,8 +5,17 @@ from projects.models import Project
 
 
 class KeyCreateForm(forms.Form):
-    name = forms.CharField(max_length=255, label="Key name")
-    models = forms.MultipleChoiceField(label="Models")
+    models = forms.MultipleChoiceField(
+        label="AI Model",
+        help_text="Add models for this project",
+        error_messages={"required": "Select at least one AI model to continue"},
+    )
+    name = forms.CharField(
+        max_length=255,
+        label="Key name",
+        help_text="Enter a name for the key",
+        error_messages={"required": "Enter a key name"},
+    )
 
     def __init__(self, *args, project: Project, available_models: list[str], **kwargs):
         super().__init__(*args, **kwargs)
