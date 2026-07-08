@@ -50,6 +50,7 @@ class TestKeyCreateView:
 
         assert response.status_code == 200
         assert "ai_gateway/key-create.html" in [t.name for t in response.templates]
+        assert b'data-module="app-multi-select-tags"' in response.content
         assert b"gpt-4" in response.content
 
     def test_post_shows_plaintext_secret(self, client, user, project, key_service):

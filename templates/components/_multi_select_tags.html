@@ -1,0 +1,29 @@
+{% comment %}
+  Reusable multi-select-with-tags widget (progressive enhancement over a native
+  <select multiple>). Enhanced client-side by the app-multi-select-tags component.
+
+  Expects:
+    field  - a bound MultipleChoiceField
+    label  - the field label text
+    hint   - optional hint text
+{% endcomment %}
+<div class="govuk-form-group{% if field.errors %} govuk-form-group--error{% endif %}"
+     data-module="app-multi-select-tags">
+  <label class="govuk-label" for="{{ field.id_for_label }}">{{ label }}</label>
+  {% if hint %}<div id="{{ field.name }}-hint" class="govuk-hint">{{ hint }}</div>{% endif %}
+  {% for error in field.errors %}
+    <p id="{{ field.name }}-error" class="govuk-error-message">
+      <span class="govuk-visually-hidden">Error:</span> {{ error }}
+    </p>
+  {% endfor %}
+  <select class="govuk-select app-multi-select-tags__native{% if field.errors %} govuk-select--error{% endif %}"
+          id="{{ field.id_for_label }}"
+          name="{{ field.html_name }}"
+          multiple
+          aria-describedby="{% if hint %}{{ field.name }}-hint{% endif %}{% if field.errors %} {{ field.name }}-error{% endif %}">
+    {% for value, label_text in field.field.choices %}
+      <option value="{{ value }}"
+              {% if field.value and value in field.value %}selected{% endif %}>{{ label_text }}</option>
+    {% endfor %}
+  </select>
+</div>

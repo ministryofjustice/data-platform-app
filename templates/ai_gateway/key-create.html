@@ -5,17 +5,12 @@
 {% endblock title %}
 {% block back_link %}
   <a href="{% url 'ai_gateway:key_list' project.slug %}"
-     class="govuk-back-link">Back to AI gateway keys</a>
+     class="govuk-back-link">Back to {{ project.name }}</a>
 {% endblock back_link %}
 {% block content %}
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-two-thirds">
-      <span class="govuk-caption-xl">{{ project.name }}</span>
-      <h1 class="govuk-heading-xl">Generate a key</h1>
-      <p class="govuk-body">
-        This generates a new AI gateway key for this project. The key is shown only once, so
-        copy it somewhere safe before leaving the page.
-      </p>
+      <h1 class="govuk-heading-xl">Create a key</h1>
       {% if form.errors %}
         <div class="govuk-error-summary" data-module="govuk-error-summary">
           <div role="alert">
