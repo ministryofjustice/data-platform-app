@@ -44,6 +44,11 @@ class KeyCreateView(ProjectScopedMixin, FormView):
     template_name = "ai_gateway/key-create.html"
     form_class = KeyCreateForm
 
+    @cached_property
+    def available_models(self) -> list[str]:
+        with KeyService.from_settings() as service:
+            return service.list_models()
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["project"] = self.project
@@ -52,12 +57,16 @@ class KeyCreateView(ProjectScopedMixin, FormView):
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs["project"] = self.project
+        kwargs["available_models"] = self.available_models
         return kwargs
 
     def form_valid(self, form: KeyCreateForm) -> HttpResponse:
         with KeyService.from_settings() as service:
             plaintext_key = service.create_key(
-                self.project, form.cleaned_data["name"], self.request.user
+                project=self.project,
+                name=form.cleaned_data["name"],
+                models=form.cleaned_data["models"],
+                created_by=self.request.user,
             )
 
         return render(

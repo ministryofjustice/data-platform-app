@@ -25,6 +25,9 @@
                 {% for error in form.name.errors %}
                   <li><a href="#id_name">{{ error }}</a></li>
                 {% endfor %}
+                {% for error in form.models.errors %}
+                  <li><a href="#id_models">{{ error }}</a></li>
+                {% endfor %}
               </ul>
             </div>
           </div>
@@ -46,6 +49,27 @@
                  type="text"
                  value="{{ form.name.value|default:'' }}"
                  aria-describedby="name-hint{% if form.name.errors %} name-error{% endif %}">
+        </div>
+        <div class="govuk-form-group{% if form.models.errors %} govuk-form-group--error{% endif %}">
+          <label class="govuk-label" for="id_models">Models</label>
+          <div id="models-hint" class="govuk-hint">Select the models this key can access.</div>
+          {% for error in form.models.errors %}
+            <p id="models-error" class="govuk-error-message">
+              <span class="govuk-visually-hidden">Error:</span> {{ error }}
+            </p>
+          {% endfor %}
+          <select class="govuk-select{% if form.models.errors %} govuk-select--error{% endif %}"
+                  id="id_models"
+                  name="models"
+                  multiple
+                  aria-describedby="models-hint{% if form.models.errors %} models-error{% endif %}">
+            {% for value, label in form.models.field.choices %}
+              <option value="{{ value }}"
+                      {% if form.models.value and value in form.models.value %}selected{% endif %}>
+                {{ label }}
+              </option>
+            {% endfor %}
+          </select>
         </div>
         <div class="govuk-button-group">
           <button type="submit" class="govuk-button">Generate key</button>

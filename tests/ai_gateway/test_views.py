@@ -16,6 +16,7 @@ def key_service():
     service = create_autospec(KeyService, instance=True)
     service.__enter__.return_value = service
     service.__exit__.return_value = False
+    service.list_models.return_value = ["gpt-4", "claude-3"]
 
     with patch("ai_gateway.views.KeyService.from_settings", return_value=service):
         yield service
@@ -43,15 +44,43 @@ class TestKeyListView:
 
 
 class TestKeyCreateView:
-    def test_get_renders_form(self, client, user, project):
+    def test_get_renders_form(self, client, user, project, key_service):
         client.force_login(user)
         response = client.get(reverse("ai_gateway:key_create", args=[project.slug]))
 
         assert response.status_code == 200
         assert "ai_gateway/key-create.html" in [t.name for t in response.templates]
+        assert b"gpt-4" in response.content
 
     def test_post_shows_plaintext_secret(self, client, user, project, key_service):
         key_service.create_key.return_value = PLAINTEXT_KEY
+        client.force_login(user)
+
+        response = client.post(
+            reverse("ai_gateway:key_create", args=[project.slug]),
+            data={"name": "primary-key", "models": ["gpt-4", "claude-3"]},
+        )
+
+        assert response.status_code == 200
+        assert "ai_gateway/key-created.html" in [t.name for t in response.templates]
+        assert PLAINTEXT_KEY.encode() in response.content
+        key_service.create_key.assert_called_once_with(
+            project, "primary-key", ["gpt-4", "claude-3"], user
+        )
+
+    def test_post_rejects_unknown_model(self, client, user, project, key_service):
+        client.force_login(user)
+
+        response = client.post(
+            reverse("ai_gateway:key_create", args=[project.slug]),
+            data={"name": "primary-key", "models": ["not-a-model"]},
+        )
+
+        assert response.status_code == 200
+        assert "ai_gateway/key-create.html" in [t.name for t in response.templates]
+        key_service.create_key.assert_not_called()
+
+    def test_post_requires_at_least_one_model(self, client, user, project, key_service):
         client.force_login(user)
 
         response = client.post(
@@ -60,10 +89,9 @@ class TestKeyCreateView:
         )
 
         assert response.status_code == 200
-        assert "ai_gateway/key-created.html" in [t.name for t in response.templates]
-        assert PLAINTEXT_KEY.encode() in response.content
-        key_service.create_key.assert_called_once_with(project, "primary-key", user)
-        key_service.__exit__.assert_called_once()
+        assert "ai_gateway/key-create.html" in [t.name for t in response.templates]
+        assert not Key.objects.filter(project=project).exists()
+        key_service.create_key.assert_not_called()
 
     def test_post_gateway_error_propagates(self, client, user, project, key_service):
         key_service.create_key.side_effect = AIGatewayAPIError(500, "boom")
@@ -72,10 +100,8 @@ class TestKeyCreateView:
         with pytest.raises(AIGatewayAPIError):
             client.post(
                 reverse("ai_gateway:key_create", args=[project.slug]),
-                data={"name": "primary-key"},
+                data={"name": "primary-key", "models": ["gpt-4"]},
             )
-
-        key_service.__exit__.assert_called_once()
 
     def test_post_duplicate_name_returns_form_error_without_calling_service(
         self, client, user, project, key, key_service
@@ -84,7 +110,7 @@ class TestKeyCreateView:
 
         response = client.post(
             reverse("ai_gateway:key_create", args=[project.slug]),
-            data={"name": key.name},
+            data={"name": key.name, "models": ["gpt-4"]},
         )
 
         assert response.status_code == 200
@@ -96,7 +122,7 @@ class TestKeyCreateView:
 
         response = client.post(
             reverse("ai_gateway:key_create", args=[project.slug]),
-            data={"name": "primary-key"},
+            data={"name": "primary-key", "models": ["gpt-4"]},
         )
 
         assert response.status_code == 404

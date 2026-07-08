@@ -40,10 +40,18 @@ class TestBuildAlias:
         assert first != second
 
 
+class TestKeyServiceListModels:
+    def test_returns_client_models(self, gateway_client):
+        gateway_client.list_models.return_value = ["gpt-4", "claude-3"]
+
+        with KeyService(gateway_client) as service:
+            assert service.list_models() == ["gpt-4", "claude-3"]
+
+
 class TestKeyServiceCreateKey:
     def test_creates_team_lazily_and_persists_metadata(self, project, user, gateway_client):
         with KeyService(gateway_client) as service:
-            plaintext = service.create_key(project, "primary-key", user)
+            plaintext = service.create_key(project, "primary-key", ["gpt-4"], user)
 
         assert plaintext == PLAINTEXT_KEY
         gateway_client.create_team.assert_called_once_with("Example Project")
@@ -52,6 +60,7 @@ class TestKeyServiceCreateKey:
 
         gateway_client.generate_key.assert_called_once()
         assert gateway_client.generate_key.call_args.args == ("team-xyz",)
+        assert gateway_client.generate_key.call_args.kwargs["models"] == ["gpt-4"]
         alias_sent = gateway_client.generate_key.call_args.kwargs["key_alias"]
         assert alias_sent.startswith("example-slug-primary-key-")
 
@@ -69,7 +78,7 @@ class TestKeyServiceCreateKey:
         Team.objects.create(project=project, litellm_team_id="existing-team")
 
         with KeyService(gateway_client) as service:
-            service.create_key(project, "primary-key", user)
+            service.create_key(project, "primary-key", ["gpt-4"], user)
 
         gateway_client.create_team.assert_not_called()
         gateway_client.generate_key.assert_called_once()
@@ -80,7 +89,7 @@ class TestKeyServiceCreateKey:
 
     def test_slugifies_name_for_gateway_alias(self, project, user, gateway_client):
         with KeyService(gateway_client) as service:
-            service.create_key(project, "My Special Key", user)
+            service.create_key(project, "My Special Key", ["gpt-4"], user)
 
         alias_sent = gateway_client.generate_key.call_args.kwargs["key_alias"]
         assert alias_sent.startswith("example-slug-my-special-key-")
@@ -93,7 +102,7 @@ class TestKeyServiceCreateKey:
         gateway_client.generate_key.side_effect = AIGatewayAPIError(500, "boom")
 
         with pytest.raises(AIGatewayAPIError), KeyService(gateway_client) as service:
-            service.create_key(project, "primary-key", user)
+            service.create_key(project, "primary-key", ["gpt-4"], user)
 
         assert not Key.objects.filter(project=project).exists()
         gateway_client.close.assert_called_once()

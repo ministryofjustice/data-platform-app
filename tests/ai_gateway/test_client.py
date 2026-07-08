@@ -96,6 +96,23 @@ class TestGenerateKey:
 
         assert result["key"] == "sk-generated"
 
+    def test_sends_models_when_given(self):
+        def handler(request):
+            assert json.loads(request.read()) == {
+                "team_id": "team-123",
+                "key_alias": "proj-abcd1234",
+                "models": ["gpt-4", "claude-3"],
+            }
+            return httpx.Response(200, json={"key": "sk-generated", "token": "hash-1"})
+
+        client = build_client(handler)
+
+        result = client.generate_key(
+            "team-123", key_alias="proj-abcd1234", models=["gpt-4", "claude-3"]
+        )
+
+        assert result["key"] == "sk-generated"
+
 
 class TestRegenerateKey:
     def test_returns_new_key(self):

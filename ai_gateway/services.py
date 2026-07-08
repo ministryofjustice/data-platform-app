@@ -40,7 +40,11 @@ class KeyService:
         """Close the underlying gateway client."""
         self._client.close()
 
-    def create_key(self, project: Project, name: str, created_by: User) -> str:
+    def list_models(self) -> list[str]:
+        """Return the ids of the models available on the gateway."""
+        return self._client.list_models()
+
+    def create_key(self, project: Project, name: str, models: list[str], created_by: User) -> str:
         """Generate a gateway key for ``project`` and persist its metadata.
 
         Lazily creates the project's gateway team, calls the gateway to generate
@@ -51,7 +55,9 @@ class KeyService:
         """
         team = self._get_or_create_team(project)
         litellm_alias = self._build_alias(project, name)
-        data = self._client.generate_key(team.litellm_team_id, key_alias=litellm_alias)
+        data = self._client.generate_key(
+            team.litellm_team_id, key_alias=litellm_alias, models=models
+        )
 
         plaintext_key = data["key"]
         Key.objects.create(

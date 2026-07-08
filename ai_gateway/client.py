@@ -67,15 +67,23 @@ class AIGatewayClient:
         """Delete the team identified by ``team_id``."""
         self._request("POST", "/team/delete", json={"team_ids": [team_id]})
 
-    def generate_key(self, team_id: str, key_alias: str | None = None) -> dict[str, Any]:
+    def generate_key(
+        self,
+        team_id: str,
+        key_alias: str | None = None,
+        models: list[str] | None = None,
+    ) -> dict[str, Any]:
         """Generate a virtual key for ``team_id`` and return the gateway response.
 
         ``key_alias`` tags the key so it can be managed later (for example deleted
-        by alias) without the plaintext.
+        by alias) without the plaintext. ``models`` scopes the key to the given
+        model ids; when omitted the gateway applies its default access.
         """
         payload: dict[str, Any] = {"team_id": team_id}
         if key_alias is not None:
             payload["key_alias"] = key_alias
+        if models is not None:
+            payload["models"] = models
         return self._request("POST", "/key/generate", json=payload)
 
     def regenerate_key(self, key: str) -> str:
