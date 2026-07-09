@@ -1,4 +1,4 @@
-.PHONY: run install build-css build-js build-static lint format lint-templates format-templates test start-ai-gateway
+.PHONY: run install build-css build-js build-static lint format lint-templates format-templates test start-ai-gateway stop-ai-gateway
 
 run:
 	uv run python manage.py makemigrations --check
