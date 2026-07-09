@@ -18,8 +18,7 @@ def project(db, user):
 
 
 class TestProject:
-    """Tests for the ProjectDetailView at '/projects/<slug>/'."""
-
+    """Tests for the `Project` model."""
     def test_project_id(self, project):
         """The project ID is displayed on the project detail page."""
         assert project.public_id.startswith("prj-")
