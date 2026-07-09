@@ -64,7 +64,7 @@ class Project(TimeStampedModel):
         return f"prj-{self.uuid}"
 
     @staticmethod
-    def get_by_public_id(public_id: str) -> Project:
+    def get_by_public_id(public_id: str) -> "Project":
         if not public_id.startswith("prj-"):
             raise ValueError("Invalid public ID format")
         uuid_str = public_id[4:]
