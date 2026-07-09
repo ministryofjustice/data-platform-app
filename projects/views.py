@@ -135,7 +135,7 @@ class ProjectCreateView(FormView):
 
 
 class ProjectUserSelectionFormView(ProjectUserSelectionSessionMixin, FormView):
-    template_name = "projects/user-add.html"
+    template_name = "projects/user_add.html"
 
     def get_success_url(self):
         raise NotImplementedError
@@ -170,7 +170,7 @@ class ProjectUserSelectionFormView(ProjectUserSelectionSessionMixin, FormView):
 
 
 class ProjectCreateAddUsersView(ProjectUserSelectionFormView):
-    template_name = "projects/create-user-add.html"
+    template_name = "projects/create_user_add.html"
 
     def get_user_bucket_key(self):
         return USER_BUCKET_SESSION_KEY
@@ -229,7 +229,7 @@ class ProjectCreateAddUsersView(ProjectUserSelectionFormView):
 
 
 class ProjectCreateConfirmView(ProjectUserSelectionSessionMixin, View):
-    template_name = "projects/create-confirm.html"
+    template_name = "projects/create_confirm.html"
 
     def get_user_bucket_key(self):
         return USER_BUCKET_SESSION_KEY
@@ -296,7 +296,7 @@ class ProjectCreateConfirmView(ProjectUserSelectionSessionMixin, View):
 
 
 class ProjectUsersDetailView(DetailView):
-    template_name = "projects/user-list.html"
+    template_name = "projects/user_list.html"
     context_object_name = "project"
     model = Project
 
@@ -325,7 +325,7 @@ class ProjectDeleteView(DeleteView):
     the user has access to delete the project.
     """
 
-    template_name = "projects/delete-confirm.html"
+    template_name = "projects/delete_confirm.html"
     context_object_name = "project"
     model = Project
     success_url = reverse_lazy("projects:projects_list")
@@ -345,7 +345,7 @@ class ProjectDeleteView(DeleteView):
 
 
 class ProjectAddUsersView(ExistingProjectMixin, ProjectUserSelectionFormView):
-    template_name = "projects/user-add.html"
+    template_name = "projects/user_add.html"
 
     def get_success_url(self):
         return reverse(
@@ -355,7 +355,7 @@ class ProjectAddUsersView(ExistingProjectMixin, ProjectUserSelectionFormView):
 
 
 class ProjectAddUsersConfirmView(ExistingProjectMixin, ProjectUserSelectionSessionMixin, View):
-    template_name = "projects/user-add-confirm.html"
+    template_name = "projects/user_add_confirm.html"
 
     def get_selected_users(self):
         selected_user_ids = self.get_selected_user_ids()
@@ -414,7 +414,7 @@ class ProjectRemoveUserView(DeleteView):
     the user can remove users from the project.
     """
 
-    template_name = "projects/user-remove-confirm.html"
+    template_name = "projects/user_remove_confirm.html"
     context_object_name = "membership"
     model = ProjectUserPermissions
 
@@ -430,11 +430,11 @@ class ProjectRemoveUserView(DeleteView):
     def get_success_url(self):
         return reverse("projects:project_users", kwargs={"slug": self.kwargs["slug"]})
 
-    def delete(self, request, *args, **kwargs):
+    def form_valid(self, form):
         membership = self.get_object()
         user_name = membership.user.full_name
-        response = super().delete(request, *args, **kwargs)
         self.request.session["success_message"] = {
             "heading": f"You have removed {user_name} from this project",
         }
+        response = super().form_valid(form)
         return response
