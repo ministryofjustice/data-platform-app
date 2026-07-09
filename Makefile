@@ -63,7 +63,7 @@ test:
 	uv run pytest --failed-first --maxfail=5 $(ARGS)
 
 start-ai-gateway:
-	docker compose --file contrib/docker-compose-ai-gateway.yml up --detach
+	bash contrib/ai-gateway/start.sh
 
 stop-ai-gateway:
 	docker compose --file contrib/docker-compose-ai-gateway.yml down --remove-orphans
