@@ -29,6 +29,7 @@ EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 # to make real calls.
 AI_GATEWAY_URL = "http://ai-gateway.test"
 AI_GATEWAY_MASTER_KEY = "sk-test-master-key"  # gitleaks:allow
+DEFAULT_ACCESS_GROUP_ID = "test-access-group-id"
 
 # Use non-manifest static storage in tests so static lookups do not require collectstatic.
 STORAGES["staticfiles"] = {  # type: ignore[index]  # noqa: F405

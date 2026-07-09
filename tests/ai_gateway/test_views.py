@@ -34,7 +34,7 @@ class TestKeyListView:
         client.force_login(user)
         response = client.get(reverse("ai_gateway:key_list", args=[project.slug]))
 
-        assert key.masked_key.encode() in response.content
+        assert key.litellm_token.encode() in response.content
 
     def test_non_member_gets_404(self, client, non_member, project):
         client.force_login(non_member)

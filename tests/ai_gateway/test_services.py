@@ -1,6 +1,7 @@
 from unittest.mock import create_autospec
 
 import pytest
+from django.core.exceptions import ImproperlyConfigured
 
 from ai_gateway.client import AIGatewayClient
 from ai_gateway.exceptions import AIGatewayAPIError
@@ -41,20 +42,37 @@ class TestBuildAlias:
 
 
 class TestKeyServiceListModels:
-    def test_returns_client_models(self, gateway_client):
-        gateway_client.list_models.return_value = ["gpt-4", "claude-3"]
+    def test_returns_client_models_for_default_access_group(self, gateway_client, settings):
+        settings.DEFAULT_ACCESS_GROUP_ID = "ag-default"
+        gateway_client.list_models_for_access_group.return_value = ["gpt-4", "claude-3"]
 
         with KeyService(gateway_client) as service:
             assert service.list_models() == ["gpt-4", "claude-3"]
 
+        gateway_client.list_models_for_access_group.assert_called_once_with(
+            access_group_id="ag-default"
+        )
+
+    def test_raises_when_default_access_group_is_not_configured(self, gateway_client, settings):
+        settings.DEFAULT_ACCESS_GROUP_ID = None
+
+        with KeyService(gateway_client) as service, pytest.raises(ImproperlyConfigured):
+            service.list_models()
+
+        gateway_client.list_models_for_access_group.assert_not_called()
+
 
 class TestKeyServiceCreateKey:
-    def test_creates_team_lazily_and_persists_metadata(self, project, user, gateway_client):
+    def test_creates_team_lazily_and_persists_metadata(
+        self, project, user, gateway_client, settings
+    ):
+        settings.DEFAULT_ACCESS_GROUP_ID = "ag-default"
+
         with KeyService(gateway_client) as service:
             plaintext = service.create_key(project, "primary-key", ["gpt-4"], user)
 
         assert plaintext == PLAINTEXT_KEY
-        gateway_client.create_team.assert_called_once_with("Example Project")
+        gateway_client.create_team.assert_called_once_with("Example Project", ["ag-default"])
         team = Team.objects.get(project=project)
         assert team.litellm_team_id == "team-xyz"
 

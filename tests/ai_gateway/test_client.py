@@ -56,6 +56,24 @@ class TestCreateTeam:
 
         assert client.create_team("my-project") == "team-123"
 
+    def test_includes_access_group_ids_when_given(self):
+        def handler(request):
+            assert request.method == "POST"
+            assert request.url.path == "/team/new"
+            assert json.loads(request.read()) == {
+                "team_alias": "my-project",
+                "max_budget": 1000,
+                "budget_duration": "monthly",
+                "tpm_limit": 500000,
+                "rpm_limit": 100,
+                "access_group_ids": ["ag-123", "ag-456"],
+            }
+            return httpx.Response(200, json={"team_id": "team-123"})
+
+        client = build_client(handler)
+
+        assert client.create_team("my-project", ["ag-123", "ag-456"]) == "team-123"
+
 
 class TestDeleteTeam:
     def test_posts_team_id(self):

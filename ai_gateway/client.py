@@ -63,18 +63,26 @@ class AIGatewayClient:
         data = self._request("GET", "/v1/models")
         return [model["id"] for model in data.get("data", [])]
 
-    def create_team(self, name: str) -> str:
+    def list_models_for_access_group(self, access_group_id: str) -> list[str]:
+        data = self._request("GET", f"/v1/access_group/{access_group_id}")
+        return data["access_model_names"]
+
+    def create_team(self, name: str, access_group_ids: list[str] | None = None) -> str:
         """Create a team named ``name`` and return its generated team id."""
+        post_data = {
+            "team_alias": name,
+            "max_budget": self.DEFAULT_TEAM_BUDGET,
+            "budget_duration": self.DEFAULT_TEAM_BUDGET_DURATION,
+            "tpm_limit": self.DEFAULT_TEAM_TPM_LIMIT,
+            "rpm_limit": self.DEFAULT_TEAM_RPM_LIMIT,
+        }
+        if access_group_ids is not None:
+            post_data["access_group_ids"] = access_group_ids
+
         data = self._request(
             "POST",
             "/team/new",
-            json={
-                "team_alias": name,
-                "max_budget": self.DEFAULT_TEAM_BUDGET,
-                "budget_duration": self.DEFAULT_TEAM_BUDGET_DURATION,
-                "tpm_limit": self.DEFAULT_TEAM_TPM_LIMIT,
-                "rpm_limit": self.DEFAULT_TEAM_RPM_LIMIT,
-            },
+            json=post_data,
         )
         return data["team_id"]
 

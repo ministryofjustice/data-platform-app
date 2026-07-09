@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import secrets
 
+from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 from django.utils.text import slugify
 
 from ai_gateway.client import AIGatewayClient
@@ -42,7 +44,9 @@ class KeyService:
 
     def list_models(self) -> list[str]:
         """Return the ids of the models available on the gateway."""
-        return self._client.list_models()
+        return self._client.list_models_for_access_group(
+            access_group_id=self._default_access_group_id()
+        )
 
     def create_key(self, project: Project, name: str, models: list[str], created_by: User) -> str:
         """Generate a gateway key for ``project`` and persist its metadata.
@@ -76,8 +80,16 @@ class KeyService:
         try:
             return project.ai_gateway_team
         except Team.DoesNotExist:
-            team_id = self._client.create_team(project.name)
+            team_id = self._client.create_team(project.name, [self._default_access_group_id()])
             return Team.objects.create(project=project, litellm_team_id=team_id)
+
+    @staticmethod
+    def _default_access_group_id() -> str:
+        """Return configured default access group id or raise if missing."""
+        access_group_id = settings.DEFAULT_ACCESS_GROUP_ID
+        if not access_group_id:
+            raise ImproperlyConfigured("DEFAULT_ACCESS_GROUP_ID is not configured")
+        return access_group_id
 
     @staticmethod
     def _build_alias(project: Project, name: str) -> str:

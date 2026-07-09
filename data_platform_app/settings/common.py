@@ -173,6 +173,7 @@ AZURE_AUTH = {
 # AI Gateway (LiteLLM)
 AI_GATEWAY_URL = os.environ.get("AI_GATEWAY_URL")
 AI_GATEWAY_MASTER_KEY = os.environ.get("AI_GATEWAY_MASTER_KEY")
+DEFAULT_ACCESS_GROUP_ID = os.environ.get("DEFAULT_ACCESS_GROUP_ID")
 
 # Keys used to encrypt sensitive model fields at rest
 FIELD_ENCRYPTION_KEYS = [
