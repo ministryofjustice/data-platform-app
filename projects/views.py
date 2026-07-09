@@ -234,7 +234,10 @@ class ProjectCreateConfirmView(ProjectUserSelectionSessionMixin, View):
 
     def get(self, request, *args, **kwargs):
         project_data = self.request.session.get(PROJECT_CREATE_SESSION_KEY, {})
-        business_unit_id = project_data.get("business_unit_id")
+        business_unit_id = project_data.get("business_unit_id") if project_data else None
+        if not business_unit_id:
+            return redirect("projects:project_create")
+
         business_unit = get_object_or_404(BusinessUnit, pk=business_unit_id)
         selected_users = list(self.get_selected_users())
 
