@@ -32,6 +32,7 @@ def clear_project_create_session(request):
     else:
         request.session.pop(ADD_USER_SESSION_KEY, None)
 
+
 class ProjectUserSelectionSessionMixin:
     def get_project(self):
         return None
