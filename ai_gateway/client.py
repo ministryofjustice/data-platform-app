@@ -13,6 +13,11 @@ from ai_gateway.exceptions import AIGatewayAPIError
 class AIGatewayClient:
     """Talks to the LiteLLM AI Gateway management API."""
 
+    DEFAULT_TEAM_BUDGET = 1000
+    DEFAULT_TEAM_BUDGET_DURATION = "monthly"
+    DEFAULT_TEAM_TPM_LIMIT = 500_000
+    DEFAULT_TEAM_RPM_LIMIT = 100
+
     def __init__(
         self,
         base_url: str,
@@ -60,7 +65,17 @@ class AIGatewayClient:
 
     def create_team(self, name: str) -> str:
         """Create a team named ``name`` and return its generated team id."""
-        data = self._request("POST", "/team/new", json={"team_alias": name})
+        data = self._request(
+            "POST",
+            "/team/new",
+            json={
+                "team_alias": name,
+                "max_budget": self.DEFAULT_TEAM_BUDGET,
+                "budget_duration": self.DEFAULT_TEAM_BUDGET_DURATION,
+                "tpm_limit": self.DEFAULT_TEAM_TPM_LIMIT,
+                "rpm_limit": self.DEFAULT_TEAM_RPM_LIMIT,
+            },
+        )
         return data["team_id"]
 
     def delete_team(self, team_id: str) -> None:

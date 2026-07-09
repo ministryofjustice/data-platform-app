@@ -43,7 +43,13 @@ class TestCreateTeam:
         def handler(request):
             assert request.method == "POST"
             assert request.url.path == "/team/new"
-            assert json.loads(request.read()) == {"team_alias": "my-project"}
+            assert json.loads(request.read()) == {
+                "team_alias": "my-project",
+                "max_budget": 1000,
+                "budget_duration": "monthly",
+                "tpm_limit": 500000,
+                "rpm_limit": 100,
+            }
             return httpx.Response(200, json={"team_id": "team-123"})
 
         client = build_client(handler)
