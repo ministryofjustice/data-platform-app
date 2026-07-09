@@ -255,7 +255,10 @@ class ProjectCreateConfirmView(ProjectUserSelectionSessionMixin, View):
         return render(request, self.template_name, context)
 
     def post(self, request, *args, **kwargs):
-        project_data = self.request.session.get(PROJECT_CREATE_SESSION_KEY, {})
+        project_data = self.request.session.get(PROJECT_CREATE_SESSION_KEY)
+        business_unit_id = project_data.get("business_unit_id") if project_data else None
+        if not business_unit_id:
+            return redirect("projects:project_create")
         with transaction.atomic():
             project = Project.objects.create(
                 name=project_data["name"],
