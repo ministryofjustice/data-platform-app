@@ -60,7 +60,7 @@ curl \
   --header "Content-Type: application/json" \
   --header "Authorization: Bearer sk-123456789" \
   --data '{
-    "model_name": "bedrock-claude-sonnet-5",
+    "model_name": "bedrock-claude-opus-4-8",
     "litellm_params": {
       "model": "bedrock/eu.anthropic.claude-opus-4-8",
       "ai_model_provider": "Amazon Bedrock",
