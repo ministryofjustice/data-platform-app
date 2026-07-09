@@ -1,6 +1,6 @@
 ##### BUILD PYTHON
 
-FROM docker.io/library/ubuntu:26.04@sha256:53958ec7b67c2c9355df922dd08dbf0360611f8c3cdb656875e81873db9ffdba AS build-python
+FROM docker.io/library/ubuntu:26.04@sha256:b7f48194d4d8b763a478a621cdc81c27be222ba2206ca3ca6bc42b49685f3d9e AS build-python
 
 SHELL ["/bin/bash", "-e", "-u", "-o", "pipefail", "-c"]
 
@@ -10,12 +10,12 @@ RUN <<EOF
 apt-get update --quiet --yes
 apt-get install --quiet --yes \
     --no-install-recommends \
-    ca-certificates=20260223 \
+    ca-certificates=20260601~26.04.1 \
     python3.14-dev=3.14.4-1ubuntu0.1
 EOF
 
 # Install uv
-COPY --from=ghcr.io/astral-sh/uv:0.11.21@sha256:ff07b86af50d4d9391d9daf4ff89ce427bc544f9aae87057e69a1cc0aa369946 /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.11.26@sha256:3d868e555f8f1dbc324afa005066cd11e1053fc4743b9808ca8025283e65efa5 /uv /usr/local/bin/uv
 
 # - Silence uv complaining about not being able to use hard links,
 # - tell uv to byte-compile packages for faster application startups,
@@ -40,7 +40,7 @@ RUN --mount=type=cache,target=/root/.cache \
 
 ##### BUILD NODE
 
-FROM docker.io/library/node:24.16.0@sha256:40ad9f3064e67d6860b4bc3fe1880b2953934fd6320ada990e45fe0efa6badd7 AS build-node
+FROM docker.io/library/node:24.18.0-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd AS build-node
 
 WORKDIR /build
 
@@ -57,7 +57,7 @@ EOF
 
 ##### FINAL
 
-FROM docker.io/library/ubuntu:26.04@sha256:53958ec7b67c2c9355df922dd08dbf0360611f8c3cdb656875e81873db9ffdba AS final
+FROM docker.io/library/ubuntu:26.04@sha256:b7f48194d4d8b763a478a621cdc81c27be222ba2206ca3ca6bc42b49685f3d9e AS final
 
 LABEL org.opencontainers.image.vendor="Ministry of Justice" \
       org.opencontainers.image.authors="Data Platform Services (justicedataplatform@justice.gov.uk)" \
@@ -93,9 +93,8 @@ apt-get update --quiet --yes
 
 apt-get install --quiet --yes \
     --no-install-recommends \
-    ca-certificates=20260223 \
+    ca-certificates=20260601~26.04.1 \
     python3.14=3.14.4-1ubuntu0.1
-
 
 apt-get clean --yes
 

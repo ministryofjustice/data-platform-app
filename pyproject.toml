@@ -23,8 +23,9 @@ dev = [
     "djlint==1.39.4",
     "django-debug-toolbar==7.0.0",
     "pre-commit==4.6.0",
-    "pytest==9.0.3",
-    "ruff==0.15.19",
+    "pytest==9.1.1",
+    "ruff==0.15.20",
+
 ]
 
 [tool.ruff]
