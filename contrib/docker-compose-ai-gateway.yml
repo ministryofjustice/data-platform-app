@@ -22,7 +22,7 @@ services:
       DATABASE_URL: postgres://ai_gateway:ai_gateway@ai-gateway-db:5432/ai_gateway
       LITELLM_MASTER_KEY: sk-123456789 # gitleaks:allow
       LITELLM_SALT_KEY: sk-123456789 # gitleaks:allow
-      LITELLM_LICENSE: ${AI_GATEWAY_LICENSE:-""}
+      LITELLM_LICENSE: ${AI_GATEWAY_LICENSE:-}
       STORE_MODEL_IN_DB: "True"
     command:
       - --config
