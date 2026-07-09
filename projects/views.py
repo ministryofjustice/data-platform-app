@@ -24,8 +24,13 @@ USER_BUCKET_SESSION_KEY = "project_create_user_add"
 
 def clear_project_create_session(request):
     request.session.pop(PROJECT_CREATE_SESSION_KEY, None)
-    request.session.pop(ADD_USER_SESSION_KEY, None)
 
+    session_map = request.session.get(ADD_USER_SESSION_KEY, {})
+    session_map.pop(USER_BUCKET_SESSION_KEY, None)
+    if session_map:
+        request.session[ADD_USER_SESSION_KEY] = session_map
+    else:
+        request.session.pop(ADD_USER_SESSION_KEY, None)
 
 class ProjectUserSelectionSessionMixin:
     def get_project(self):
