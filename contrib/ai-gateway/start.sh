@@ -6,7 +6,8 @@ echo "Logging in to AWS"
 aws-sso login
 
 echo "Retrieving AI Gateway License"
-export AI_GATEWAY_LICENSE=$(aws-sso exec --profile data-platform-development:platform-engineer-admin -- aws secretsmanager get-secret-value --secret-id ai-gateway/litellm-license --query SecretString --output text)
+AI_GATEWAY_LICENSE=$(aws-sso exec --profile data-platform-development:platform-engineer-admin -- aws secretsmanager get-secret-value --secret-id ai-gateway/litellm-license --query SecretString --output text)
+export AI_GATEWAY_LICENSE
 
 echo "Starting AI Gateway"
 docker compose --file contrib/docker-compose-ai-gateway.yml up --detach
