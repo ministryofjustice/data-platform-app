@@ -52,7 +52,7 @@ class TestProjectDeleteView:
         response = client.get(reverse("projects:project_delete", args=[project.slug]))
 
         assert response.status_code == 200
-        assert "projects/delete-confirm.html" in [t.name for t in response.templates]
+        assert "projects/delete_confirm.html" in [t.name for t in response.templates]
 
     def test_delete_page_fail(self, client, non_project_user, project):
         client.force_login(non_project_user)
@@ -78,7 +78,7 @@ class TestProjectRemoveUserView:
         )
 
         assert response.status_code == 200
-        assert "projects/user-remove-confirm.html" in [t.name for t in response.templates]
+        assert "projects/user_remove_confirm.html" in [t.name for t in response.templates]
 
     def test_remove_user_page_fail(self, client, non_project_user, project):
         client.force_login(non_project_user)
@@ -107,7 +107,7 @@ class TestProjectAddUsersFlow:
         response = client.get(reverse("projects:project_users_add", args=[project.slug]))
 
         assert response.status_code == 200
-        assert "projects/user-add.html" in [t.name for t in response.templates]
+        assert "projects/user_add.html" in [t.name for t in response.templates]
 
     def test_add_users_page_fail(self, client, non_project_user, project):
         client.force_login(non_project_user)
@@ -212,7 +212,7 @@ class TestProjectAddUsersFlow:
         response = client.get(reverse("projects:project_users_add_confirm", args=[project.slug]))
 
         assert response.status_code == 200
-        assert "projects/user-add-confirm.html" in [t.name for t in response.templates]
+        assert "projects/user_add_confirm.html" in [t.name for t in response.templates]
         assert selected_user.email in response.content.decode()
 
     def test_confirm_adds_users_to_project(self, client, user, project):
@@ -311,7 +311,7 @@ class TestProjectCreateFlow:
         response = client.get(reverse("projects:project_create_add_users"))
 
         assert response.status_code == 200
-        assert "projects/create-user-add.html" in [t.name for t in response.templates]
+        assert "projects/create_user_add.html" in [t.name for t in response.templates]
         assert "decision_form" in response.context
         assert "formset" in response.context
 
@@ -397,7 +397,7 @@ class TestProjectCreateFlow:
         response = client.get(reverse("projects:project_create_confirm"))
 
         assert response.status_code == 200
-        assert "projects/create-confirm.html" in [t.name for t in response.templates]
+        assert "projects/create_confirm.html" in [t.name for t in response.templates]
         assert "Confirm Project" in response.content.decode()
         assert business_unit.name in response.content.decode()
         assert selected_user.email in response.content.decode()
