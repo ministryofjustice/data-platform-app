@@ -22,11 +22,16 @@ services:
       DATABASE_URL: postgres://ai_gateway:ai_gateway@ai-gateway-db:5432/ai_gateway
       LITELLM_MASTER_KEY: sk-123456789 # gitleaks:allow
       LITELLM_SALT_KEY: sk-123456789 # gitleaks:allow
+    command:
+      - --config
+      - /app/config.yaml
     ports:
       - "4000:4000"
     depends_on:
       ai-gateway-db:
         condition: service_healthy
+    volumes:
+      - ./ai-gateway/config.yaml:/app/config.yaml:ro
     healthcheck:
       test:
         - CMD-SHELL

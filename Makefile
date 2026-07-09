@@ -64,3 +64,6 @@ test:
 
 start-ai-gateway:
 	docker compose --file contrib/docker-compose-ai-gateway.yml up --detach
+
+stop-ai-gateway:
+	docker compose --file contrib/docker-compose-ai-gateway.yml down --remove-orphans

@@ -1,0 +1,11 @@
+model_list:
+  - model_name: bedrock-claude-sonnet-5
+    litellm_params:
+      model: bedrock/eu.anthropic.claude-sonnet-5
+    model_info:
+      generally_available: true
+  - model_name: bedrock-claude-sonnet-4-6
+    litellm_params:
+      model: eu.anthropic.claude-sonnet-4-6
+    model_info:
+      generally_available: false
