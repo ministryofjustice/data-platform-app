@@ -19,7 +19,7 @@
                 {% endfor %}
                 {% for error in decision_form.add_user.errors %}
                   <li>
-                    <a href="#{{ decision_form.add_user.id_for_label }}">{{ error }}</a>
+                    <a href="#add_user_yes">{{ error }}</a>
                   </li>
                 {% endfor %}
                 {% for error in form.non_form_errors %}
