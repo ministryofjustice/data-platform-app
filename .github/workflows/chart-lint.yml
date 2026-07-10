@@ -13,4 +13,4 @@ jobs:
     name: Chart Lint
     permissions:
       contents: read
-    uses: ministryofjustice/data-platform-github-actions/.github/workflows/chart-lint.yml@92832dad5ea35a24fa25db98a932020e03a300ce # v4.0.2
+    uses: ministryofjustice/data-platform-github-actions/.github/workflows/chart-lint.yml@6df010e45fdb953369f12ab2bc69107d3c487f15 # v4.0.8
