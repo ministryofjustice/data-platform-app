@@ -29,10 +29,10 @@ class TestMaskKey:
 
 
 class TestBuildAlias:
-    def test_prefixes_project_slug_and_slugifies_name(self, project):
+    def test_prefixes_project_uuid_and_slugifies_name(self, project):
         alias = KeyService._build_alias(project, "My Special Key")
 
-        assert alias.startswith("example-slug-my-special-key-")
+        assert alias.startswith(f"{project.uuid}-my-special-key-")
 
     def test_aliases_are_unique_for_the_same_inputs(self, project):
         first = KeyService._build_alias(project, "same-name")
@@ -80,7 +80,7 @@ class TestKeyServiceCreateKey:
         assert gateway_client.generate_key.call_args.args == ("team-xyz",)
         assert gateway_client.generate_key.call_args.kwargs["models"] == ["gpt-4"]
         alias_sent = gateway_client.generate_key.call_args.kwargs["key_alias"]
-        assert alias_sent.startswith("example-slug-primary-key-")
+        assert alias_sent.startswith(f"{project.uuid}-primary-key-")
 
         key = Key.objects.get(project=project)
         assert key.name == "primary-key"
@@ -102,7 +102,7 @@ class TestKeyServiceCreateKey:
         gateway_client.generate_key.assert_called_once()
         assert gateway_client.generate_key.call_args.args == ("existing-team",)
         assert gateway_client.generate_key.call_args.kwargs["key_alias"].startswith(
-            "example-slug-primary-key-"
+            f"{project.uuid}-primary-key-"
         )
 
     def test_slugifies_name_for_gateway_alias(self, project, user, gateway_client):
@@ -110,7 +110,7 @@ class TestKeyServiceCreateKey:
             service.create_key(project, "My Special Key", ["gpt-4"], user)
 
         alias_sent = gateway_client.generate_key.call_args.kwargs["key_alias"]
-        assert alias_sent.startswith("example-slug-my-special-key-")
+        assert alias_sent.startswith(f"{project.uuid}-my-special-key-")
 
         key = Key.objects.get(project=project)
         assert key.name == "My Special Key"

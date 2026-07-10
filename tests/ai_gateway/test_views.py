@@ -25,20 +25,20 @@ def key_service():
 class TestKeyListView:
     def test_renders_for_member(self, client, user, project):
         client.force_login(user)
-        response = client.get(reverse("ai_gateway:key_list", args=[project.slug]))
+        response = client.get(reverse("ai_gateway:key_list", args=[project.uuid]))
 
         assert response.status_code == 200
         assert "ai_gateway/key-list.html" in [t.name for t in response.templates]
 
     def test_lists_existing_keys(self, client, user, project, key):
         client.force_login(user)
-        response = client.get(reverse("ai_gateway:key_list", args=[project.slug]))
+        response = client.get(reverse("ai_gateway:key_list", args=[project.uuid]))
 
         assert key.litellm_token.encode() in response.content
 
     def test_non_member_gets_404(self, client, non_member, project):
         client.force_login(non_member)
-        response = client.get(reverse("ai_gateway:key_list", args=[project.slug]))
+        response = client.get(reverse("ai_gateway:key_list", args=[project.uuid]))
 
         assert response.status_code == 404
 
@@ -46,7 +46,7 @@ class TestKeyListView:
 class TestKeyCreateView:
     def test_get_renders_form(self, client, user, project, key_service):
         client.force_login(user)
-        response = client.get(reverse("ai_gateway:key_create", args=[project.slug]))
+        response = client.get(reverse("ai_gateway:key_create", args=[project.uuid]))
 
         assert response.status_code == 200
         assert "ai_gateway/key-create.html" in [t.name for t in response.templates]
@@ -58,7 +58,7 @@ class TestKeyCreateView:
         client.force_login(user)
 
         response = client.post(
-            reverse("ai_gateway:key_create", args=[project.slug]),
+            reverse("ai_gateway:key_create", args=[project.uuid]),
             data={"name": "primary-key", "models": ["gpt-4", "claude-3"]},
         )
 
@@ -73,7 +73,7 @@ class TestKeyCreateView:
         client.force_login(user)
 
         response = client.post(
-            reverse("ai_gateway:key_create", args=[project.slug]),
+            reverse("ai_gateway:key_create", args=[project.uuid]),
             data={"name": "primary-key", "models": ["not-a-model"]},
         )
 
@@ -85,7 +85,7 @@ class TestKeyCreateView:
         client.force_login(user)
 
         response = client.post(
-            reverse("ai_gateway:key_create", args=[project.slug]),
+            reverse("ai_gateway:key_create", args=[project.uuid]),
             data={"name": "primary-key"},
         )
 
@@ -100,7 +100,7 @@ class TestKeyCreateView:
 
         with pytest.raises(AIGatewayAPIError):
             client.post(
-                reverse("ai_gateway:key_create", args=[project.slug]),
+                reverse("ai_gateway:key_create", args=[project.uuid]),
                 data={"name": "primary-key", "models": ["gpt-4"]},
             )
 
@@ -110,7 +110,7 @@ class TestKeyCreateView:
         client.force_login(user)
 
         response = client.post(
-            reverse("ai_gateway:key_create", args=[project.slug]),
+            reverse("ai_gateway:key_create", args=[project.uuid]),
             data={"name": key.name, "models": ["gpt-4"]},
         )
 
@@ -122,7 +122,7 @@ class TestKeyCreateView:
         client.force_login(non_member)
 
         response = client.post(
-            reverse("ai_gateway:key_create", args=[project.slug]),
+            reverse("ai_gateway:key_create", args=[project.uuid]),
             data={"name": "primary-key", "models": ["gpt-4"]},
         )
 

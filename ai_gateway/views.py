@@ -21,7 +21,7 @@ class ProjectScopedMixin:
     def project(self) -> Project:
         return get_object_or_404(
             Project.objects.filter(user_permissions__user=self.request.user).distinct(),
-            slug=self.kwargs["slug"],
+            uuid=self.kwargs["uuid"],
         )
 
 

@@ -6,7 +6,7 @@ from ai_gateway.models import Key, Team
 
 @pytest.fixture
 def project(db, user):
-    return baker.make("projects.Project", name="Example Project", slug="example-slug")
+    return baker.make("projects.Project", name="Example Project")
 
 
 class TestTeam:

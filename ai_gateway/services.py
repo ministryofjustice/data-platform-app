@@ -94,7 +94,7 @@ class KeyService:
     @staticmethod
     def _build_alias(project: Project, name: str) -> str:
         """Build a globally unique, readable gateway alias from a project and name."""
-        return f"{project.slug}-{slugify(name)}-{secrets.token_hex(6)}"
+        return f"{project.uuid}-{slugify(name)}-{secrets.token_hex(6)}"
 
     @staticmethod
     def _mask_key(key: str) -> str:

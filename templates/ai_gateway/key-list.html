@@ -5,7 +5,7 @@
 {% endblock title %}
 {% block back_link %}
   <div>
-    <a href="{% url 'projects:project_detail' project.slug %}"
+    <a href="{% url 'projects:project_detail' project.uuid %}"
        class="govuk-back-link">Back to {{ project.name }}</a>
   </div>
 {% endblock back_link %}
@@ -22,7 +22,7 @@
         </div>
         <div class="govuk-grid-column-one-third govuk-!-text-align-right">
           <a class="govuk-button govuk-button--secondary"
-             href="{% url 'ai_gateway:key_create' project.slug %}">Create API key</a>
+             href="{% url 'ai_gateway:key_create' project.uuid %}">Create API key</a>
         </div>
       </div>
       <div class="govuk-grid-row">
