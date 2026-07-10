@@ -46,6 +46,21 @@ $masthead-background-color: #381a62;
   border: 1px solid #8eb8fc;
 }
 
+.app-key-panel {
+  padding: govuk-spacing(3);
+  border: 1px solid $govuk-border-colour;
+}
+
+.app-key-token {
+  display: inline-block;
+  box-sizing: border-box;
+  @include govuk-font($size: 19, $line-height: 19px, $weight: bold);
+  padding: 8px govuk-spacing(2) 7px;
+  border: 1px solid govuk-colour("blue");
+  background-color: govuk-colour("blue", $variant: "tint-95");
+  vertical-align: baseline;
+}
+
 .info-panel-home-width {
   max-width: 652px;
 }
