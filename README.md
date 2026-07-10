@@ -153,10 +153,10 @@ To have this Django app use your local gateway, add these variables to your `.en
 ```bash
 AI_GATEWAY_URL=http://localhost:4000
 AI_GATEWAY_MASTER_KEY=sk-123456789: # gitleaks:allow
-DEFAULT_ACCESS_GROUP_ID=12345
+DEFAULT_ACCESS_GROUP_NAME=generally-available-models
 ```
 
-`AI_GATEWAY_MASTER_KEY` must match the gateway's `LITELLM_MASTER_KEY` value. If you changed it in Docker compose or your environment, use that value instead. `DEFAULT_ACCESS_GROUP_ID` is the ID of the access group that should be created to define with models are available by default.
+`AI_GATEWAY_MASTER_KEY` must match the gateway's `LITELLM_MASTER_KEY` value. If you changed it in Docker compose or your environment, use that value instead. `DEFAULT_ACCESS_GROUP_NAME` is the name of the access group that defines which models are available by default; the app looks up its id on the gateway at runtime.
 
 The app stores each generated key's secret encrypted at rest (Fernet), so you must
 also set a `FIELD_ENCRYPTION_KEY`. Generate one with:

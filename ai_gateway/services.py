@@ -42,11 +42,9 @@ class KeyService:
         """Close the underlying gateway client."""
         self._client.close()
 
-    def list_models(self) -> list[str]:
-        """Return the ids of the models available on the gateway."""
-        return self._client.list_models_for_access_group(
-            access_group_id=self._default_access_group_id()
-        )
+    def list_default_models(self) -> list[str]:
+        """Return the model names in the default (generally available) access group."""
+        return self._client.list_models_for_access_group(self._default_access_group_name())
 
     def create_key(self, project: Project, name: str, models: list[str], created_by: User) -> str:
         """Generate a gateway key for ``project`` and persist its metadata.
@@ -80,16 +78,17 @@ class KeyService:
         try:
             return project.ai_gateway_team
         except Team.DoesNotExist:
-            team_id = self._client.create_team(project.name, [self._default_access_group_id()])
+            access_group_id = self._client.get_access_group_id(self._default_access_group_name())
+            team_id = self._client.create_team(project.name, [access_group_id])
             return Team.objects.create(project=project, litellm_team_id=team_id)
 
     @staticmethod
-    def _default_access_group_id() -> str:
-        """Return configured default access group id or raise if missing."""
-        access_group_id = settings.DEFAULT_ACCESS_GROUP_ID
-        if not access_group_id:
-            raise ImproperlyConfigured("DEFAULT_ACCESS_GROUP_ID is not configured")
-        return access_group_id
+    def _default_access_group_name() -> str:
+        """Return configured default access group name or raise if missing."""
+        name = settings.DEFAULT_ACCESS_GROUP_NAME
+        if not name:
+            raise ImproperlyConfigured("DEFAULT_ACCESS_GROUP_NAME is not configured")
+        return name
 
     @staticmethod
     def _build_alias(project: Project, name: str) -> str:

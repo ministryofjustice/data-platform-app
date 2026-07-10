@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import httpx
 from django.conf import settings
@@ -63,9 +63,27 @@ class AIGatewayClient:
         data = self._request("GET", "/v1/models")
         return [model["id"] for model in data.get("data", [])]
 
-    def list_models_for_access_group(self, access_group_id: str) -> list[str]:
-        data = self._request("GET", f"/v1/access_group/{access_group_id}")
-        return data["access_model_names"]
+    def _get_access_group(self, name: str) -> dict[str, Any]:
+        """Return the access group whose name matches ``name``.
+
+        Resolves the group by its stable name rather than an environment-specific
+        id, and raises if no group or more than one group matches.
+        """
+        groups = cast("list[dict[str, Any]]", self._request("GET", "/v1/access_group"))
+        matches = [group for group in groups if group.get("access_group_name") == name]
+        if not matches:
+            raise AIGatewayAPIError(404, f"No access group named {name!r}")
+        if len(matches) > 1:
+            raise AIGatewayAPIError(409, f"Multiple access groups named {name!r}")
+        return matches[0]
+
+    def get_access_group_id(self, name: str) -> str:
+        """Return the id of the access group named ``name``."""
+        return self._get_access_group(name)["access_group_id"]
+
+    def list_models_for_access_group(self, name: str) -> list[str]:
+        """Return the model names available in the access group named ``name``."""
+        return self._get_access_group(name)["access_model_names"]
 
     def create_team(self, name: str, access_group_ids: list[str] | None = None) -> str:
         """Create a team named ``name`` and return its generated team id."""

@@ -49,7 +49,7 @@ class KeyCreateView(ProjectScopedMixin, FormView):
     @cached_property
     def available_models(self) -> list[str]:
         with KeyService.from_settings() as service:
-            return service.list_models()
+            return service.list_default_models()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

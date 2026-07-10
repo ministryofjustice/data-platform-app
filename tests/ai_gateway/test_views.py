@@ -17,7 +17,7 @@ def key_service():
     service = create_autospec(KeyService, instance=True)
     service.__enter__.return_value = service
     service.__exit__.return_value = False
-    service.list_models.return_value = ["gpt-4", "claude-3"]
+    service.list_default_models.return_value = ["gpt-4", "claude-3"]
 
     with patch("ai_gateway.views.KeyService.from_settings", return_value=service):
         yield service

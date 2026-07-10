@@ -75,6 +75,77 @@ class TestCreateTeam:
         assert client.create_team("my-project", ["ag-123", "ag-456"]) == "team-123"
 
 
+def access_group_list_handler(request):
+    """Serve the /v1/access_group list endpoint with two named groups."""
+    assert request.method == "GET"
+    assert request.url.path == "/v1/access_group"
+    return httpx.Response(
+        200,
+        json=[
+            {
+                "access_group_name": "other-models",
+                "access_group_id": "ag-other",
+                "access_model_names": ["gpt-3.5"],
+            },
+            {
+                "access_group_name": "generally-available-models",
+                "access_group_id": "ag-default",
+                "access_model_names": ["gpt-4", "claude-3"],
+            },
+        ],
+    )
+
+
+class TestListModelsForAccessGroup:
+    def test_returns_model_names_for_matching_group(self):
+        client = build_client(access_group_list_handler)
+
+        assert client.list_models_for_access_group("generally-available-models") == [
+            "gpt-4",
+            "claude-3",
+        ]
+
+    def test_raises_when_group_not_found(self):
+        client = build_client(access_group_list_handler)
+
+        with pytest.raises(AIGatewayAPIError) as exc_info:
+            client.list_models_for_access_group("missing-models")
+
+        assert exc_info.value.status_code == 404
+
+
+class TestGetAccessGroupId:
+    def test_returns_id_for_matching_group(self):
+        client = build_client(access_group_list_handler)
+
+        assert client.get_access_group_id("generally-available-models") == "ag-default"
+
+    def test_raises_when_group_not_found(self):
+        client = build_client(access_group_list_handler)
+
+        with pytest.raises(AIGatewayAPIError) as exc_info:
+            client.get_access_group_id("missing-models")
+
+        assert exc_info.value.status_code == 404
+
+    def test_raises_when_multiple_groups_match(self):
+        def handler(request):
+            return httpx.Response(
+                200,
+                json=[
+                    {"access_group_name": "dupe", "access_group_id": "ag-1"},
+                    {"access_group_name": "dupe", "access_group_id": "ag-2"},
+                ],
+            )
+
+        client = build_client(handler)
+
+        with pytest.raises(AIGatewayAPIError) as exc_info:
+            client.get_access_group_id("dupe")
+
+        assert exc_info.value.status_code == 409
+
+
 class TestDeleteTeam:
     def test_posts_team_id(self):
         captured = {}
