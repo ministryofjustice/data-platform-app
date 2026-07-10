@@ -3,13 +3,17 @@ from __future__ import annotations
 from functools import cached_property
 
 from django.http import HttpRequest, HttpResponse
-from django.shortcuts import get_object_or_404, render
-from django.views.generic import FormView, ListView
+from django.shortcuts import get_object_or_404, redirect
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import never_cache
+from django.views.generic import FormView, ListView, TemplateView
 
 from ai_gateway.forms import KeyCreateForm
 from ai_gateway.services import KeyService
 from projects.mixins import ProjectLayoutContextMixin
 from projects.models import Project
+
+SESSION_PLAINTEXT_KEY = "ai_gateway_plaintext_key"
 
 
 class ProjectScopedMixin:
@@ -71,8 +75,26 @@ class KeyCreateView(ProjectScopedMixin, FormView):
                 created_by=self.request.user,
             )
 
-        return render(
-            self.request,
-            "ai_gateway/key-created.html",
-            {"project": self.project, "plaintext_key": plaintext_key},
-        )
+        self.request.session[SESSION_PLAINTEXT_KEY] = plaintext_key
+        return redirect("ai_gateway:key_created", uuid=self.project.uuid)
+
+
+@method_decorator(never_cache, name="dispatch")
+class KeyCreatedView(ProjectScopedMixin, TemplateView):
+    """Displays a newly created key once."""
+
+    template_name = "ai_gateway/key-created.html"
+
+    def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+        plaintext_key = request.session.pop(SESSION_PLAINTEXT_KEY, None)
+        if not plaintext_key:
+            return redirect("ai_gateway:key_list", uuid=self.project.uuid)
+
+        context = self.get_context_data(**kwargs)
+        context["plaintext_key"] = plaintext_key
+        return self.render_to_response(context)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["project"] = self.project
+        return context

@@ -60,7 +60,7 @@ class TestKeyCreateView:
         assertContains(response, 'data-module="app-multi-select-tags"')
         assertContains(response, "gpt-4")
 
-    def test_post_shows_plaintext_secret(self, client, user, project, key_service):
+    def test_post_redirects_to_created_page(self, client, user, project, key_service):
         key_service.create_key.return_value = PLAINTEXT_KEY
         client.force_login(user)
 
@@ -69,9 +69,9 @@ class TestKeyCreateView:
             data={"name": "primary-key", "models": ["gpt-4", "claude-3"]},
         )
 
-        assert response.status_code == 200
-        assertTemplateUsed(response, "ai_gateway/key-created.html")
-        assertContains(response, PLAINTEXT_KEY)
+        assert response.status_code == 302
+        assert response.url == reverse("ai_gateway:key_created", args=[project.uuid])
+        assert client.session["ai_gateway_plaintext_key"] == PLAINTEXT_KEY
         key_service.create_key.assert_called_once_with(
             project, "primary-key", ["gpt-4", "claude-3"], user
         )
@@ -136,3 +136,59 @@ class TestKeyCreateView:
         assert response.status_code == 404
         assert not Key.objects.filter(project=project).exists()
         key_service.create_key.assert_not_called()
+
+
+class TestKeyCreatedView:
+    def _set_session_key(self, client, value=PLAINTEXT_KEY):
+        session = client.session
+        session["ai_gateway_plaintext_key"] = value
+        session.save()
+
+    def test_shows_key_from_session_once(self, client, user, project):
+        client.force_login(user)
+        self._set_session_key(client)
+
+        response = client.get(reverse("ai_gateway:key_created", args=[project.uuid]))
+
+        assert response.status_code == 200
+        assertTemplateUsed(response, "ai_gateway/key-created.html")
+        assertContains(response, PLAINTEXT_KEY)
+        assert "ai_gateway_plaintext_key" not in client.session
+
+    def test_sets_no_store_cache_headers(self, client, user, project):
+        client.force_login(user)
+        self._set_session_key(client)
+
+        response = client.get(reverse("ai_gateway:key_created", args=[project.uuid]))
+
+        assert "no-store" in response["Cache-Control"]
+
+    def test_back_button_does_not_re_expose_key(self, client, user, project):
+        client.force_login(user)
+        self._set_session_key(client)
+        url = reverse("ai_gateway:key_created", args=[project.uuid])
+
+        first = client.get(url)
+        assertContains(first, PLAINTEXT_KEY)
+
+        # Simulates the browser back button re-requesting the page.
+        second = client.get(url)
+
+        assert second.status_code == 302
+        assert second.url == reverse("ai_gateway:key_list", args=[project.uuid])
+
+    def test_redirects_to_list_when_no_key_in_session(self, client, user, project):
+        client.force_login(user)
+
+        response = client.get(reverse("ai_gateway:key_created", args=[project.uuid]))
+
+        assert response.status_code == 302
+        assert response.url == reverse("ai_gateway:key_list", args=[project.uuid])
+
+    def test_non_member_gets_404(self, client, non_member, project):
+        client.force_login(non_member)
+        self._set_session_key(client)
+
+        response = client.get(reverse("ai_gateway:key_created", args=[project.uuid]))
+
+        assert response.status_code == 404
