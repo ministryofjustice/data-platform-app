@@ -7,10 +7,10 @@
     "ghcr.io/devcontainers/features/node:": {
       "version": "24"
     },
-    "./features/src/postgresql": {},
     "ghcr.io/ministryofjustice/devcontainer-feature/apm:": {},
+    "ghcr.io/ministryofjustice/devcontainer-feature/aws:": {},
     "ghcr.io/ministryofjustice/devcontainer-feature/kubernetes:": {},
-    "ghcr.io/ministryofjustice/devcontainer-feature/aws:": {}
+    "./features/src/postgresql": {}
   },
   "customizations": {
     "vscode": {
