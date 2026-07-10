@@ -13,4 +13,4 @@ jobs:
     name: Spell Check
     permissions:
       contents: read
-    uses: ministryofjustice/data-platform-github-actions/.github/workflows/spell-check.yml@92832dad5ea35a24fa25db98a932020e03a300ce # v4.0.2
+    uses: ministryofjustice/data-platform-github-actions/.github/workflows/spell-check.yml@5a78fec83924b266564bef1a9803536a9bd68a1f # v4.0.7
