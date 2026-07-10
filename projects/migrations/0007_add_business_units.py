@@ -14,7 +14,8 @@ def create_business_units(apps, schema_editor):
             BusinessUnit(name="Criminal Injuries Compensation Authority", code="CICA"),
             BusinessUnit(name="Office of the CTO", code="OCTO"),
             BusinessUnit(name="Youth Justice Board", code="YJB"),
-        ]
+        ],
+        ignore_conflicts=True,
     )
 
 
