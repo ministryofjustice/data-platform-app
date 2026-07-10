@@ -319,7 +319,7 @@ class TestProjectCreateFlow:
         response = client.post(reverse("projects:project_create_add_users"), data={})
 
         assert response.status_code == 200
-        assert "Select yes if you want to add project members now." in response.content.decode()
+        assert "Choose yes or no" in response.content.decode()
 
     def test_create_add_users_no_redirects_and_clears_selection(self, client, user):
         selected_user = baker.make("users.User", email="skip.member@example.com")
