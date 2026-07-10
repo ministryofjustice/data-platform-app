@@ -14,7 +14,7 @@
     <div class="govuk-grid-column-full">
       <h2 class="govuk-heading-l">{{ project.name }}</h2>
     </div>
-    {% include "includes/sidebar.html" %}
+    {% include "includes/sidebar.html" with project=project active_project_section=active_project_section only %}
     <div class="govuk-grid-column-three-quarters">
       <div class="govuk-grid-row">
         <div class="govuk-grid-column-two-thirds">

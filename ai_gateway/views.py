@@ -35,6 +35,7 @@ class KeyListView(ProjectScopedMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["project"] = self.project
+        context["active_project_section"] = "ai_gateway"
         return context
 
 

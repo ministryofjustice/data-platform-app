@@ -71,6 +71,7 @@ class ProjectDetailView(UUIDObjectMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["success_message"] = self.request.session.pop("success_message", None)
+        context["active_project_section"] = "overview"
         return context
 
 
@@ -297,6 +298,7 @@ class ProjectUsersDetailView(UUIDObjectMixin, DetailView):
         self.request.session.pop(ADD_USER_SESSION_KEY, None)
         context = super().get_context_data(**kwargs)
         context["success_message"] = self.request.session.pop("success_message", None)
+        context["active_project_section"] = "members"
         return context
 
 

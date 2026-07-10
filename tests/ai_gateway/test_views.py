@@ -2,6 +2,7 @@ from unittest.mock import create_autospec, patch
 
 import pytest
 from django.urls import reverse
+from pytest_django.asserts import assertContains, assertInHTML
 
 from ai_gateway.exceptions import AIGatewayAPIError
 from ai_gateway.models import Key
@@ -26,9 +27,15 @@ class TestKeyListView:
     def test_renders_for_member(self, client, user, project):
         client.force_login(user)
         response = client.get(reverse("ai_gateway:key_list", args=[project.uuid]))
+        current_ai_gateway_link = (
+            f'<a href="{reverse("ai_gateway:key_list", args=[project.uuid])}" '
+            'aria-current="location">AI gateway</a>'
+        )
 
         assert response.status_code == 200
         assert "ai_gateway/key-list.html" in [t.name for t in response.templates]
+        assertContains(response, 'aria-current="location"', count=1)
+        assertInHTML(current_ai_gateway_link, response.content.decode())
 
     def test_lists_existing_keys(self, client, user, project, key):
         client.force_login(user)

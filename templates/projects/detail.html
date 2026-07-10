@@ -16,24 +16,7 @@
     <div class="govuk-grid-column-full">
       <h2 class="govuk-heading-l">{{ project.name }}</h2>
     </div>
-    <!-- Sidebar -->
-    <div class="govuk-grid-column-one-quarter">
-      <nav class="moj-side-navigation govuk-!-padding-top-0"
-           aria-label="Project sections">
-        <ul class="moj-side-navigation__list">
-          <li class="moj-side-navigation__item moj-side-navigation__item--active">
-            <a href="{% url 'projects:project_detail' project.uuid %}"
-               aria-current="location">Overview</a>
-          </li>
-          <li class="moj-side-navigation__item">
-            <a href="{% url 'ai_gateway:key_list' project.uuid %}">AI gateway</a>
-          </li>
-          <li class="moj-side-navigation__item">
-            <a href="{% url 'projects:project_users' project.uuid %}">Project Members</a>
-          </li>
-        </ul>
-      </nav>
-    </div>
+    {% include "includes/sidebar.html" with project=project active_project_section=active_project_section only %}
     <!-- Main content -->
     <div class="govuk-grid-column-three-quarters">
       <h3 class="govuk-heading-m">Project ID</h3>
