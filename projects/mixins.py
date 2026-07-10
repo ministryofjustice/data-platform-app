@@ -52,3 +52,13 @@ class UUIDObjectMixin:
         if queryset is None:
             queryset = self.get_queryset()
         return get_object_or_404(queryset, uuid=self.kwargs["uuid"])
+
+
+class ProjectLayoutContextMixin:
+    active_project_section = None
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["success_message"] = self.request.session.pop("success_message", None)
+        context["active_project_section"] = self.active_project_section
+        return context

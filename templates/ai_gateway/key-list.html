@@ -1,4 +1,4 @@
-{% extends "base/base.html" %}
+{% extends "base/project_layout.html" %}
 {% load static %}
 {% block title %}
   AI gateway keys - {{ project.name }} - Justice Data Platform | Ministry of Justice
@@ -9,50 +9,44 @@
        class="govuk-back-link">Back to {{ project.name }}</a>
   </div>
 {% endblock back_link %}
-{% block content %}
+{% block project_main_content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h2 class="govuk-heading-m govuk-!-margin-bottom-0">AI gateway</h2>
+    </div>
+    <div class="govuk-grid-column-one-third govuk-!-text-align-right">
+      <a class="govuk-button govuk-button--secondary"
+         href="{% url 'ai_gateway:key_create' project.uuid %}">Create API key</a>
+    </div>
+  </div>
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-full">
-      <h2 class="govuk-heading-l">{{ project.name }}</h2>
+      <p class="govuk-body">Create and manage API keys to securely access AI models for this project.</p>
+      {% if keys %}
+        <table class="govuk-table" data-module="moj-sortable-table">
+          <thead class="govuk-table__head">
+            <tr class="govuk-table__row">
+              <th scope="col" class="govuk-table__header" aria-sort="none">Name</th>
+              <th scope="col" class="govuk-table__header" aria-sort="none">Key ID</th>
+              <th scope="col" class="govuk-table__header" aria-sort="none">Created on</th>
+              <th scope="col" class="govuk-table__header"></th>
+            </tr>
+          </thead>
+          <tbody class="govuk-table__body">
+            {% for key in keys %}
+              <tr class="govuk-table__row">
+                <td class="govuk-table__cell">{{ key.name }}</td>
+                <td class="govuk-table__cell">{{ key.litellm_token }}</td>
+                <td class="govuk-table__cell"
+                    data-sort-value="{{ key.created|date:'U' }}">{{ key.created|date:"d F Y" }}</td>
+                <td class="govuk-table__cell"><a href="#todo" class="govuk-link">Manage</a></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="govuk-body">No keys have been generated for this project yet.</p>
+      {% endif %}
     </div>
-    {% include "includes/sidebar.html" with project=project active_project_section=active_project_section only %}
-    <div class="govuk-grid-column-three-quarters">
-      <div class="govuk-grid-row">
-        <div class="govuk-grid-column-two-thirds">
-          <h2 class="govuk-heading-l govuk-!-margin-bottom-0">AI gateway</h2>
-        </div>
-        <div class="govuk-grid-column-one-third govuk-!-text-align-right">
-          <a class="govuk-button govuk-button--secondary"
-             href="{% url 'ai_gateway:key_create' project.uuid %}">Create API key</a>
-        </div>
-      </div>
-      <div class="govuk-grid-row">
-        <div class="govuk-grid-column-full">
-          <p class="govuk-body">Create and manage API keys to securely access AI models for this project.</p>
-          {% if keys %}
-            <table class="govuk-table" data-module="moj-sortable-table">
-              <thead class="govuk-table__head">
-                <tr class="govuk-table__row">
-                  <th scope="col" class="govuk-table__header" aria-sort="none">Name</th>
-                  <th scope="col" class="govuk-table__header" aria-sort="none">Key ID</th>
-                  <th scope="col" class="govuk-table__header" aria-sort="none">Created on</th>
-                  <th scope="col" class="govuk-table__header"></th>
-                </tr>
-              </thead>
-              <tbody class="govuk-table__body">
-                {% for key in keys %}
-                  <tr class="govuk-table__row">
-                    <td class="govuk-table__cell">{{ key.name }}</td>
-                    <td class="govuk-table__cell">{{ key.litellm_token }}</td>
-                    <td class="govuk-table__cell"
-                        data-sort-value="{{ key.created|date:'U' }}">{{ key.created|date:"d F Y" }}</td>
-                    <td class="govuk-table__cell"><a href="#todo" class="govuk-link">Manage</a></td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          {% else %}
-            <p class="govuk-body">No keys have been generated for this project yet.</p>
-          {% endif %}
-        </div>
-      </div>
-    {% endblock content %}
+  </div>
+{% endblock project_main_content %}

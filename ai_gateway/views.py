@@ -8,6 +8,7 @@ from django.views.generic import FormView, ListView
 
 from ai_gateway.forms import KeyCreateForm
 from ai_gateway.services import KeyService
+from projects.mixins import ProjectLayoutContextMixin
 from projects.models import Project
 
 
@@ -25,9 +26,10 @@ class ProjectScopedMixin:
         )
 
 
-class KeyListView(ProjectScopedMixin, ListView):
+class KeyListView(ProjectScopedMixin, ProjectLayoutContextMixin, ListView):
     template_name = "ai_gateway/key-list.html"
     context_object_name = "keys"
+    active_project_section = "ai_gateway"
 
     def get_queryset(self):
         return self.project.ai_gateway_keys.order_by("-created")
@@ -35,7 +37,6 @@ class KeyListView(ProjectScopedMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["project"] = self.project
-        context["active_project_section"] = "ai_gateway"
         return context
 
 
