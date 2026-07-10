@@ -1,4 +1,4 @@
-.PHONY: run install build-css build-js build-static lint format lint-templates format-templates test start-ai-gateway
+.PHONY: run install build-css build-js build-static lint format lint-templates format-templates test start-ai-gateway stop-ai-gateway
 
 run:
 	uv run python manage.py makemigrations --check
@@ -67,4 +67,7 @@ test:
 	uv run pytest --failed-first --maxfail=5 $(ARGS)
 
 start-ai-gateway:
-	docker compose --file contrib/docker-compose-ai-gateway.yml up --detach
+	bash contrib/ai-gateway/start.sh
+
+stop-ai-gateway:
+	docker compose --file contrib/docker-compose-ai-gateway.yml down --remove-orphans
