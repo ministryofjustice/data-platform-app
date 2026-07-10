@@ -2,7 +2,7 @@ from unittest.mock import create_autospec, patch
 
 import pytest
 from django.urls import reverse
-from pytest_django.asserts import assertContains, assertInHTML
+from pytest_django.asserts import assertContains, assertInHTML, assertTemplateUsed
 
 from ai_gateway.exceptions import AIGatewayAPIError
 from ai_gateway.models import Key
@@ -41,7 +41,7 @@ class TestKeyListView:
         client.force_login(user)
         response = client.get(reverse("ai_gateway:key_list", args=[project.uuid]))
 
-        assert key.litellm_token.encode() in response.content
+        assertContains(response, key.litellm_token)
 
     def test_non_member_gets_404(self, client, non_member, project):
         client.force_login(non_member)
@@ -56,9 +56,9 @@ class TestKeyCreateView:
         response = client.get(reverse("ai_gateway:key_create", args=[project.uuid]))
 
         assert response.status_code == 200
-        assert "ai_gateway/key-create.html" in [t.name for t in response.templates]
-        assert b'data-module="app-multi-select-tags"' in response.content
-        assert b"gpt-4" in response.content
+        assertTemplateUsed(response, "ai_gateway/key-create.html")
+        assertContains(response, 'data-module="app-multi-select-tags"')
+        assertContains(response, "gpt-4")
 
     def test_post_shows_plaintext_secret(self, client, user, project, key_service):
         key_service.create_key.return_value = PLAINTEXT_KEY
@@ -70,8 +70,8 @@ class TestKeyCreateView:
         )
 
         assert response.status_code == 200
-        assert "ai_gateway/key-created.html" in [t.name for t in response.templates]
-        assert PLAINTEXT_KEY.encode() in response.content
+        assertTemplateUsed(response, "ai_gateway/key-created.html")
+        assertContains(response, PLAINTEXT_KEY)
         key_service.create_key.assert_called_once_with(
             project, "primary-key", ["gpt-4", "claude-3"], user
         )
@@ -85,7 +85,7 @@ class TestKeyCreateView:
         )
 
         assert response.status_code == 200
-        assert "ai_gateway/key-create.html" in [t.name for t in response.templates]
+        assertTemplateUsed(response, "ai_gateway/key-create.html")
         key_service.create_key.assert_not_called()
 
     def test_post_requires_at_least_one_model(self, client, user, project, key_service):
@@ -97,7 +97,7 @@ class TestKeyCreateView:
         )
 
         assert response.status_code == 200
-        assert "ai_gateway/key-create.html" in [t.name for t in response.templates]
+        assertTemplateUsed(response, "ai_gateway/key-create.html")
         assert not Key.objects.filter(project=project).exists()
         key_service.create_key.assert_not_called()
 
@@ -122,7 +122,7 @@ class TestKeyCreateView:
         )
 
         assert response.status_code == 200
-        assert b"A key with this name already exists for this project." in response.content
+        assertContains(response, "A key with this name already exists for this project.")
         key_service.create_key.assert_not_called()
 
     def test_non_member_gets_404(self, client, non_member, project, key_service):
