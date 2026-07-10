@@ -26,7 +26,7 @@
       {% for project in user_projects %}
         <div class="govuk-grid-column-one-half govuk-!-margin-bottom-3">
           <div class="info-panel">
-            <a href="{% url 'projects:project_detail' project.slug %}"
+            <a href="{% url 'projects:project_detail' project.uuid %}"
                class="govuk-link project-link">{{ project.name }}</a>
             <p class="govuk-body">{{ project.description }}</p>
           </div>

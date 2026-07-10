@@ -3,7 +3,7 @@
   Add members - {{ project.name }} - Justice Data Platform | Ministry of Justice
 {% endblock title %}
 {% block back_link %}
-  <a href="{% url 'projects:project_users' project.slug %}"
+  <a href="{% url 'projects:project_users' project.uuid %}"
      class="govuk-back-link">Back to project members</a>
 {% endblock back_link %}
 {% block content %}
@@ -16,7 +16,9 @@
             <div class="govuk-error-summary__body">
               <ul class="govuk-list govuk-error-summary__list">
                 {% for error in formset.non_form_errors %}
-                  <li>{{ error }}</li>
+                  <li>
+                    <a href="#id_members-0-user">{{ error }}</a>
+                  </li>
                 {% endfor %}
               </ul>
             </div>

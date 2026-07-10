@@ -23,7 +23,9 @@
                   </li>
                 {% endfor %}
                 {% for error in form.non_form_errors %}
-                  <li>{{ error }}</li>
+                  <li>
+                    <a href="#id_members-0-user">{{ error }}</a>
+                  </li>
                 {% endfor %}
                 {% for member_form in form %}
                   {% for error in member_form.user.errors %}

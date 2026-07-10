@@ -8,9 +8,7 @@ from projects.models import Project
 def project(db, user):
     """A project created by a user."""
 
-    project = baker.make(
-        "projects.Project", name="Example Project", slug="example-slug", created_by=user
-    )
+    project = baker.make("projects.Project", name="Example Project", created_by=user)
 
     baker.make("projects.ProjectUserPermissions", project=project, user=user, role="admin")
 

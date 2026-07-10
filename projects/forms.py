@@ -63,7 +63,7 @@ class BaseProjectAddMemberFormSet(BaseFormSet):
                 selected_user_ids.append(user.id)
 
         if not selected_user_ids:
-            raise ValidationError("Select at least one user to continue.")
+            raise ValidationError("Enter a valid email address")
 
         duplicate_user_ids = [
             user_id for user_id, count in Counter(selected_user_ids).items() if count > 1
@@ -116,6 +116,17 @@ class ProjectCreateForm(forms.ModelForm):
         labels = {
             "business_unit": "Business unit",
         }
+        error_messages = {
+            "name": {
+                "required": "Enter a project name",
+            },
+            "description": {
+                "required": "Enter a description",
+            },
+            "business_unit": {
+                "required": "Select a business unit",
+            },
+        }
 
 
 class ProjectCreateAddUsersDecisionForm(forms.Form):
@@ -124,6 +135,6 @@ class ProjectCreateAddUsersDecisionForm(forms.Form):
         choices=(("yes", "Yes"), ("no", "No")),
         widget=forms.RadioSelect,
         error_messages={
-            "required": "Select yes if you want to add project members now.",
+            "required": "Choose yes or no",
         },
     )

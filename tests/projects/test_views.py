@@ -9,9 +9,7 @@ from projects.models import Project, ProjectUserPermissions
 def project(db, user):
     """A project created by a user."""
 
-    project = baker.make(
-        "projects.Project", name="Example Project", slug="example-slug", created_by=user
-    )
+    project = baker.make("projects.Project", name="Example Project", created_by=user)
 
     baker.make("projects.ProjectUserPermissions", project=project, user=user, role="admin")
 
@@ -28,53 +26,53 @@ def non_project_user(db):
 
 
 class TestDetailView:
-    """Tests for the ProjectDetailView at '/projects/<slug>/'."""
+    """Tests for the ProjectDetailView at '/projects/<uuid>/'."""
 
     def test_detail_page_renders(self, client, user, project):
         client.force_login(user)
-        response = client.get(reverse("projects:project_detail", args=[project.slug]))
+        response = client.get(reverse("projects:project_detail", args=[project.uuid]))
 
         assert response.status_code == 200
         assert "projects/detail.html" in [t.name for t in response.templates]
 
     def test_detail_page_fail(self, client, non_project_user, project):
         client.force_login(non_project_user)
-        response = client.get(reverse("projects:project_detail", args=[project.slug]))
+        response = client.get(reverse("projects:project_detail", args=[project.uuid]))
 
         assert response.status_code == 404
 
 
 class TestProjectDeleteView:
-    """Tests for the ProjectDeleteView at '/projects/<slug>/delete'."""
+    """Tests for the ProjectDeleteView at '/projects/<uuid>/delete'."""
 
     def test_delete_page_renders(self, client, user, project):
         client.force_login(user)
-        response = client.get(reverse("projects:project_delete", args=[project.slug]))
+        response = client.get(reverse("projects:project_delete", args=[project.uuid]))
 
         assert response.status_code == 200
         assert "projects/delete_confirm.html" in [t.name for t in response.templates]
 
     def test_delete_page_fail(self, client, non_project_user, project):
         client.force_login(non_project_user)
-        response = client.get(reverse("projects:project_delete", args=[project.slug]))
+        response = client.get(reverse("projects:project_delete", args=[project.uuid]))
 
         assert response.status_code == 404
 
     def test_delete_project(self, client, user, project):
         client.force_login(user)
-        response = client.post(reverse("projects:project_delete", args=[project.slug]))
+        response = client.post(reverse("projects:project_delete", args=[project.uuid]))
 
         assert response.status_code == 302
         assert not Project.objects.filter(id=project.id).exists()
 
 
 class TestProjectRemoveUserView:
-    """Tests for the ProjectRemoveUserView at '/projects/<slug>/users/<user_id>/remove/'."""
+    """Tests for the ProjectRemoveUserView at '/projects/<uuid>/users/<user_id>/remove/'."""
 
     def test_remove_user_page_renders(self, client, user, project):
         client.force_login(user)
         response = client.get(
-            reverse("projects:project_user_remove", args=[project.slug, user.id])
+            reverse("projects:project_user_remove", args=[project.uuid, user.id])
         )
 
         assert response.status_code == 200
@@ -83,7 +81,7 @@ class TestProjectRemoveUserView:
     def test_remove_user_page_fail(self, client, non_project_user, project):
         client.force_login(non_project_user)
         response = client.get(
-            reverse("projects:project_user_remove", args=[project.slug, non_project_user.id])
+            reverse("projects:project_user_remove", args=[project.uuid, non_project_user.id])
         )
 
         assert response.status_code == 404
@@ -91,7 +89,7 @@ class TestProjectRemoveUserView:
     def test_remove_user(self, client, user, project):
         client.force_login(user)
         response = client.post(
-            reverse("projects:project_user_remove", args=[project.slug, user.id])
+            reverse("projects:project_user_remove", args=[project.uuid, user.id])
         )
 
         assert response.status_code == 302
@@ -104,7 +102,7 @@ class TestProjectAddUsersFlow:
     def test_add_users_page_renders(self, client, user, project):
         client.force_login(user)
 
-        response = client.get(reverse("projects:project_users_add", args=[project.slug]))
+        response = client.get(reverse("projects:project_users_add", args=[project.uuid]))
 
         assert response.status_code == 200
         assert "projects/user_add.html" in [t.name for t in response.templates]
@@ -112,14 +110,14 @@ class TestProjectAddUsersFlow:
     def test_add_users_page_fail(self, client, non_project_user, project):
         client.force_login(non_project_user)
 
-        response = client.get(reverse("projects:project_users_add", args=[project.slug]))
+        response = client.get(reverse("projects:project_users_add", args=[project.uuid]))
 
         assert response.status_code == 404
 
     def test_add_users_page_context_contains_formset(self, client, user, project):
         client.force_login(user)
 
-        response = client.get(reverse("projects:project_users_add", args=[project.slug]))
+        response = client.get(reverse("projects:project_users_add", args=[project.uuid]))
 
         assert response.status_code == 200
         assert "formset" in response.context
@@ -135,7 +133,7 @@ class TestProjectAddUsersFlow:
         }
         session.save()
 
-        response = client.get(reverse("projects:project_users_add", args=[project.slug]))
+        response = client.get(reverse("projects:project_users_add", args=[project.uuid]))
 
         assert response.status_code == 200
         formset = response.context["formset"]
@@ -149,7 +147,7 @@ class TestProjectAddUsersFlow:
         client.force_login(user)
 
         response = client.post(
-            reverse("projects:project_users_add", args=[project.slug]),
+            reverse("projects:project_users_add", args=[project.uuid]),
             data={
                 "members-TOTAL_FORMS": "1",
                 "members-INITIAL_FORMS": "0",
@@ -160,7 +158,7 @@ class TestProjectAddUsersFlow:
         )
 
         assert response.status_code == 302
-        assert response.url == reverse("projects:project_users_add_confirm", args=[project.slug])
+        assert response.url == reverse("projects:project_users_add_confirm", args=[project.uuid])
 
     def test_add_users_page_excludes_existing_members_from_options(self, client, user, project):
 
@@ -174,7 +172,7 @@ class TestProjectAddUsersFlow:
         )
 
         client.force_login(user)
-        response = client.get(reverse("projects:project_users_add", args=[project.slug]))
+        response = client.get(reverse("projects:project_users_add", args=[project.uuid]))
 
         content = response.content.decode()
         assert response.status_code == 200
@@ -187,7 +185,7 @@ class TestProjectAddUsersFlow:
         client.force_login(user)
 
         response = client.post(
-            reverse("projects:project_users_add", args=[project.slug]),
+            reverse("projects:project_users_add", args=[project.uuid]),
             data={
                 "members-TOTAL_FORMS": "2",
                 "members-INITIAL_FORMS": "0",
@@ -209,7 +207,7 @@ class TestProjectAddUsersFlow:
         session["project_user_add_selection"] = {f"project:{project.id}": [selected_user.id]}
         session.save()
 
-        response = client.get(reverse("projects:project_users_add_confirm", args=[project.slug]))
+        response = client.get(reverse("projects:project_users_add_confirm", args=[project.uuid]))
 
         assert response.status_code == 200
         assert "projects/user_add_confirm.html" in [t.name for t in response.templates]
@@ -223,10 +221,10 @@ class TestProjectAddUsersFlow:
         session["project_user_add_selection"] = {f"project:{project.id}": [selected_user.id]}
         session.save()
 
-        response = client.post(reverse("projects:project_users_add_confirm", args=[project.slug]))
+        response = client.post(reverse("projects:project_users_add_confirm", args=[project.uuid]))
 
         assert response.status_code == 302
-        assert response.url == reverse("projects:project_users", args=[project.slug])
+        assert response.url == reverse("projects:project_users", args=[project.uuid])
         assert ProjectUserPermissions.objects.filter(
             project=project,
             user=selected_user,
@@ -420,7 +418,7 @@ class TestProjectCreateFlow:
 
         project = Project.objects.get(name="Final Creation Project")
         assert response.status_code == 302
-        assert response.url == reverse("projects:project_detail", args=[project.slug])
+        assert response.url == reverse("projects:project_detail", args=[project.uuid])
         assert ProjectUserPermissions.objects.filter(
             project=project,
             user=selected_user,

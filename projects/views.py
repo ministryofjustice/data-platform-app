@@ -3,7 +3,6 @@ from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.urls.base import reverse_lazy
-from django.utils.text import slugify
 from django.views.generic.base import View
 from django.views.generic.detail import DetailView
 from django.views.generic.edit import DeleteView, FormView
@@ -14,12 +13,16 @@ from projects.forms import (
     ProjectCreateForm,
     build_project_add_member_formset,
 )
+from projects.mixins import (
+    ADD_USER_SESSION_KEY,
+    PROJECT_CREATE_SESSION_KEY,
+    USER_BUCKET_SESSION_KEY,
+    ExistingProjectMixin,
+    ProjectUserSelectionSessionMixin,
+    UUIDObjectMixin,
+)
 from projects.models import BusinessUnit, Project, ProjectUserPermissions
 from users.models import User
-
-ADD_USER_SESSION_KEY = "project_user_add_selection"
-PROJECT_CREATE_SESSION_KEY = "project_create"
-USER_BUCKET_SESSION_KEY = "project_create_user_add"
 
 
 def clear_project_create_session(request):
@@ -31,44 +34,6 @@ def clear_project_create_session(request):
         request.session[ADD_USER_SESSION_KEY] = session_map
     else:
         request.session.pop(ADD_USER_SESSION_KEY, None)
-
-
-class ProjectUserSelectionSessionMixin:
-    def get_project(self):
-        return None
-
-    def get_user_bucket_key(self):
-        raise NotImplementedError
-
-    def get_selected_user_ids(self):
-        session_map = self.request.session.get(ADD_USER_SESSION_KEY, {})
-        return [int(user_id) for user_id in session_map.get(self.get_user_bucket_key(), [])]
-
-    def set_selected_user_ids(self, user_ids):
-        session_map = self.request.session.get(ADD_USER_SESSION_KEY, {})
-        session_map[self.get_user_bucket_key()] = list(user_ids)
-        self.request.session[ADD_USER_SESSION_KEY] = session_map
-
-    def clear_selected_user_ids(self):
-        session_map = self.request.session.get(ADD_USER_SESSION_KEY, {})
-        session_map.pop(self.get_user_bucket_key(), None)
-        self.request.session[ADD_USER_SESSION_KEY] = session_map
-
-
-class ExistingProjectMixin:
-    def get_project(self):
-        if not hasattr(self, "_project"):
-            self._project = get_object_or_404(
-                Project.objects.filter(
-                    user_permissions__user=self.request.user,
-                    user_permissions__role="admin",
-                ).distinct(),
-                slug=self.kwargs["slug"],
-            )
-        return self._project
-
-    def get_user_bucket_key(self):
-        return f"project:{self.get_project().id}"
 
 
 class ProjectListView(ListView):
@@ -90,7 +55,7 @@ class ProjectListView(ListView):
         return context
 
 
-class ProjectDetailView(DetailView):
+class ProjectDetailView(UUIDObjectMixin, DetailView):
     template_name = "projects/detail.html"
     context_object_name = "project"
     model = Project
@@ -238,12 +203,29 @@ class ProjectCreateConfirmView(ProjectUserSelectionSessionMixin, View):
         selected_user_ids = self.get_selected_user_ids()
         return User.objects.filter(id__in=selected_user_ids).order_by("email")
 
+    def validate_project_create_session(self, session_data):
+
+        if not session_data:
+            # If no data, form will be unbound and invalid
+            return False
+
+        form = ProjectCreateForm(
+            data={
+                "name": session_data.get("name", ""),
+                "description": session_data.get("description", ""),
+                "business_unit": session_data.get("business_unit_id"),
+            }
+        )
+
+        return form.is_valid()
+
     def get(self, request, *args, **kwargs):
         project_data = self.request.session.get(PROJECT_CREATE_SESSION_KEY, {})
-        business_unit_id = project_data.get("business_unit_id") if project_data else None
-        if not business_unit_id:
+        is_valid = self.validate_project_create_session(project_data)
+        if not is_valid:
             return redirect("projects:project_create")
 
+        business_unit_id = project_data.get("business_unit_id") if project_data else None
         business_unit = get_object_or_404(BusinessUnit, pk=business_unit_id)
         selected_users = list(self.get_selected_users())
 
@@ -256,8 +238,8 @@ class ProjectCreateConfirmView(ProjectUserSelectionSessionMixin, View):
 
     def post(self, request, *args, **kwargs):
         project_data = self.request.session.get(PROJECT_CREATE_SESSION_KEY)
-        business_unit_id = project_data.get("business_unit_id") if project_data else None
-        if not business_unit_id:
+        is_valid = self.validate_project_create_session(project_data)
+        if not is_valid:
             return redirect("projects:project_create")
         with transaction.atomic():
             project = Project.objects.create(
@@ -265,7 +247,6 @@ class ProjectCreateConfirmView(ProjectUserSelectionSessionMixin, View):
                 description=project_data["description"],
                 business_unit_id=project_data["business_unit_id"],
                 created_by=self.request.user,
-                slug=slugify(project_data["name"]),
             )
             selected_user_ids = self.get_selected_user_ids()
 
@@ -292,10 +273,10 @@ class ProjectCreateConfirmView(ProjectUserSelectionSessionMixin, View):
             "message": "You can now generate keys for the AI gateway API",
         }
 
-        return redirect("projects:project_detail", slug=project.slug)
+        return redirect("projects:project_detail", uuid=project.uuid)
 
 
-class ProjectUsersDetailView(DetailView):
+class ProjectUsersDetailView(UUIDObjectMixin, DetailView):
     template_name = "projects/user_list.html"
     context_object_name = "project"
     model = Project
@@ -319,7 +300,7 @@ class ProjectUsersDetailView(DetailView):
         return context
 
 
-class ProjectDeleteView(DeleteView):
+class ProjectDeleteView(UUIDObjectMixin, DeleteView):
     """
     Will need additional checks for user permissions to ensure
     the user has access to delete the project.
@@ -350,7 +331,7 @@ class ProjectAddUsersView(ExistingProjectMixin, ProjectUserSelectionFormView):
     def get_success_url(self):
         return reverse(
             "projects:project_users_add_confirm",
-            kwargs={"slug": self.get_project().slug},
+            kwargs={"uuid": self.get_project().uuid},
         )
 
 
@@ -365,7 +346,7 @@ class ProjectAddUsersConfirmView(ExistingProjectMixin, ProjectUserSelectionSessi
         project = self.get_project()
         selected_users = list(self.get_selected_users())
         if not selected_users:
-            return redirect("projects:project_users_add", slug=project.slug)
+            return redirect("projects:project_users_add", uuid=project.uuid)
 
         context = {"project": project, "selected_users": selected_users}
         return render(request, self.template_name, context)
@@ -375,7 +356,7 @@ class ProjectAddUsersConfirmView(ExistingProjectMixin, ProjectUserSelectionSessi
         selected_user_ids = self.get_selected_user_ids()
 
         if not selected_user_ids:
-            return redirect("projects:project_users_add", slug=project.slug)
+            return redirect("projects:project_users_add", uuid=project.uuid)
 
         existing_user_ids = set(
             ProjectUserPermissions.objects.filter(
@@ -405,7 +386,7 @@ class ProjectAddUsersConfirmView(ExistingProjectMixin, ProjectUserSelectionSessi
             "heading": "Project member added",
         }
 
-        return redirect("projects:project_users", slug=project.slug)
+        return redirect("projects:project_users", uuid=project.uuid)
 
 
 class ProjectRemoveUserView(DeleteView):
@@ -423,12 +404,12 @@ class ProjectRemoveUserView(DeleteView):
             ProjectUserPermissions.objects.select_related("project", "user")
             .filter(project__user_permissions__user=self.request.user)
             .distinct(),
-            project__slug=self.kwargs["slug"],
+            project__uuid=self.kwargs["uuid"],
             user_id=self.kwargs["user_id"],
         )
 
     def get_success_url(self):
-        return reverse("projects:project_users", kwargs={"slug": self.kwargs["slug"]})
+        return reverse("projects:project_users", kwargs={"uuid": self.kwargs["uuid"]})
 
     def form_valid(self, form):
         membership = self.get_object()

@@ -22,17 +22,17 @@ urlpatterns = [
         "create/add-users/", ProjectCreateAddUsersView.as_view(), name="project_create_add_users"
     ),
     path("create/confirm/", ProjectCreateConfirmView.as_view(), name="project_create_confirm"),
-    path("<slug:slug>/", ProjectDetailView.as_view(), name="project_detail"),
-    path("<slug:slug>/users/", ProjectUsersDetailView.as_view(), name="project_users"),
-    path("<slug:slug>/users/add/", ProjectAddUsersView.as_view(), name="project_users_add"),
+    path("<uuid:uuid>/", ProjectDetailView.as_view(), name="project_detail"),
+    path("<uuid:uuid>/users/", ProjectUsersDetailView.as_view(), name="project_users"),
+    path("<uuid:uuid>/users/add/", ProjectAddUsersView.as_view(), name="project_users_add"),
     path(
-        "<slug:slug>/users/add/confirm/",
+        "<uuid:uuid>/users/add/confirm/",
         ProjectAddUsersConfirmView.as_view(),
         name="project_users_add_confirm",
     ),
-    path("<slug:slug>/delete/", ProjectDeleteView.as_view(), name="project_delete"),
+    path("<uuid:uuid>/delete/", ProjectDeleteView.as_view(), name="project_delete"),
     path(
-        "<slug:slug>/users/<int:user_id>/remove/",
+        "<uuid:uuid>/users/<int:user_id>/remove/",
         ProjectRemoveUserView.as_view(),
         name="project_user_remove",
     ),
