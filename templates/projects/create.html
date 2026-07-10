@@ -1,0 +1,85 @@
+{% extends "base/base.html" %}
+{% block title %}
+  Create a project - Justice Data Platform | Ministry of Justice
+{% endblock title %}
+{% block back_link %}
+  <a href="{% url 'projects:projects_list' %}" class="govuk-back-link">Back to projects</a>
+{% endblock back_link %}
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      {% if form.errors %}
+        <div class="govuk-error-summary" data-module="govuk-error-summary">
+          <div role="alert">
+            <h2 class="govuk-error-summary__title">There is a problem</h2>
+            <div class="govuk-error-summary__body">
+              <ul class="govuk-list govuk-error-summary__list">
+                {% for error in form.non_field_errors %}
+                  <li>{{ error }}</li>
+                {% endfor %}
+                {% for field in form %}
+                  {% for error in field.errors %}
+                    <li>
+                      <a href="#{{ field.id_for_label }}">{{ error }}</a>
+                    </li>
+                  {% endfor %}
+                {% endfor %}
+              </ul>
+            </div>
+          </div>
+        </div>
+      {% endif %}
+      <h1 class="govuk-heading-l">Create a project</h1>
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="govuk-form-group{% if form.name.errors %} govuk-form-group--error{% endif %}">
+          <label class="govuk-label govuk-label--m" for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+          <div class="govuk-hint">Enter a meaningful name for this project</div>
+          {% if form.name.errors %}
+            {% for error in form.name.errors %}
+              <p class="govuk-error-message">
+                <span class="govuk-visually-hidden">Error:</span>
+                {{ error }}
+              </p>
+            {% endfor %}
+          {% endif %}
+          {{ form.name }}
+        </div>
+        <div class="govuk-form-group{% if form.business_unit.errors %} govuk-form-group--error{% endif %}">
+          <label class="govuk-label govuk-label--m"
+                 for="{{ form.business_unit.id_for_label }}">
+            {{ form.business_unit.label }}
+          </label>
+          <div class="govuk-hint">Select the associated business unit for this project</div>
+          {% if form.business_unit.errors %}
+            {% for error in form.business_unit.errors %}
+              <p class="govuk-error-message">
+                <span class="govuk-visually-hidden">Error:</span>
+                {{ error }}
+              </p>
+            {% endfor %}
+          {% endif %}
+          {{ form.business_unit }}
+        </div>
+        <div class="govuk-form-group{% if form.description.errors %} govuk-form-group--error{% endif %}">
+          <label class="govuk-label govuk-label--m"
+                 for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
+          <div class="govuk-hint">Enter a short description of the project purpose</div>
+          {% if form.description.errors %}
+            {% for error in form.description.errors %}
+              <p class="govuk-error-message">
+                <span class="govuk-visually-hidden">Error:</span>
+                {{ error }}
+              </p>
+            {% endfor %}
+          {% endif %}
+          {{ form.description }}
+        </div>
+        <div class="govuk-button-group">
+          <button type="submit" class="govuk-button">Continue</button>
+          <a href="{% url 'projects:projects_list' %}" class="govuk-link">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock content %}

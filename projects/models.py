@@ -1,3 +1,5 @@
+import uuid
+
 from django.db import models
 from django_extensions.db.models import TimeStampedModel
 from simple_history.models import HistoricalRecords
@@ -35,7 +37,7 @@ class BusinessUnit(TimeStampedModel):
 class Project(TimeStampedModel):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField()
-    slug = models.SlugField(unique=True)
+    uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False, db_index=True)
     users = models.ManyToManyField(
         "users.User",
         related_name="projects",
@@ -55,3 +57,18 @@ class Project(TimeStampedModel):
 
     def __str__(self):
         return self.name
+
+    @property
+    def public_id(self) -> str:
+        return f"prj-{self.uuid}"
+
+    @staticmethod
+    def get_by_public_id(public_id: str):
+        if not public_id.startswith("prj-"):
+            raise ValueError("Invalid public ID format")
+        uuid_str = public_id[4:]
+        try:
+            project_uuid = uuid.UUID(uuid_str)
+        except ValueError as err:
+            raise ValueError("Invalid UUID in public ID") from err
+        return Project.objects.get(uuid=project_uuid)

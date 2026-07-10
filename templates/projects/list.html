@@ -5,11 +5,17 @@
 {% endblock title %}
 {% block content %}
   <div class="govuk-grid-row">
+    {% if success_message %}
+      <div class="govuk-grid-column-full">
+        {% include "includes/success_message.html" with heading=success_message.heading message=success_message.message only %}
+      </div>
+    {% endif %}
     <div class="govuk-grid-column-two-thirds">
       <h2 class="govuk-heading-l">Projects</h2>
     </div>
     <div class="govuk-grid-column-one-third govuk-!-text-align-right">
-      <a class="govuk-button govuk-button--secondary" href="#">Create a project</a>
+      <a class="govuk-button govuk-button--secondary"
+         href="{% url 'projects:project_create' %}">Create a project</a>
     </div>
     <div class="govuk-grid-column-two-thirds">
       <p class="govuk-body">
@@ -20,7 +26,7 @@
       {% for project in user_projects %}
         <div class="govuk-grid-column-one-half govuk-!-margin-bottom-3">
           <div class="info-panel">
-            <a href="{% url 'projects:project_detail' project.slug %}"
+            <a href="{% url 'projects:project_detail' project.uuid %}"
                class="govuk-link project-link">{{ project.name }}</a>
             <p class="govuk-body">{{ project.description }}</p>
           </div>

@@ -4,7 +4,7 @@
   Remove {{ project.name }} - Justice Data Platform | Ministry of Justice
 {% endblock title %}
 {% block back_link %}
-  <a href="{% url 'projects:project_detail' membership.project.slug %}"
+  <a href="{% url 'projects:project_detail' membership.project.uuid %}"
      class="govuk-back-link">Back to project</a>
 {% endblock back_link %}
 {% block content %}
@@ -15,14 +15,14 @@
       <h2 class="govuk-heading-m">Are you sure you want to remove this member?</h2>
       <p class="govuk-body">{{ membership.user.email }} will receive an email telling them they are no longer a member of {{ membership.project.name }}. They will lose access to the data and tools in this project.</p>
       <form method="post"
-            action="{% url 'projects:project_user_remove' membership.project.slug membership.user.id %}">
+            action="{% url 'projects:project_user_remove' membership.project.uuid membership.user.id %}">
         {% csrf_token %}
         <div class="govuk-button-group">
           <button type="submit"
                   class="govuk-button govuk-button--warning govuk-!-margin-right-2">
             Remove
           </button>
-          <a href="{% url 'projects:project_detail' membership.project.slug %}"
+          <a href="{% url 'projects:project_detail' membership.project.uuid %}"
              class="govuk-link">Cancel</a>
         </div>
       </form>

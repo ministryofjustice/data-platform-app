@@ -10,31 +10,7 @@
   <div class="govuk-grid-row">
     {% if success_message %}
       <div class="govuk-grid-column-full">
-        <div role="region"
-             class="moj-alert moj-alert--success moj-alert--with-heading"
-             aria-label="success: Project created successfully"
-             data-module="moj-alert">
-          <div>
-            <svg class="moj-alert__icon"
-                 role="presentation"
-                 focusable="false"
-                 xmlns="http://www.w3.org/2000/svg"
-                 viewBox="0 0 30 30"
-                 height="30"
-                 width="30">
-              <path d="M11.2869 24.6726L2.00415 15.3899L4.62189 12.7722L11.2869 19.4186L25.3781 5.32739L27.9958 7.96369L11.2869 24.6726Z" fill="currentColor" />
-            </svg>
-          </div>
-          <div class="moj-alert__content">
-            <h2 class="moj-alert__heading">{{ success_message.heading }}</h2>
-            {% if success_message.message %}
-              <p>{{ success_message.message }}</p>
-            {% endif %}
-          </div>
-          <div class="moj-alert__action">
-            <button class="moj-alert__dismiss" hidden>Dismiss</button>
-          </div>
-        </div>
+        {% include "includes/success_message.html" with heading=success_message.heading message=success_message.message only %}
       </div>
     {% endif %}
     <div class="govuk-grid-column-full">
@@ -46,14 +22,14 @@
            aria-label="Project sections">
         <ul class="moj-side-navigation__list">
           <li class="moj-side-navigation__item moj-side-navigation__item--active">
-            <a href="{% url 'projects:project_detail' project.slug %}"
+            <a href="{% url 'projects:project_detail' project.uuid %}"
                aria-current="location">Overview</a>
           </li>
           <li class="moj-side-navigation__item">
             <a href="#">AI gateway</a>
           </li>
           <li class="moj-side-navigation__item">
-            <a href="{% url 'projects:project_users' project.slug %}">Project Members</a>
+            <a href="{% url 'projects:project_users' project.uuid %}">Project Members</a>
           </li>
         </ul>
       </nav>
@@ -62,7 +38,7 @@
     <div class="govuk-grid-column-three-quarters">
       <h3 class="govuk-heading-m">Project ID</h3>
       <span id="copy-alert" class="govuk-visually-hidden" aria-live="polite"></span>
-      <span id="project-id" class="govuk-body">{{ project.id }}</span>
+      <span id="project-id" class="govuk-body">{{ project.public_id }}</span>
       <button class="govuk-button copy-button govuk-!-margin-bottom-0 govuk-!-margin-left-2"
               type="button"
               data-module="copy-button"
@@ -78,7 +54,7 @@
       <h3 class="govuk-heading-m">Project owner</h3>
       <p class="govuk-body">{{ project.created_by.full_name }}</p>
       <p class="govuk-body">Created {{ project.created|date:"d F Y" }}</p>
-      <a href="{% url 'projects:project_delete' project.slug %}"
+      <a href="{% url 'projects:project_delete' project.uuid %}"
          class="govuk-link">Remove this project</a>
     </div>
   </div>
