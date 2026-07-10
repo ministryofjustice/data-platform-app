@@ -22,7 +22,7 @@ class TestKey:
             project=project,
             name="Example",
             litellm_token="tok-1",
-            masked_key="sk-abc...wxyz",
+            masked_key="sk-abc...secret",
         )
 
         assert str(key) == "Example"

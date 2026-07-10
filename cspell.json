@@ -9,6 +9,7 @@
     "**/*.svg"
   ],
   "words": [
+    "autospecced",
     "addopts",
     "asgi",
     "automount",
@@ -20,6 +21,7 @@
     "collectstatic",
     "containerfile",
     "dataplatform",
+    "describedby",
     "dbname",
     "djlint",
     "docstrings",
@@ -42,6 +44,7 @@
     "HMCTS",
     "HMPPS",
     "htmx",
+    "httpx",
     "hsts",
     "isort",
     "kubeconform",
@@ -77,6 +80,7 @@
     "pyupgrade",
     "querysets",
     "runserver",
+    "slugifies",
     "staticfiles",
     "teardown",
     "testpaths",

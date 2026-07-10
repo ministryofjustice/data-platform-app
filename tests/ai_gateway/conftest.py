@@ -24,7 +24,7 @@ def key(db, project, user):
         "ai_gateway.Key",
         project=project,
         name="primary-key",
-        litellm_secret="sk-abcdefghijklmnopqrstuvwxyz",
-        masked_key="sk-abc...wxyz",
+        litellm_secret="sk-full-secret",
+        masked_key="sk-abc...secret",
         created_by=user,
     )

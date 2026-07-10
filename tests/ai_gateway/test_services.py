@@ -23,7 +23,7 @@ def gateway_client():
 
 class TestMaskKey:
     def test_masks_a_long_key(self):
-        assert KeyService._mask_key("sk-abcdefghijklmnop") == "sk-abc...mnop"
+        assert KeyService._mask_key("sk-very-long-secret-value") == "sk-ver...alue"
 
     def test_short_key_is_fully_masked(self):
         assert KeyService._mask_key("sk-123") == "..."
