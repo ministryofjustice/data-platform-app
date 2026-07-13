@@ -152,7 +152,7 @@ To have this Django app use your local gateway, add these variables to your `.en
 
 ```bash
 AI_GATEWAY_URL=http://localhost:4000
-AI_GATEWAY_MASTER_KEY=sk-123456789: # gitleaks:allow
+AI_GATEWAY_MASTER_KEY=sk-123456789 # gitleaks:allow
 DEFAULT_ACCESS_GROUP_NAME=generally-available-models
 ```
 
