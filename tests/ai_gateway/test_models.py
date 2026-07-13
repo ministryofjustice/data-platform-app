@@ -1,12 +1,4 @@
-import pytest
-from model_bakery import baker
-
 from ai_gateway.models import Key, Team
-
-
-@pytest.fixture
-def project(db, user):
-    return baker.make("projects.Project", name="Example Project")
 
 
 class TestTeam:

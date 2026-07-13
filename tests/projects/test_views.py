@@ -7,17 +7,6 @@ from projects.models import Project, ProjectUserPermissions
 
 
 @pytest.fixture
-def project(db, user):
-    """A project created by a user."""
-
-    project = baker.make("projects.Project", name="Example Project", created_by=user)
-
-    baker.make("projects.ProjectUserPermissions", project=project, user=user, role="admin")
-
-    return project
-
-
-@pytest.fixture
 def non_project_user(db):
     """A user who is not part of any project."""
 
