@@ -85,10 +85,10 @@ class AIGatewayClient:
         """Return the model names available in the access group named ``name``."""
         return self._get_access_group(name)["access_model_names"]
 
-    def create_team(self, name: str, access_group_ids: list[str] | None = None) -> str:
-        """Create a team named ``name`` and return its generated team id."""
+    def create_team(self, team_alias: str, access_group_ids: list[str] | None = None) -> str:
+        """Create a team with alias ``team_alias`` and return its generated team id."""
         post_data = {
-            "team_alias": name,
+            "team_alias": team_alias,
             "max_budget": self.DEFAULT_TEAM_BUDGET,
             "budget_duration": self.DEFAULT_TEAM_BUDGET_DURATION,
             "tpm_limit": self.DEFAULT_TEAM_TPM_LIMIT,

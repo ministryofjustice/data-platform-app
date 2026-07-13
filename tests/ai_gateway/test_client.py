@@ -3,7 +3,8 @@ import json
 import httpx
 import pytest
 
-from ai_gateway import AIGatewayAPIError, AIGatewayClient
+from ai_gateway.client import AIGatewayClient
+from ai_gateway.exceptions import AIGatewayAPIError
 
 
 def build_client(handler):
@@ -39,12 +40,12 @@ class TestListModels:
 
 
 class TestCreateTeam:
-    def test_sends_project_name_and_returns_team_id(self):
+    def test_sends_team_alias_and_returns_team_id(self):
         def handler(request):
             assert request.method == "POST"
             assert request.url.path == "/team/new"
             assert json.loads(request.read()) == {
-                "team_alias": "my-project",
+                "team_alias": "project-uuid",
                 "max_budget": 1000,
                 "budget_duration": "monthly",
                 "tpm_limit": 500000,
@@ -54,14 +55,14 @@ class TestCreateTeam:
 
         client = build_client(handler)
 
-        assert client.create_team("my-project") == "team-123"
+        assert client.create_team("project-uuid") == "team-123"
 
     def test_includes_access_group_ids_when_given(self):
         def handler(request):
             assert request.method == "POST"
             assert request.url.path == "/team/new"
             assert json.loads(request.read()) == {
-                "team_alias": "my-project",
+                "team_alias": "project-uuid",
                 "max_budget": 1000,
                 "budget_duration": "monthly",
                 "tpm_limit": 500000,
@@ -72,7 +73,7 @@ class TestCreateTeam:
 
         client = build_client(handler)
 
-        assert client.create_team("my-project", ["ag-123", "ag-456"]) == "team-123"
+        assert client.create_team("project-uuid", ["ag-123", "ag-456"]) == "team-123"
 
 
 def access_group_list_handler(request):

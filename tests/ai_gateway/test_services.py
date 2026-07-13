@@ -23,10 +23,10 @@ def gateway_client():
 
 class TestMaskKey:
     def test_masks_a_long_key(self):
-        assert KeyService._mask_key("sk-very-long-secret-1234") == "sk-ver...1234"
+        assert KeyService._mask_key("sk-very-long-secret-1234") == "...1234"
 
     def test_short_key_is_fully_masked(self):
-        assert KeyService._mask_key("sk-123") == "..."
+        assert KeyService._mask_key("1234") == "..."
 
 
 class TestBuildAlias:
@@ -75,7 +75,7 @@ class TestKeyServiceCreateKey:
 
         assert plaintext == PLAINTEXT_KEY
         gateway_client.get_access_group_id.assert_called_once_with("generally-available-models")
-        gateway_client.create_team.assert_called_once_with("Example Project", ["ag-default"])
+        gateway_client.create_team.assert_called_once_with(str(project.uuid), ["ag-default"])
         team = Team.objects.get(project=project)
         assert team.litellm_team_id == "team-xyz"
 

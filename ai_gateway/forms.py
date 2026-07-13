@@ -4,7 +4,7 @@ from ai_gateway.models import Key
 from projects.models import Project
 
 
-class KeyCreateForm(forms.Form):
+class KeyCreateForm(forms.ModelForm):
     models = forms.MultipleChoiceField(
         label="AI Model",
         help_text="Add models for this project",
@@ -16,6 +16,10 @@ class KeyCreateForm(forms.Form):
         help_text="Enter a name for the key",
         error_messages={"required": "Enter a key name"},
     )
+
+    class Meta:
+        model = Key
+        fields = ["name"]
 
     def __init__(self, *args, project: Project, available_models: list[str], **kwargs):
         super().__init__(*args, **kwargs)

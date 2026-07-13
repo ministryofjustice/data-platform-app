@@ -79,7 +79,7 @@ class KeyService:
             return project.ai_gateway_team
         except Team.DoesNotExist:
             access_group_id = self._client.get_access_group_id(self._default_access_group_name())
-            team_id = self._client.create_team(project.name, [access_group_id])
+            team_id = self._client.create_team(str(project.uuid), [access_group_id])
             return Team.objects.create(project=project, litellm_team_id=team_id)
 
     @staticmethod
@@ -98,6 +98,6 @@ class KeyService:
     @staticmethod
     def _mask_key(key: str) -> str:
         """Return a display-safe fingerprint of a key, never the full secret."""
-        if len(key) <= 10:
+        if len(key) <= 4:
             return "..."
-        return f"{key[:6]}...{key[-4:]}"
+        return f"...{key[-4:]}"
