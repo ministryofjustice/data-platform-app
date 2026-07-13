@@ -93,3 +93,31 @@ $masthead-background-color: #381a62;
   font-size: 24px;
   line-height: 32px;
 }
+
+.app-ai-gateway-key-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.app-ai-gateway-key-table__name {
+  width: 20%;
+}
+
+.app-ai-gateway-key-table__key-id {
+  width: 50%;
+}
+
+.app-ai-gateway-key-table__created-on {
+  width: 20%;
+}
+
+.app-ai-gateway-key-table__actions {
+  width: 10%;
+}
+
+.app-ai-gateway-key-table__value {
+  display: inline-block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}

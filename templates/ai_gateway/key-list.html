@@ -23,23 +23,35 @@
     <div class="govuk-grid-column-full">
       <p class="govuk-body">Create and manage API keys to securely access AI models for this project.</p>
       {% if keys %}
-        <table class="govuk-table" data-module="moj-sortable-table">
+        <table class="govuk-table app-ai-gateway-key-table"
+               data-module="moj-sortable-table">
           <thead class="govuk-table__head">
             <tr class="govuk-table__row">
-              <th scope="col" class="govuk-table__header" aria-sort="none">Name</th>
-              <th scope="col" class="govuk-table__header" aria-sort="none">Key ID</th>
-              <th scope="col" class="govuk-table__header" aria-sort="none">Created on</th>
-              <th scope="col" class="govuk-table__header"></th>
+              <th scope="col"
+                  class="govuk-table__header app-ai-gateway-key-table__name"
+                  aria-sort="none">Name</th>
+              <th scope="col"
+                  class="govuk-table__header app-ai-gateway-key-table__key-id"
+                  aria-sort="none">Key ID</th>
+              <th scope="col"
+                  class="govuk-table__header app-ai-gateway-key-table__created-on"
+                  aria-sort="none">Created on</th>
+              <th scope="col"
+                  class="govuk-table__header app-ai-gateway-key-table__actions"></th>
             </tr>
           </thead>
           <tbody class="govuk-table__body">
             {% for key in keys %}
               <tr class="govuk-table__row">
-                <td class="govuk-table__cell">{{ key.name }}</td>
-                <td class="govuk-table__cell">{{ key.litellm_token }}</td>
+                <td class="govuk-table__cell">
+                  <span class="app-ai-gateway-key-table__value">{{ key.name }}</span>
+                </td>
+                <td class="govuk-table__cell">
+                  <span class="app-ai-gateway-key-table__value">{{ key.litellm_token }}</span>
+                </td>
                 <td class="govuk-table__cell"
                     data-sort-value="{{ key.created|date:'U' }}">{{ key.created|date:"d F Y" }}</td>
-                <td class="govuk-table__cell"><a href="#todo" class="govuk-link">Manage</a></td>
+                <td class="govuk-table__cell govuk-!-text-align-right"><a href="#todo" class="govuk-link">Manage</a></td>
               </tr>
             {% endfor %}
           </tbody>
