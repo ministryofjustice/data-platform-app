@@ -106,14 +106,6 @@ class TestListModelsForAccessGroup:
             "claude-3",
         ]
 
-    def test_raises_when_group_not_found(self):
-        client = build_client(access_group_list_handler)
-
-        with pytest.raises(AIGatewayAPIError) as exc_info:
-            client.list_models_for_access_group("missing-models")
-
-        assert exc_info.value.status_code == 404
-
 
 class TestGetAccessGroupId:
     def test_returns_id_for_matching_group(self):

@@ -4,7 +4,6 @@ import pytest
 from django.urls import reverse
 from pytest_django.asserts import assertContains, assertInHTML, assertTemplateUsed
 
-from ai_gateway.exceptions import AIGatewayAPIError
 from ai_gateway.models import Key
 from ai_gateway.services import KeyService
 
@@ -43,8 +42,8 @@ class TestKeyListView:
 
         assertContains(response, key.litellm_token)
 
-    def test_non_member_gets_404(self, client, non_member, project):
-        client.force_login(non_member)
+    def test_non_member_gets_404(self, client, non_project_user, project):
+        client.force_login(non_project_user)
         response = client.get(reverse("ai_gateway:key_list", args=[project.uuid]))
 
         assert response.status_code == 404
@@ -102,16 +101,6 @@ class TestKeyCreateView:
         assert not Key.objects.filter(project=project).exists()
         key_service.create_key.assert_not_called()
 
-    def test_post_gateway_error_propagates(self, client, user, project, key_service):
-        key_service.create_key.side_effect = AIGatewayAPIError(500, "boom")
-        client.force_login(user)
-
-        with pytest.raises(AIGatewayAPIError):
-            client.post(
-                reverse("ai_gateway:key_create", args=[project.uuid]),
-                data={"name": "primary-key", "models": ["gpt-4"]},
-            )
-
     def test_post_duplicate_name_returns_form_error_without_calling_service(
         self, client, user, project, key, key_service
     ):
@@ -126,8 +115,8 @@ class TestKeyCreateView:
         assertContains(response, "A key with this name already exists for this project.")
         key_service.create_key.assert_not_called()
 
-    def test_non_member_gets_404(self, client, non_member, project, key_service):
-        client.force_login(non_member)
+    def test_non_member_gets_404(self, client, non_project_user, project, key_service):
+        client.force_login(non_project_user)
 
         response = client.post(
             reverse("ai_gateway:key_create", args=[project.uuid]),

@@ -1,18 +1,8 @@
-import pytest
 from django.urls import reverse
 from model_bakery import baker
 from pytest_django.asserts import assertContains, assertInHTML
 
 from projects.models import Project, ProjectUserPermissions
-
-
-@pytest.fixture
-def non_project_user(db):
-    """A user who is not part of any project."""
-
-    non_project_user = baker.make("users.User", email="non_project_user@example.com")
-
-    return non_project_user
 
 
 class TestDetailView:
