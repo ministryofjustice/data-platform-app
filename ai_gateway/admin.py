@@ -9,6 +9,7 @@ class AIGatewayTeamAdmin(admin.ModelAdmin):
 
 class KeyAdmin(admin.ModelAdmin):
     list_display = ("name", "project", "masked_key", "created_by", "created")
+    exclude = ("litellm_secret",)
 
 
 admin.site.register(Team, AIGatewayTeamAdmin)
