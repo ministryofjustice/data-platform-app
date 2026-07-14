@@ -21,7 +21,7 @@ class KeyService:
     single lifecycle. Use as a context manager to close the client on exit::
 
         with KeyService.from_settings() as service:
-            service.create_key(project, name, user)
+            service.create_key(project, name, models, created_by)
     """
 
     def __init__(self, client: AIGatewayClient) -> None:

@@ -56,7 +56,7 @@ class AIGatewayClient:
         method: str,
         path: str,
         json: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
+    ) -> Any:
         """Send a request and return the parsed JSON body, raising on error responses."""
         response = self._client.request(method, path, json=json)
         if response.is_error:
