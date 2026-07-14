@@ -21,10 +21,6 @@ $masthead-background-color: #381a62;
   background-color: $masthead-background-color;
 }
 
-.moj-header {
-  border-bottom-color: govuk-colour("black");
-}
-
 .moj-header--inverse {
   background-color: $masthead-background-color;
   border-bottom-color: $masthead-background-color;
@@ -120,4 +116,9 @@ $masthead-background-color: #381a62;
   max-width: 100%;
   overflow-wrap: anywhere;
   word-break: break-word;
+}
+
+.ai-gateway-key-detail {
+  background-color: govuk-colour("blue", $variant: "tint-95");
+  padding: govuk-spacing(4);
 }

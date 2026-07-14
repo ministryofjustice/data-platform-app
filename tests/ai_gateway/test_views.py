@@ -2,6 +2,7 @@ from unittest.mock import create_autospec, patch
 
 import pytest
 from django.urls import reverse
+from model_bakery import baker
 from pytest_django.asserts import assertContains, assertInHTML, assertTemplateUsed
 
 from ai_gateway.models import Key
@@ -41,6 +42,16 @@ class TestKeyListView:
         response = client.get(reverse("ai_gateway:key_list", args=[project.uuid]))
 
         assertContains(response, key.litellm_token)
+
+    def test_lists_manage_link_to_key_detail(self, client, user, project, key):
+        client.force_login(user)
+
+        response = client.get(reverse("ai_gateway:key_list", args=[project.uuid]))
+
+        assertContains(
+            response,
+            f'href="{reverse("ai_gateway:key_detail", args=[project.uuid, key.pk])}"',
+        )
 
     def test_non_member_gets_404(self, client, non_project_user, project):
         client.force_login(non_project_user)
@@ -126,3 +137,46 @@ class TestKeyCreateView:
         assert response.status_code == 404
         assert not Key.objects.filter(project=project).exists()
         key_service.create_key.assert_not_called()
+
+
+class TestKeyDetailView:
+    def test_renders_for_member(self, client, user, project, key):
+        client.force_login(user)
+
+        response = client.get(reverse("ai_gateway:key_detail", args=[project.uuid, key.pk]))
+
+        assert response.status_code == 200
+        assertTemplateUsed(response, "ai_gateway/key-detail.html")
+        assertContains(response, key.name)
+        assertContains(response, key.litellm_token)
+
+    def test_non_member_gets_404(self, client, non_project_user, project, key):
+        client.force_login(non_project_user)
+
+        response = client.get(reverse("ai_gateway:key_detail", args=[project.uuid, key.pk]))
+
+        assert response.status_code == 404
+
+    def test_key_from_another_project_gets_404(self, client, user, project):
+        other_project = baker.make("projects.Project", created_by=user)
+        baker.make(
+            "projects.ProjectUserPermissions",
+            project=other_project,
+            user=user,
+            role="admin",
+        )
+        other_key = baker.make(
+            "ai_gateway.Key",
+            project=other_project,
+            name="other-project-key",
+            litellm_secret="sk-other-project-secret",
+            litellm_alias="alias-other-project-key",
+            litellm_token="token-other-project-key",
+            masked_key="sk-oth...key",
+            created_by=user,
+        )
+        client.force_login(user)
+
+        response = client.get(reverse("ai_gateway:key_detail", args=[project.uuid, other_key.pk]))
+
+        assert response.status_code == 404

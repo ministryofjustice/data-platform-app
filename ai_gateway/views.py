@@ -5,7 +5,7 @@ from functools import cached_property
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils.cache import add_never_cache_headers
-from django.views.generic import FormView, ListView
+from django.views.generic import DetailView, FormView, ListView
 
 from ai_gateway.forms import KeyCreateForm
 from ai_gateway.services import KeyService
@@ -26,6 +26,11 @@ class ProjectScopedMixin:
             uuid=self.kwargs["uuid"],
         )
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["project"] = self.project
+        return context
+
 
 class KeyListView(ProjectScopedMixin, ProjectLayoutContextMixin, ListView):
     template_name = "ai_gateway/key-list.html"
@@ -34,11 +39,6 @@ class KeyListView(ProjectScopedMixin, ProjectLayoutContextMixin, ListView):
 
     def get_queryset(self):
         return self.project.ai_gateway_keys.order_by("-created")
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["project"] = self.project
-        return context
 
 
 class KeyCreateView(ProjectScopedMixin, FormView):
@@ -51,11 +51,6 @@ class KeyCreateView(ProjectScopedMixin, FormView):
     def available_models(self) -> list[str]:
         with KeyService.from_settings() as service:
             return service.list_default_models()
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["project"] = self.project
-        return context
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -79,3 +74,11 @@ class KeyCreateView(ProjectScopedMixin, FormView):
         )
         add_never_cache_headers(response)
         return response
+
+
+class KeyDetailView(ProjectScopedMixin, DetailView):
+    template_name = "ai_gateway/key-detail.html"
+    context_object_name = "key"
+
+    def get_queryset(self):
+        return self.project.ai_gateway_keys.all()
