@@ -1,6 +1,8 @@
+from datetime import timedelta
 from unittest.mock import create_autospec
 
 import pytest
+from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
 
 from ai_gateway.client import AIGatewayClient
@@ -19,6 +21,13 @@ def gateway_client():
     client.generate_key.return_value = {"key": PLAINTEXT_KEY, "token": "tok-1"}
     client.get_access_group_id.return_value = "ag-default"
     return client
+
+
+@pytest.fixture(autouse=True)
+def clear_django_cache():
+    cache.clear()
+    yield
+    cache.clear()
 
 
 class TestMaskKey:
@@ -127,3 +136,34 @@ class TestKeyServiceCreateKey:
 
         assert not Key.objects.filter(project=project).exists()
         gateway_client.close.assert_called_once()
+
+
+class TestKeyServiceGetModelsForKey:
+    def test_uses_cache_for_repeated_lookup(self, gateway_client, key):
+        gateway_client.key_info.return_value = {"info": {"models": ["gpt-4"]}}
+
+        with KeyService(gateway_client) as service:
+            first = service.get_models_for_key(key)
+            second = service.get_models_for_key(key)
+
+        assert first == ["gpt-4"]
+        assert second == ["gpt-4"]
+        gateway_client.key_info.assert_called_once_with(key.litellm_secret)
+
+    def test_cache_key_changes_when_key_modified_changes(self, gateway_client, key):
+        gateway_client.key_info.side_effect = [
+            {"info": {"models": ["gpt-4"]}},
+            {"info": {"models": ["claude-3"]}},
+        ]
+
+        with KeyService(gateway_client) as service:
+            first = service.get_models_for_key(key)
+
+            Key.objects.filter(pk=key.pk).update(modified=key.modified + timedelta(seconds=1))
+            key.refresh_from_db(fields=["modified"])
+
+            second = service.get_models_for_key(key)
+
+        assert first == ["gpt-4"]
+        assert second == ["claude-3"]
+        assert gateway_client.key_info.call_count == 2
