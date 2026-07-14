@@ -32,9 +32,12 @@
           <div class="govuk-summary-list__row">
             <dt class="govuk-summary-list__key">AI models</dt>
             <dd class="govuk-summary-list__value">
-              Claude
-              <br>
-              OpenAI
+              {% for model in models %}
+                {{ model }}
+                {% if not forloop.last %}<br>{% endif %}
+              {% empty %}
+                Error retrieving models from the AI gateway. Please contact support if the issue persists.
+              {% endfor %}
             </dd>
           </div>
         </dl>

@@ -73,6 +73,11 @@ class KeyService:
         )
         return plaintext_key
 
+    def get_models_for_key(self, key: Key) -> list[str]:
+        """Return the model names associated with a gateway key."""
+        data = self._client.key_info(key.litellm_secret)
+        return data.get("info", {}).get("models", [])
+
     def _get_or_create_team(self, project: Project) -> Team:
         """Return the project's gateway team, creating it on the gateway if needed."""
         try:

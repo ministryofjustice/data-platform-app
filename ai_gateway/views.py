@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from functools import cached_property
 
+import sentry_sdk
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils.cache import add_never_cache_headers
 from django.views.generic import DetailView, FormView, ListView
 
+from ai_gateway.exceptions import AIGatewayError
 from ai_gateway.forms import KeyCreateForm
 from ai_gateway.services import KeyService
 from projects.mixins import ProjectLayoutContextMixin
@@ -82,3 +84,13 @@ class KeyDetailView(ProjectScopedMixin, DetailView):
 
     def get_queryset(self):
         return self.project.ai_gateway_keys.all()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        with KeyService.from_settings() as service:
+            try:
+                context["models"] = service.get_models_for_key(self.object)
+            except AIGatewayError as error:
+                sentry_sdk.capture_exception(error)
+                context["models"] = []
+        return context
