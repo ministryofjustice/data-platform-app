@@ -1,0 +1,19 @@
+<div class="govuk-grid-column-one-quarter">
+  <nav class="moj-side-navigation govuk-!-padding-top-0"
+       aria-label="Project sections">
+    <ul class="moj-side-navigation__list">
+      <li class="moj-side-navigation__item{% if active_project_section == 'overview' %} moj-side-navigation__item--active{% endif %}">
+        <a href="{% url 'projects:project_detail' project.uuid %}"
+           {% if active_project_section == 'overview' %}aria-current="location"{% endif %}>Overview</a>
+      </li>
+      <li class="moj-side-navigation__item{% if active_project_section == 'ai_gateway' %} moj-side-navigation__item--active{% endif %}">
+        <a href="{% url 'ai_gateway:key_list' project.uuid %}"
+           {% if active_project_section == 'ai_gateway' %}aria-current="location"{% endif %}>AI gateway</a>
+      </li>
+      <li class="moj-side-navigation__item{% if active_project_section == 'members' %} moj-side-navigation__item--active{% endif %}">
+        <a href="{% url 'projects:project_users' project.uuid %}"
+           {% if active_project_section == 'members' %}aria-current="location"{% endif %}>Project Members</a>
+      </li>
+    </ul>
+  </nav>
+</div>

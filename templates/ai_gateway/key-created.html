@@ -1,0 +1,43 @@
+{% extends "base/base.html" %}
+{% load static %}
+{% block title %}
+  Store your API Key - {{ project.name }} - Justice Data Platform | Ministry of Justice
+{% endblock title %}
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h1 class="govuk-heading-xl">Store your API Key</h1>
+      <p class="govuk-body">You've created an API key for {{ project.name }}.</p>
+      <div class="app-key-panel">
+        <h2 class="govuk-heading-m">Copy and store this key securely</h2>
+        <p class="govuk-body">It won’t be shown again</p>
+        <span id="copy-alert" class="govuk-visually-hidden" aria-live="polite"></span>
+        <div class="govuk-!-margin-bottom-4">
+          <code id="plaintext-key" class="app-key-token">{{ plaintext_key }}</code>
+          <button class="govuk-button copy-button govuk-!-margin-bottom-0 govuk-!-margin-left-2"
+                  type="button"
+                  data-module="copy-button"
+                  data-text-selector="#plaintext-key"
+                  data-success-message="API key copied">Copy</button>
+        </div>
+        <p class="govuk-body">API keys are secret and should not be shared</p>
+      </div>
+      <h2 class="govuk-heading-m">Next steps</h2>
+      <ol class="govuk-list govuk-list--number">
+        <li>Store your API key securely, such as in a password manager.</li>
+        <li>Test your key in code in your integrated development environment. Never commit your API key in Git.</li>
+        <li>If you're using automated workflows in Airflow or another tool, host your key in a secure place these tools can access (such as AWS Secrets Manager).  </li>
+      </ol>
+      <p class="govuk-body">
+        <a class="govuk-link"
+           href="https://user-guide.cloud-platform.service.justice.gov.uk/documentation/deploying-an-app/add-secrets-to-deployment.html"
+           target="_blank"
+           rel="noopener noreferrer">Learn about adding secrets to an application (opens in a new tab)</a>
+      </p>
+      <p class="govuk-body">
+        <a class="govuk-button moj-button"
+           href="{% url 'ai_gateway:key_list' project.uuid %}">Done</a>
+      </p>
+    </div>
+  </div>
+{% endblock content %}

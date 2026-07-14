@@ -31,6 +31,7 @@ from data_platform_app.views import (
 )
 
 urlpatterns = [
+    path("app/projects/<uuid:uuid>/ai-gateway/", include("ai_gateway.urls")),
     path("app/projects/", include("projects.urls")),
     path("", HomeView.as_view(), name="home"),
     path("roadmap/", RoadmapView.as_view(), name="roadmap"),

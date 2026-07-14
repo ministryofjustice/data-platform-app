@@ -1,4 +1,4 @@
-{% extends "base/base.html" %}
+{% extends "base/project_layout.html" %}
 {% load static %}
 {% block title %}
   {{ project.name }} users - Justice Data Platform | Ministry of Justice
@@ -6,68 +6,37 @@
 {% block back_link %}
   <a href="{% url 'projects:projects_list' %}" class="govuk-back-link">Back to projects</a>
 {% endblock back_link %}
-{% block content %}
-  <div class="govuk-grid-row">
-    {% if success_message %}
-      <div class="govuk-grid-column-full">
-        {% include "includes/success_message.html" with heading=success_message.heading message=success_message.message only %}
-      </div>
-    {% endif %}
-    <div class="govuk-grid-column-full">
-      <h2 class="govuk-heading-l">{{ project.name }}</h2>
-    </div>
-    <!-- Sidebar -->
-    <div class="govuk-grid-column-one-quarter">
-      <nav class="moj-side-navigation govuk-!-padding-top-0"
-           aria-label="Project sections">
-        <ul class="moj-side-navigation__list">
-          <li class="moj-side-navigation__item">
-            <a href="{% url 'projects:project_detail' project.uuid %}">Overview</a>
-          </li>
-          <li class="moj-side-navigation__item">
-            <a href="#">AI gateway</a>
-          </li>
-          <li class="moj-side-navigation__item moj-side-navigation__item--active">
-            <a href="{% url 'projects:project_users' project.uuid %}"
-               aria-current="location">Project Members</a>
-          </li>
-        </ul>
-      </nav>
-    </div>
-    <!-- Main content -->
-    <div class="govuk-grid-column-three-quarters">
-      <div class="govuk-grid-column-two-thirds govuk-!-padding-left-0">
-        <h2 class="govuk-heading-m">Project members</h2>
-      </div>
-      <div class="govuk-grid-column-one-third govuk-!-padding-right-0 govuk-!-text-align-right">
-        <a class="govuk-button govuk-button--secondary"
-           href="{% url 'projects:project_users_add' project.uuid %}">Add a member</a>
-      </div>
-      {% if project.user_permissions.all %}
-        <table class="govuk-table">
-          <thead class="govuk-table__head">
-            <tr class="govuk-table__row">
-              <th scope="col" class="govuk-table__header">Name</th>
-              <th scope="col" class="govuk-table__header">
-                <span class="govuk-visually-hidden">Actions</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody class="govuk-table__body">
-            {% for permission in project.user_permissions.all %}
-              <tr class="govuk-table__row">
-                <td class="govuk-table__cell govuk-!-font-weight-bold">{{ permission.user.full_name }}</td>
-                <td class="govuk-table__cell govuk-!-text-align-right">
-                  <a href="{% url 'projects:project_user_remove' project.uuid permission.user.id %}"
-                     class="govuk-link">Remove member</a>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      {% else %}
-        <p class="govuk-body">No users currently have access to this project.</p>
-      {% endif %}
-    </div>
+{% block project_main_content %}
+  <div class="govuk-grid-column-two-thirds govuk-!-padding-left-0">
+    <h2 class="govuk-heading-m">Project members</h2>
   </div>
-{% endblock content %}
+  <div class="govuk-grid-column-one-third govuk-!-padding-right-0 govuk-!-text-align-right">
+    <a class="govuk-button govuk-button--secondary"
+       href="{% url 'projects:project_users_add' project.uuid %}">Add a member</a>
+  </div>
+  {% if project.user_permissions.all %}
+    <table class="govuk-table">
+      <thead class="govuk-table__head">
+        <tr class="govuk-table__row">
+          <th scope="col" class="govuk-table__header">Name</th>
+          <th scope="col" class="govuk-table__header">
+            <span class="govuk-visually-hidden">Actions</span>
+          </th>
+        </tr>
+      </thead>
+      <tbody class="govuk-table__body">
+        {% for permission in project.user_permissions.all %}
+          <tr class="govuk-table__row">
+            <td class="govuk-table__cell govuk-!-font-weight-bold">{{ permission.user.full_name }}</td>
+            <td class="govuk-table__cell govuk-!-text-align-right">
+              <a href="{% url 'projects:project_user_remove' project.uuid permission.user.id %}"
+                 class="govuk-link">Remove member</a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="govuk-body">No users currently have access to this project.</p>
+  {% endif %}
+{% endblock project_main_content %}

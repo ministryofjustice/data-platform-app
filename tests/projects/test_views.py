@@ -1,28 +1,8 @@
-import pytest
 from django.urls import reverse
 from model_bakery import baker
+from pytest_django.asserts import assertContains, assertInHTML
 
 from projects.models import Project, ProjectUserPermissions
-
-
-@pytest.fixture
-def project(db, user):
-    """A project created by a user."""
-
-    project = baker.make("projects.Project", name="Example Project", created_by=user)
-
-    baker.make("projects.ProjectUserPermissions", project=project, user=user, role="admin")
-
-    return project
-
-
-@pytest.fixture
-def non_project_user(db):
-    """A user who is not part of any project."""
-
-    non_project_user = baker.make("users.User", email="non_project_user@example.com")
-
-    return non_project_user
 
 
 class TestDetailView:
@@ -31,15 +11,38 @@ class TestDetailView:
     def test_detail_page_renders(self, client, user, project):
         client.force_login(user)
         response = client.get(reverse("projects:project_detail", args=[project.uuid]))
+        current_overview_link = (
+            f'<a href="{reverse("projects:project_detail", args=[project.uuid])}" '
+            'aria-current="location">Overview</a>'
+        )
 
         assert response.status_code == 200
         assert "projects/detail.html" in [t.name for t in response.templates]
+        assertContains(response, 'aria-current="location"', count=1)
+        assertInHTML(current_overview_link, response.content.decode())
 
     def test_detail_page_fail(self, client, non_project_user, project):
         client.force_login(non_project_user)
         response = client.get(reverse("projects:project_detail", args=[project.uuid]))
 
         assert response.status_code == 404
+
+
+class TestProjectUsersDetailView:
+    """Tests for the ProjectUsersDetailView at '/projects/<uuid>/users/'"""
+
+    def test_users_page_renders_with_members_active(self, client, user, project):
+        client.force_login(user)
+        response = client.get(reverse("projects:project_users", args=[project.uuid]))
+        current_members_link = (
+            f'<a href="{reverse("projects:project_users", args=[project.uuid])}" '
+            'aria-current="location">Project Members</a>'
+        )
+
+        assert response.status_code == 200
+        assert "projects/user_list.html" in [t.name for t in response.templates]
+        assertContains(response, 'aria-current="location"', count=1)
+        assertInHTML(current_members_link, response.content.decode())
 
 
 class TestProjectDeleteView:

@@ -1,8 +1,7 @@
 from django.db import transaction
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
-from django.urls.base import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.views.generic.base import View
 from django.views.generic.detail import DetailView
 from django.views.generic.edit import DeleteView, FormView
@@ -18,6 +17,7 @@ from projects.mixins import (
     PROJECT_CREATE_SESSION_KEY,
     USER_BUCKET_SESSION_KEY,
     ExistingProjectMixin,
+    ProjectLayoutContextMixin,
     ProjectUserSelectionSessionMixin,
     UUIDObjectMixin,
 )
@@ -55,10 +55,11 @@ class ProjectListView(ListView):
         return context
 
 
-class ProjectDetailView(UUIDObjectMixin, DetailView):
+class ProjectDetailView(ProjectLayoutContextMixin, UUIDObjectMixin, DetailView):
     template_name = "projects/detail.html"
     context_object_name = "project"
     model = Project
+    active_project_section = "overview"
 
     def get_queryset(self):
         return (
@@ -67,11 +68,6 @@ class ProjectDetailView(UUIDObjectMixin, DetailView):
             .prefetch_related("users", "user_permissions__user")
             .distinct()
         )
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["success_message"] = self.request.session.pop("success_message", None)
-        return context
 
 
 class ProjectCreateView(FormView):
@@ -276,10 +272,11 @@ class ProjectCreateConfirmView(ProjectUserSelectionSessionMixin, View):
         return redirect("projects:project_detail", uuid=project.uuid)
 
 
-class ProjectUsersDetailView(UUIDObjectMixin, DetailView):
+class ProjectUsersDetailView(ProjectLayoutContextMixin, UUIDObjectMixin, DetailView):
     template_name = "projects/user_list.html"
     context_object_name = "project"
     model = Project
+    active_project_section = "members"
 
     def get_queryset(self):
         return (
@@ -295,9 +292,7 @@ class ProjectUsersDetailView(UUIDObjectMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         self.request.session.pop(ADD_USER_SESSION_KEY, None)
-        context = super().get_context_data(**kwargs)
-        context["success_message"] = self.request.session.pop("success_message", None)
-        return context
+        return super().get_context_data(**kwargs)
 
 
 class ProjectDeleteView(UUIDObjectMixin, DeleteView):

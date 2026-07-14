@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "users",
     "projects",
+    "ai_gateway",
     "simple_history",
     "django_extensions",
 ]
@@ -167,3 +168,16 @@ AZURE_AUTH = {
     "USERNAME_ATTRIBUTE": "oid",
     "USER_MAPPING_FN": "users.auth.user_mapping_fn",
 }
+
+
+# AI Gateway (LiteLLM)
+AI_GATEWAY_URL = os.environ.get("AI_GATEWAY_URL")
+AI_GATEWAY_MASTER_KEY = os.environ.get("AI_GATEWAY_MASTER_KEY")
+DEFAULT_ACCESS_GROUP_NAME = os.environ.get(
+    "DEFAULT_ACCESS_GROUP_NAME", "generally-available-models"
+)
+
+# Keys used to encrypt sensitive model fields at rest
+FIELD_ENCRYPTION_KEYS = [
+    key.strip() for key in os.environ.get("FIELD_ENCRYPTION_KEY", "").split(",") if key.strip()
+]
