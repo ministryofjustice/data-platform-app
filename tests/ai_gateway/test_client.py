@@ -2,6 +2,7 @@ import json
 
 import httpx
 import pytest
+from django.core.exceptions import ImproperlyConfigured
 
 from ai_gateway.client import AIGatewayClient
 from ai_gateway.exceptions import AIGatewayAPIError
@@ -264,3 +265,12 @@ class TestFromSettings:
 
         assert client._base_url == "http://gateway.example"
         assert client._client.headers["Authorization"] == "Bearer sk-from-settings"
+
+    def test_raises_if_settings_missing(self, settings):
+        settings.AI_GATEWAY_URL = ""
+        settings.AI_GATEWAY_MASTER_KEY = ""
+
+        with pytest.raises(ImproperlyConfigured) as exc_info:
+            AIGatewayClient.from_settings()
+
+        assert "AI_GATEWAY_URL and AI_GATEWAY_MASTER_KEY must be configured" in str(exc_info.value)

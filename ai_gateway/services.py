@@ -50,10 +50,10 @@ class KeyService:
         """Generate a gateway key for ``project`` and persist its metadata.
 
         Lazily creates the project's gateway team, calls the gateway to generate
-        a key, then stores metadata only. ``name`` is the user-facing name
-        (unique per project); a globally unique ``litellm_alias`` is derived from
-        it for the gateway. Returns the plaintext key, which is shown to the user
-        once and never stored.
+        a key, then stores metadata and an encrypted copy of the secret. ``name``
+        is the user-facing name (unique per project); a globally unique ``litellm_alias`` is
+        derived from it for the gateway. Returns the plaintext key, which is shown to the user
+        once.
         """
         team = self._get_or_create_team(project)
         litellm_alias = self._build_alias(project, name)

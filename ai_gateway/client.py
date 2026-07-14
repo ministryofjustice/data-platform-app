@@ -6,6 +6,7 @@ from typing import Any, cast
 
 import httpx
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 
 from ai_gateway.exceptions import AIGatewayAPIError
 
@@ -37,6 +38,10 @@ class AIGatewayClient:
     @classmethod
     def from_settings(cls) -> AIGatewayClient:
         """Build a client from ``AI_GATEWAY_URL`` and ``AI_GATEWAY_MASTER_KEY`` settings."""
+        if not settings.AI_GATEWAY_URL or not settings.AI_GATEWAY_MASTER_KEY:
+            raise ImproperlyConfigured(
+                "AI_GATEWAY_URL and AI_GATEWAY_MASTER_KEY must be configured"
+            )
         return cls(
             base_url=settings.AI_GATEWAY_URL,
             master_key=settings.AI_GATEWAY_MASTER_KEY,
