@@ -1,0 +1,74 @@
+{% extends "base/base.html" %}
+{% block title %}{{ key.name }} - {{ project.name }} - {{ block.super }}{% endblock title %}
+{% block back_link %}
+  <a href="{% url 'ai_gateway:key_list' project.uuid %}"
+     class="govuk-back-link">Back to {{ project.name }}</a>
+{% endblock back_link %}
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <span class="govuk-caption-l">Manage</span>
+      <h1 class="govuk-heading-l">{{ key.name }}</h1>
+      <div class="ai-gateway-key-detail">
+        <dl class="govuk-summary-list govuk-summary-list--no-border govuk-!-margin-0">
+          <div class="govuk-summary-list__row">
+            <dt class="govuk-summary-list__key">Key ID</dt>
+            <dd class="govuk-summary-list__value">
+              {{ key.litellm_token }}
+            </dd>
+          </div>
+          <div class="govuk-summary-list__row">
+            <dt class="govuk-summary-list__key">Created on</dt>
+            <dd class="govuk-summary-list__value">
+              {{ key.created|date:"d F Y" }}
+            </dd>
+          </div>
+          <div class="govuk-summary-list__row">
+            <dt class="govuk-summary-list__key">API key</dt>
+            <dd class="govuk-summary-list__value">
+              {{ key.masked_key }}
+            </dd>
+          </div>
+          <div class="govuk-summary-list__row">
+            <dt class="govuk-summary-list__key">AI models</dt>
+            <dd class="govuk-summary-list__value">
+              {% for model in models %}
+                {{ model }}
+                {% if not forloop.last %}<br>{% endif %}
+              {% empty %}
+                Error retrieving models from the AI gateway. Please contact support if the issue persists.
+              {% endfor %}
+            </dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+  </div>
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
+    </div>
+  </div>
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h2 class="govuk-heading-m">Regenerate key</h2>
+      <p class="govuk-body">Replace the current key. You'll need to update applications with the new key. You will only be able to view the new key once.</p>
+      <a href="#TODO" class="govuk-button govuk-button--secondary">Regenerate</a>
+    </div>
+  </div>
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
+    </div>
+  </div>
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h2 class="govuk-heading-m">Revoke key</h2>
+      <p class="govuk-body">
+        Permanently disable this API key. Applications using this key will stop working.
+        This cannot be undone.
+      </p>
+      <a href="#TODO" class="govuk-button govuk-button--secondary">Revoke</a>
+    </div>
+  </div>
+{% endblock content %}

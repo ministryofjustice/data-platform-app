@@ -12,3 +12,11 @@ class AIGatewayAPIError(AIGatewayError):
         self.status_code = status_code
         self.message = message
         super().__init__(f"AI Gateway returned {status_code}: {message}")
+
+
+class AIGatewayTransportError(AIGatewayError):
+    """Raised when requests to the AI Gateway fail before a response is received."""
+
+    def __init__(self, message: str) -> None:
+        self.message = message
+        super().__init__(f"AI Gateway transport failure: {message}")

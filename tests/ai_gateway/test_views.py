@@ -2,8 +2,10 @@ from unittest.mock import create_autospec, patch
 
 import pytest
 from django.urls import reverse
+from model_bakery import baker
 from pytest_django.asserts import assertContains, assertInHTML, assertTemplateUsed
 
+from ai_gateway.exceptions import AIGatewayAPIError
 from ai_gateway.models import Key
 from ai_gateway.services import KeyService
 
@@ -17,6 +19,7 @@ def key_service():
     service.__enter__.return_value = service
     service.__exit__.return_value = False
     service.list_default_models.return_value = ["gpt-4", "claude-3"]
+    service.get_models_for_key.return_value = ["gpt-4"]
 
     with patch("ai_gateway.views.KeyService.from_settings", return_value=service):
         yield service
@@ -41,6 +44,16 @@ class TestKeyListView:
         response = client.get(reverse("ai_gateway:key_list", args=[project.uuid]))
 
         assertContains(response, key.litellm_token)
+
+    def test_lists_manage_link_to_key_detail(self, client, user, project, key):
+        client.force_login(user)
+
+        response = client.get(reverse("ai_gateway:key_list", args=[project.uuid]))
+
+        assertContains(
+            response,
+            f'href="{reverse("ai_gateway:key_detail", args=[project.uuid, key.pk])}"',
+        )
 
     def test_non_member_gets_404(self, client, non_project_user, project):
         client.force_login(non_project_user)
@@ -126,3 +139,64 @@ class TestKeyCreateView:
         assert response.status_code == 404
         assert not Key.objects.filter(project=project).exists()
         key_service.create_key.assert_not_called()
+
+
+class TestKeyDetailView:
+    def test_renders_for_member(self, client, user, project, key, key_service):
+        client.force_login(user)
+
+        response = client.get(reverse("ai_gateway:key_detail", args=[project.uuid, key.pk]))
+
+        assert response.status_code == 200
+        assertTemplateUsed(response, "ai_gateway/key-detail.html")
+        assertContains(response, key.name)
+        assertContains(response, key.litellm_token)
+        assertContains(response, "gpt-4")
+
+    def test_renders_fallback_message_when_gateway_call_fails(
+        self, client, user, project, key, key_service
+    ):
+        key_service.get_models_for_key.side_effect = AIGatewayAPIError(503, "gateway unavailable")
+        client.force_login(user)
+        expected_error_message = (
+            "Error retrieving models from the AI gateway. "
+            "Please contact support if the issue persists."
+        )
+
+        with patch("ai_gateway.views.sentry_sdk.capture_exception") as capture_exception:
+            response = client.get(reverse("ai_gateway:key_detail", args=[project.uuid, key.pk]))
+
+        assert response.status_code == 200
+        assertContains(response, expected_error_message)
+        capture_exception.assert_called_once()
+
+    def test_non_member_gets_404(self, client, non_project_user, project, key):
+        client.force_login(non_project_user)
+
+        response = client.get(reverse("ai_gateway:key_detail", args=[project.uuid, key.pk]))
+
+        assert response.status_code == 404
+
+    def test_key_from_another_project_gets_404(self, client, user, project):
+        other_project = baker.make("projects.Project", created_by=user)
+        baker.make(
+            "projects.ProjectUserPermissions",
+            project=other_project,
+            user=user,
+            role="admin",
+        )
+        other_key = baker.make(
+            "ai_gateway.Key",
+            project=other_project,
+            name="other-project-key",
+            litellm_secret="sk-other-project-secret",
+            litellm_alias="alias-other-project-key",
+            litellm_token="token-other-project-key",
+            masked_key="sk-oth...key",
+            created_by=user,
+        )
+        client.force_login(user)
+
+        response = client.get(reverse("ai_gateway:key_detail", args=[project.uuid, other_key.pk]))
+
+        assert response.status_code == 404

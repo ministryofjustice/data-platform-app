@@ -4,10 +4,8 @@
   AI gateway keys - {{ project.name }} - Justice Data Platform | Ministry of Justice
 {% endblock title %}
 {% block back_link %}
-  <div>
-    <a href="{% url 'projects:project_detail' project.uuid %}"
-       class="govuk-back-link">Back to {{ project.name }}</a>
-  </div>
+  <a href="{% url 'projects:project_detail' project.uuid %}"
+     class="govuk-back-link">Back to {{ project.name }}</a>
 {% endblock back_link %}
 {% block project_main_content %}
   <div class="govuk-grid-row">
@@ -51,7 +49,8 @@
                 </td>
                 <td class="govuk-table__cell"
                     data-sort-value="{{ key.created|date:'U' }}">{{ key.created|date:"d F Y" }}</td>
-                <td class="govuk-table__cell govuk-!-text-align-right"><a href="#todo" class="govuk-link">Manage</a></td>
+                <td class="govuk-table__cell govuk-!-text-align-right"><a href="{% url 'ai_gateway:key_detail' project.uuid key.pk %}"
+   class="govuk-link">Manage</a></td>
               </tr>
             {% endfor %}
           </tbody>

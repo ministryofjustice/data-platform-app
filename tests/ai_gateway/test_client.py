@@ -5,7 +5,7 @@ import pytest
 from django.core.exceptions import ImproperlyConfigured
 
 from ai_gateway.client import AIGatewayClient
-from ai_gateway.exceptions import AIGatewayAPIError
+from ai_gateway.exceptions import AIGatewayAPIError, AIGatewayTransportError
 
 
 def build_client(handler):
@@ -240,6 +240,17 @@ class TestErrorHandling:
 
         assert exc_info.value.status_code == 401
         assert exc_info.value.message == "Unauthorized"
+
+    def test_transport_error_raises_gateway_transport_error(self):
+        def handler(request):
+            raise httpx.ConnectError("gateway unavailable")
+
+        client = build_client(handler)
+
+        with pytest.raises(AIGatewayTransportError) as exc_info:
+            client.list_models()
+
+        assert "gateway unavailable" in exc_info.value.message
 
 
 class TestAuthentication:
