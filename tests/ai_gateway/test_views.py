@@ -152,6 +152,10 @@ class TestKeyDetailView:
         assertContains(response, key.name)
         assertContains(response, key.litellm_token)
         assertContains(response, "gpt-4")
+        assertContains(
+            response,
+            f'href="{reverse("ai_gateway:key_revoke", args=[project.uuid, key.pk])}"',
+        )
 
     def test_renders_fallback_message_when_gateway_call_fails(
         self, client, user, project, key, key_service
@@ -200,3 +204,70 @@ class TestKeyDetailView:
         response = client.get(reverse("ai_gateway:key_detail", args=[project.uuid, other_key.pk]))
 
         assert response.status_code == 404
+
+
+class TestKeyRevokeView:
+    def test_get_renders_confirmation_page(self, client, user, project, key, key_service):
+        client.force_login(user)
+
+        response = client.get(reverse("ai_gateway:key_revoke", args=[project.uuid, key.pk]))
+
+        assert response.status_code == 200
+        assertTemplateUsed(response, "ai_gateway/key-revoke.html")
+        assertContains(response, "Are you sure you want to revoke this API key?")
+
+    def test_post_revokes_key_and_redirects_to_key_list(
+        self, client, user, project, key, key_service
+    ):
+        client.force_login(user)
+
+        response = client.post(reverse("ai_gateway:key_revoke", args=[project.uuid, key.pk]))
+
+        assert response.status_code == 302
+        assert response.url == reverse("ai_gateway:key_list", args=[project.uuid])
+        key_service.delete_key.assert_called_once_with(key)
+        assert client.session["success_message"] == {
+            "heading": "Key revoked",
+            "message": f"You've revoked {key.name}",
+        }
+
+    def test_non_member_gets_404(self, client, non_project_user, project, key, key_service):
+        client.force_login(non_project_user)
+
+        get_response = client.get(reverse("ai_gateway:key_revoke", args=[project.uuid, key.pk]))
+        post_response = client.post(reverse("ai_gateway:key_revoke", args=[project.uuid, key.pk]))
+
+        assert get_response.status_code == 404
+        assert post_response.status_code == 404
+        key_service.delete_key.assert_not_called()
+
+    def test_key_from_another_project_gets_404(self, client, user, project, key_service):
+        other_project = baker.make("projects.Project", created_by=user)
+        baker.make(
+            "projects.ProjectUserPermissions",
+            project=other_project,
+            user=user,
+            role="admin",
+        )
+        other_key = baker.make(
+            "ai_gateway.Key",
+            project=other_project,
+            name="other-project-key",
+            litellm_secret="sk-other-project-secret",
+            litellm_alias="alias-other-project-key",
+            litellm_token="token-other-project-key",
+            masked_key="sk-oth...key",
+            created_by=user,
+        )
+        client.force_login(user)
+
+        get_response = client.get(
+            reverse("ai_gateway:key_revoke", args=[project.uuid, other_key.pk])
+        )
+        post_response = client.post(
+            reverse("ai_gateway:key_revoke", args=[project.uuid, other_key.pk])
+        )
+
+        assert get_response.status_code == 404
+        assert post_response.status_code == 404
+        key_service.delete_key.assert_not_called()

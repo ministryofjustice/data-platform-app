@@ -91,6 +91,11 @@ class KeyService:
         cache.set(cache_key, models, timeout=self._key_models_cache_timeout())
         return models
 
+    def delete_key(self, key: Key) -> None:
+        """Delete the virtual key from the gateway and remove its metadata."""
+        self._client.delete_key(key.litellm_secret)
+        key.delete()
+
     @staticmethod
     def _key_models_cache_key(key: Key) -> str:
         """Return a versioned cache key for model names associated with ``key``."""

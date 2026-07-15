@@ -167,3 +167,12 @@ class TestKeyServiceGetModelsForKey:
         assert first == ["gpt-4"]
         assert second == ["claude-3"]
         assert gateway_client.key_info.call_count == 2
+
+
+class TestKeyServiceDeleteKey:
+    def test_deletes_gateway_key_and_object(self, gateway_client, key):
+        with KeyService(gateway_client) as service:
+            service.delete_key(key)
+
+        gateway_client.delete_key.assert_called_once_with(key.litellm_secret)
+        assert not Key.objects.filter(pk=key.pk).exists()
