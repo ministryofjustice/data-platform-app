@@ -17,6 +17,7 @@ def gateway_client():
     client = create_autospec(AIGatewayClient, instance=True)
     client.create_team.return_value = "team-xyz"
     client.generate_key.return_value = {"key": PLAINTEXT_KEY, "token": "tok-1"}
+    client.regenerate_key.return_value = "sk-regenerated-key-value-9999"
     client.get_access_group_id.return_value = "ag-default"
     return client
 
@@ -127,3 +128,29 @@ class TestKeyServiceCreateKey:
 
         assert not Key.objects.filter(project=project).exists()
         gateway_client.close.assert_called_once()
+
+
+class TestKeyServiceRegenerateKey:
+    def test_regenerates_and_persists_secret_and_mask(self, project, user, gateway_client):
+        key = Key.objects.create(
+            project=project,
+            name="primary-key",
+            litellm_alias=f"{project.uuid}-primary-key-seed",
+            litellm_secret="sk-old-secret",
+            litellm_token="tok-1",
+            masked_key="...cret",
+            created_by=user,
+        )
+
+        with KeyService(gateway_client) as service:
+            plaintext = service.regenerate_key(project, "primary-key", "sk-old-secret")
+
+        key.refresh_from_db()
+        assert plaintext == "sk-regenerated-key-value-9999"
+        assert key.litellm_secret == "sk-regenerated-key-value-9999"
+        assert key.masked_key == "...9999"
+        gateway_client.regenerate_key.assert_called_once_with("sk-old-secret")
+
+    def test_raises_when_key_row_is_missing(self, project, gateway_client):
+        with KeyService(gateway_client) as service, pytest.raises(Key.DoesNotExist):
+            service.regenerate_key(project, "missing-key", "sk-old-secret")

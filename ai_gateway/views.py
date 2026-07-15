@@ -5,7 +5,7 @@ from functools import cached_property
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils.cache import add_never_cache_headers
-from django.views.generic import FormView, ListView
+from django.views.generic import FormView, ListView, TemplateView
 
 from ai_gateway.forms import KeyCreateForm
 from ai_gateway.services import KeyService
@@ -76,6 +76,35 @@ class KeyCreateView(ProjectScopedMixin, FormView):
             self.request,
             "ai_gateway/key-created.html",
             {"project": self.project, "plaintext_key": plaintext_key},
+        )
+        add_never_cache_headers(response)
+        return response
+
+
+class KeyRegenerateView(ProjectScopedMixin, TemplateView):
+    template_name = "ai_gateway/key-regenerate.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["project"] = self.project
+        context["key_name"] = self.kwargs["key_name"]
+        return context
+
+    def post(self, request, *args, **kwargs):
+        key_name = kwargs["key_name"]
+        existing_key = self.project.ai_gateway_keys.get(name=key_name)
+
+        with KeyService.from_settings() as service:
+            plaintext_key = service.regenerate_key(
+                project=self.project,
+                name=existing_key.name,
+                key=existing_key.litellm_secret,
+            )
+
+        response = render(
+            request,
+            "ai_gateway/key-created.html",
+            {"project": self.project, "plaintext_key": plaintext_key, "regenerated": True},
         )
         add_never_cache_headers(response)
         return response

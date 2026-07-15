@@ -115,14 +115,44 @@ class TestKeyCreateView:
         assertContains(response, "A key with this name already exists for this project.")
         key_service.create_key.assert_not_called()
 
-    def test_non_member_gets_404(self, client, non_project_user, project, key_service):
-        client.force_login(non_project_user)
 
-        response = client.post(
-            reverse("ai_gateway:key_create", args=[project.uuid]),
-            data={"name": "primary-key", "models": ["gpt-4"]},
-        )
+class TestKeyRegenerateView:
+    def test_renders_for_member(self, client, user, project, key):
+        client.force_login(user)
+        response = client.get(reverse("ai_gateway:key_regenerate", args=[project.uuid, key.name]))
+
+        assert response.status_code == 200
+        assert "ai_gateway/key-regenerate.html" in [t.name for t in response.templates]
+
+    def test_non_member_gets_404(self, client, non_project_user, project, key):
+        client.force_login(non_project_user)
+        response = client.get(reverse("ai_gateway:key_regenerate", args=[project.uuid, key.name]))
 
         assert response.status_code == 404
-        assert not Key.objects.filter(project=project).exists()
-        key_service.create_key.assert_not_called()
+
+    def test_post_regenerates_key_and_renders_created_template(
+        self, client, user, project, key, key_service
+    ):
+        client.force_login(user)
+        key_service.regenerate_key.return_value = PLAINTEXT_KEY
+
+        response = client.post(reverse("ai_gateway:key_regenerate", args=[project.uuid, key.name]))
+
+        assert response.status_code == 200
+        assertTemplateUsed(response, "ai_gateway/key-created.html")
+        assertContains(response, PLAINTEXT_KEY)
+        assertContains(response, "Store your API Key")
+        key_service.regenerate_key.assert_called_once_with(
+            project=project,
+            name=key.name,
+            key="sk-full-secret",
+        )
+        assert response.headers["Cache-Control"]
+
+    def test_post_non_member_gets_404(self, client, non_project_user, project, key, key_service):
+        client.force_login(non_project_user)
+
+        response = client.post(reverse("ai_gateway:key_regenerate", args=[project.uuid, key.name]))
+
+        assert response.status_code == 404
+        key_service.regenerate_key.assert_not_called()

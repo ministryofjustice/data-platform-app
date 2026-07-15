@@ -6,6 +6,7 @@ import secrets
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
+from django.db import transaction
 from django.utils.text import slugify
 
 from ai_gateway.client import AIGatewayClient
@@ -71,6 +72,21 @@ class KeyService:
             masked_key=self._mask_key(plaintext_key),
             created_by=created_by,
         )
+        return plaintext_key
+
+    def regenerate_key(self, project: Project, name: str, key: str) -> str:
+        """
+        Regenerate a gateway key for ``project`` and persist its metadata.
+        """
+
+        plaintext_key = self._client.regenerate_key(key)
+
+        with transaction.atomic():
+            db_key = Key.objects.select_for_update().get(project=project, name=name)
+            db_key.litellm_secret = plaintext_key
+            db_key.masked_key = self._mask_key(plaintext_key)
+            db_key.save(update_fields=["litellm_secret", "masked_key", "modified"])
+
         return plaintext_key
 
     def _get_or_create_team(self, project: Project) -> Team:
