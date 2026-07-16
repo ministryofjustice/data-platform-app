@@ -1,5 +1,9 @@
+from unittest.mock import create_autospec, patch
+
 import pytest
 from model_bakery import baker
+
+from ai_gateway.services import KeyService
 
 
 @pytest.fixture
@@ -32,3 +36,16 @@ def non_project_user(db):
     non_project_user = baker.make("users.User", email="non_project_user@example.com")
 
     return non_project_user
+
+
+@pytest.fixture
+def key_service():
+    """Patch KeyService.from_settings with an autospecced instance used as a context manager."""
+    service = create_autospec(KeyService, instance=True)
+    service.__enter__.return_value = service
+    service.__exit__.return_value = False
+    service.list_default_models.return_value = ["gpt-4", "claude-3"]
+    service.get_models_for_key.return_value = ["gpt-4"]
+
+    with patch("ai_gateway.views.KeyService.from_settings", return_value=service):
+        yield service

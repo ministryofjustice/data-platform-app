@@ -1,3 +1,4 @@
+import sentry_sdk
 from django.db import transaction
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect, render
@@ -339,8 +340,6 @@ class ProjectDeleteView(UUIDObjectMixin, DeleteView):
 
             response = super().form_valid(form)
         except AIGatewayError as error:
-            import sentry_sdk
-
             sentry_sdk.capture_exception(error)
             self.request.session["error_message"] = {
                 "heading": "Could not delete project. Please try again later.",

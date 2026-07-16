@@ -1,28 +1,13 @@
-from unittest.mock import create_autospec, patch
+from unittest.mock import patch
 
-import pytest
 from django.urls import reverse
 from model_bakery import baker
 from pytest_django.asserts import assertContains, assertInHTML, assertTemplateUsed
 
 from ai_gateway.exceptions import AIGatewayAPIError
 from ai_gateway.models import Key
-from ai_gateway.services import KeyService
 
 PLAINTEXT_KEY = "sk-plaintext-key-value-123456"
-
-
-@pytest.fixture
-def key_service():
-    """Patch KeyService.from_settings with an autospecced instance used as a context manager."""
-    service = create_autospec(KeyService, instance=True)
-    service.__enter__.return_value = service
-    service.__exit__.return_value = False
-    service.list_default_models.return_value = ["gpt-4", "claude-3"]
-    service.get_models_for_key.return_value = ["gpt-4"]
-
-    with patch("ai_gateway.views.KeyService.from_settings", return_value=service):
-        yield service
 
 
 class TestKeyListView:

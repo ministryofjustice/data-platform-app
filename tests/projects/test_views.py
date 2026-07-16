@@ -1,23 +1,9 @@
-from unittest.mock import create_autospec, patch
-
-import pytest
 from django.urls import reverse
 from model_bakery import baker
 from pytest_django.asserts import assertContains, assertInHTML
 
 from ai_gateway.exceptions import AIGatewayAPIError
-from ai_gateway.services import KeyService
 from projects.models import Project, ProjectUserPermissions
-
-
-@pytest.fixture
-def key_service():
-    service = create_autospec(KeyService, instance=True)
-    service.__enter__.return_value = service
-    service.__exit__.return_value = False
-
-    with patch("projects.views.KeyService.from_settings", return_value=service):
-        yield service
 
 
 class TestDetailView:
