@@ -128,6 +128,18 @@ class TestKeyCreateView:
         assertContains(response, "A key with this name already exists for this project.")
         key_service.create_key.assert_not_called()
 
+    def test_non_member_gets_404(self, client, non_project_user, project, key_service):
+        client.force_login(non_project_user)
+
+        response = client.post(
+            reverse("ai_gateway:key_create", args=[project.uuid]),
+            data={"name": "primary-key", "models": ["gpt-4"]},
+        )
+
+        assert response.status_code == 404
+        assert not Key.objects.filter(project=project).exists()
+        key_service.create_key.assert_not_called()
+
 
 class TestKeyDetailView:
     def test_renders_for_member(self, client, user, project, key, key_service):
