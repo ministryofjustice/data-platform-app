@@ -245,6 +245,23 @@ class TestKeyRegenerateView:
         assert response.status_code == 404
         key_service.regenerate_key.assert_not_called()
 
+    def test_post_gateway_error_redirects_to_key_detail_with_error_message(
+        self, client, user, project, key, key_service
+    ):
+        key_service.regenerate_key.side_effect = AIGatewayAPIError(500, "gateway error")
+        client.force_login(user)
+
+        with patch("ai_gateway.views.sentry_sdk.capture_exception") as capture_exception:
+            response = client.post(
+                reverse("ai_gateway:key_regenerate", args=[project.uuid, key.pk])
+            )
+
+        assert response.status_code == 302
+        assert response.url == reverse("ai_gateway:key_detail", args=[project.uuid, key.pk])
+        key.refresh_from_db()
+        assert key.litellm_secret == "sk-full-secret"  # unchanged
+        capture_exception.assert_called_once()
+
 
 class TestKeyRevokeView:
     def test_get_renders_confirmation_page(self, client, user, project, key, key_service):

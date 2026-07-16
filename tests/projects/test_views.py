@@ -5,6 +5,7 @@ from django.urls import reverse
 from model_bakery import baker
 from pytest_django.asserts import assertContains, assertInHTML
 
+from ai_gateway.exceptions import AIGatewayAPIError
 from ai_gateway.services import KeyService
 from projects.models import Project, ProjectUserPermissions
 
@@ -105,6 +106,39 @@ class TestProjectDeleteView:
 
         deleted_keys = key_service.bulk_delete_keys.call_args.args[0]
         assert sorted(deleted_keys) == ["sk-secret-1", "sk-secret-2"]
+
+    def test_gateway_error_on_bulk_delete_keys_aborts_project_deletion(
+        self, client, user, project, key_service
+    ):
+        baker.make("ai_gateway.Team", project=project, litellm_team_id="team-123")
+        baker.make(
+            "ai_gateway.Key", project=project, litellm_secret="sk-secret-1", created_by=user
+        )
+        key_service.bulk_delete_keys.side_effect = AIGatewayAPIError(500, "gateway error")
+
+        client.force_login(user)
+        response = client.post(reverse("projects:project_delete", args=[project.uuid]))
+
+        assert response.status_code == 302
+        assert response.url == reverse("projects:project_detail", args=[project.uuid])
+        assert Project.objects.filter(id=project.id).exists()
+        key_service.delete_team.assert_not_called()
+
+    def test_gateway_error_on_delete_team_aborts_project_deletion(
+        self, client, user, project, key_service
+    ):
+        baker.make("ai_gateway.Team", project=project, litellm_team_id="team-123")
+        baker.make(
+            "ai_gateway.Key", project=project, litellm_secret="sk-secret-1", created_by=user
+        )
+        key_service.delete_team.side_effect = AIGatewayAPIError(500, "gateway error")
+
+        client.force_login(user)
+        response = client.post(reverse("projects:project_delete", args=[project.uuid]))
+
+        assert response.status_code == 302
+        assert response.url == reverse("projects:project_detail", args=[project.uuid])
+        assert Project.objects.filter(id=project.id).exists()
 
 
 class TestProjectRemoveUserView:
