@@ -4,7 +4,7 @@ from functools import cached_property
 
 import sentry_sdk
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.cache import add_never_cache_headers
 from django.views.generic import DeleteView, DetailView, FormView, ListView, TemplateView
 from django.views.generic.detail import SingleObjectMixin
@@ -88,6 +88,7 @@ class KeyDetailView(ProjectScopedMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context["error_message"] = self.request.session.pop("error_message", None)
         with KeyService.from_settings() as service:
             try:
                 context["models"] = service.get_models_for_key(self.object)
@@ -113,14 +114,16 @@ class KeyRegenerateView(ProjectScopedMixin, SingleObjectMixin, TemplateView):
 
         try:
             with KeyService.from_settings() as service:
+                raise AIGatewayError(
+                    "Simulated gateway error for testing"
+                )  # Simulate an error for testing
                 plaintext_key = service.regenerate_key(key=self.object)
         except AIGatewayError as error:
             sentry_sdk.capture_exception(error)
-            context = self.get_context_data(object=self.object)
-            context["error_message"] = {
+            self.request.session["error_message"] = {
                 "heading": "Could not regenerate key. Please try again later.",
             }
-            return render(request, self.template_name, context, status=502)
+            return redirect("ai_gateway:key_detail", uuid=self.project.uuid, pk=self.object.pk)
 
         response = render(
             request,
