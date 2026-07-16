@@ -138,7 +138,7 @@ class TestKeyServiceRegenerateKey:
             litellm_alias=f"{project.uuid}-primary-key-seed",
             litellm_secret="sk-old-secret",
             litellm_token="tok-1",
-            masked_key="...cret",
+            masked_key="...secret",
             created_by=user,
         )
 
