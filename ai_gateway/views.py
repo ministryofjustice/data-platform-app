@@ -7,6 +7,7 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils.cache import add_never_cache_headers
 from django.views.generic import DetailView, FormView, ListView, TemplateView
+from django.views.generic.detail import SingleObjectMixin
 
 from ai_gateway.exceptions import AIGatewayError
 from ai_gateway.forms import KeyCreateForm
@@ -96,25 +97,30 @@ class KeyDetailView(ProjectScopedMixin, DetailView):
         return context
 
 
-class KeyRegenerateView(ProjectScopedMixin, TemplateView):
+class KeyRegenerateView(ProjectScopedMixin, SingleObjectMixin, TemplateView):
     template_name = "ai_gateway/key-regenerate.html"
+    context_object_name = "key"
+
+    def get_queryset(self):
+        return self.project.ai_gateway_keys.all()
+
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        return super().get(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["project"] = self.project
-        existing_key = self.project.ai_gateway_keys.get(pk=self.kwargs["pk"])
-        context["key"] = existing_key
         return context
 
     def post(self, request, *args, **kwargs):
-        key_id = kwargs["pk"]
-        existing_key = self.project.ai_gateway_keys.get(pk=key_id)
+        self.object = self.get_object()
 
         with KeyService.from_settings() as service:
             plaintext_key = service.regenerate_key(
                 project=self.project,
-                name=existing_key.name,
-                key=existing_key.litellm_secret,
+                name=self.object.name,
+                key=self.object.litellm_secret,
             )
 
         response = render(

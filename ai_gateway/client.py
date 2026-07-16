@@ -145,6 +145,10 @@ class AIGatewayClient:
         """Delete the virtual key ``key``."""
         self._request("POST", "/key/delete", json={"keys": [key]})
 
+    def bulk_delete_keys(self, keys: list[str]) -> None:
+        """Delete the virtual keys ``keys``."""
+        self._request("POST", "/key/delete", json={"keys": keys})
+
     def key_info(self, key: str) -> dict[str, Any]:
         """Return metadata about the virtual key ``key``."""
         return self._request("GET", "/key/info", params={"key": key})

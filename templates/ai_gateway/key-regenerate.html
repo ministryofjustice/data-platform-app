@@ -16,11 +16,11 @@
       <p class="govuk-body">You'll need to update applications with the new key.</p>
       <p class="govuk-body">You will only be able to view the new key once.</p>
       <form method="post"
-            action="{% url 'ai_gateway:key_regenerate' project.uuid key.id %}">
+            action="{% url 'ai_gateway:key_regenerate' project.uuid key.pk %}">
         {% csrf_token %}
         <div class="govuk-button-group">
           <button type="submit" class="govuk-button govuk-!-margin-right-2">Regenerate</button>
-          <a href="{% url 'ai_gateway:key_detail' project.uuid key.id %}"
+          <a href="{% url 'ai_gateway:key_detail' project.uuid key.pk %}"
              class="govuk-link">Cancel</a>
         </div>
       </form>

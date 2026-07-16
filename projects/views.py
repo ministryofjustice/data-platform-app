@@ -313,6 +313,7 @@ class ProjectDeleteView(UUIDObjectMixin, DeleteView):
         ).distinct()
 
     def form_valid(self, form):
+
         response = super().form_valid(form)
         self.request.session["success_message"] = {
             "heading": "Project deleted",
