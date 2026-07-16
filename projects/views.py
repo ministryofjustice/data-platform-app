@@ -338,7 +338,10 @@ class ProjectDeleteView(UUIDObjectMixin, DeleteView):
                         service.delete_team(team_id)
 
             response = super().form_valid(form)
-        except AIGatewayError:
+        except AIGatewayError as error:
+            import sentry_sdk
+
+            sentry_sdk.capture_exception(error)
             self.request.session["error_message"] = {
                 "heading": "Could not delete project. Please try again later.",
             }
