@@ -330,16 +330,14 @@ class ProjectDeleteView(UUIDObjectMixin, DeleteView):
             team_id = None
 
         try:
-            # Local DB delete is atomic.
-            with transaction.atomic():
-                if key_values or team_id:
-                    with KeyService.from_settings() as service:
-                        if key_values:
-                            service.bulk_delete_keys(key_values)
-                        if team_id:
-                            service.delete_team(team_id)
+            if key_values or team_id:
+                with KeyService.from_settings() as service:
+                    if key_values:
+                        service.bulk_delete_keys(key_values)
+                    if team_id:
+                        service.delete_team(team_id)
 
-                response = super().form_valid(form)
+            response = super().form_valid(form)
         except AIGatewayError:
             self.request.session["error_message"] = {
                 "heading": "Could not delete project. Please try again later.",
