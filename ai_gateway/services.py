@@ -80,10 +80,9 @@ class KeyService:
         Regenerate a gateway key for ``key`` and persist its metadata.
         """
 
-        db_key = Key.objects.select_for_update().get(pk=key.pk)
-        plaintext_key = self._client.regenerate_key(key.litellm_secret)
-
         with transaction.atomic():
+            db_key = Key.objects.select_for_update().get(pk=key.pk)
+            plaintext_key = self._client.regenerate_key(key.litellm_secret)
             db_key.litellm_secret = plaintext_key
             db_key.masked_key = self._mask_key(plaintext_key)
             db_key.save(update_fields=["litellm_secret", "masked_key", "modified"])
