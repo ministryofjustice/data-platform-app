@@ -92,7 +92,8 @@ class KeyService:
 
     def bulk_delete_keys(self, keys: list[str]) -> None:
         """Bulk delete gateway keys for ``project``."""
-        self._client.bulk_delete_keys(keys)
+        if len(keys) > 0:
+            self._client.bulk_delete_keys(keys)
 
     def delete_team(self, team_id: str) -> None:
         """Delete the gateway team identified by ``team_id``."""
@@ -114,6 +115,11 @@ class KeyService:
         models = data.get("info", {}).get("models", [])
         cache.set(cache_key, models, timeout=self._key_models_cache_timeout())
         return models
+
+    def delete_key(self, key: Key) -> None:
+        """Delete the virtual key from the gateway and remove its metadata."""
+        self._client.delete_key(key.litellm_secret)
+        key.delete()
 
     @staticmethod
     def _key_models_cache_key(key: Key) -> str:

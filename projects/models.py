@@ -1,6 +1,7 @@
 import uuid
 
 from django.db import models
+from django.urls import reverse
 from django_extensions.db.models import TimeStampedModel
 from simple_history.models import HistoricalRecords
 
@@ -72,3 +73,9 @@ class Project(TimeStampedModel):
         except ValueError as err:
             raise ValueError("Invalid UUID in public ID") from err
         return Project.objects.get(uuid=project_uuid)
+
+    def get_absolute_url(self) -> str:
+        return reverse(viewname="projects:project_detail", kwargs={"uuid": self.uuid})
+
+    def get_absolute_keys_url(self) -> str:
+        return reverse(viewname="ai_gateway:key_list", kwargs={"uuid": self.uuid})

@@ -3,10 +3,10 @@ from __future__ import annotations
 from functools import cached_property
 
 import sentry_sdk
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.utils.cache import add_never_cache_headers
-from django.views.generic import DetailView, FormView, ListView, TemplateView
+from django.views.generic import DeleteView, DetailView, FormView, ListView, TemplateView
 from django.views.generic.detail import SingleObjectMixin
 
 from ai_gateway.exceptions import AIGatewayError
@@ -130,3 +130,25 @@ class KeyRegenerateView(ProjectScopedMixin, SingleObjectMixin, TemplateView):
         )
         add_never_cache_headers(response)
         return response
+
+
+class KeyRevokeView(ProjectScopedMixin, DeleteView):
+    template_name = "ai_gateway/key-revoke.html"
+    context_object_name = "key"
+    http_method_names = ["get", "post", "head", "options"]
+
+    def get_queryset(self):
+        return self.project.ai_gateway_keys.all()
+
+    def get_success_url(self):
+        return self.project.get_absolute_keys_url()
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        with KeyService.from_settings() as service:
+            service.delete_key(self.object)
+        self.request.session["success_message"] = {
+            "heading": "Key revoked",
+            "message": f"You've revoked {self.object.name}",
+        }
+        return HttpResponseRedirect(self.get_success_url())

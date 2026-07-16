@@ -194,3 +194,48 @@ class TestKeyServiceRegenerateKey:
     def test_raises_when_key_row_is_missing(self, project, gateway_client):
         with KeyService(gateway_client) as service, pytest.raises(Key.DoesNotExist):
             service.regenerate_key(project, "missing-key", "sk-old-secret")
+
+
+class TestKeyServiceDeleteKey:
+    def test_deletes_gateway_key_and_object(self, gateway_client, key):
+        with KeyService(gateway_client) as service:
+            service.delete_key(key)
+
+        gateway_client.delete_key.assert_called_once_with(key.litellm_secret)
+        assert not Key.objects.filter(pk=key.pk).exists()
+
+
+class TestKeyServiceBulkDeleteKeys:
+    def test_delegates_to_client(self, gateway_client):
+        keys = ["sk-key-one", "sk-key-two", "sk-key-three"]
+
+        with KeyService(gateway_client) as service:
+            service.bulk_delete_keys(keys)
+
+        gateway_client.bulk_delete_keys.assert_called_once_with(keys)
+
+    def test_empty_list(self, gateway_client):
+        with KeyService(gateway_client) as service:
+            service.bulk_delete_keys([])
+
+        gateway_client.bulk_delete_keys.assert_not_called()
+
+    def test_gateway_error_propagates(self, gateway_client):
+        gateway_client.bulk_delete_keys.side_effect = AIGatewayAPIError(500, "boom")
+
+        with pytest.raises(AIGatewayAPIError), KeyService(gateway_client) as service:
+            service.bulk_delete_keys(["sk-key-one"])
+
+
+class TestKeyServiceDeleteTeam:
+    def test_delegates_to_client(self, gateway_client):
+        with KeyService(gateway_client) as service:
+            service.delete_team("team-abc-123")
+
+        gateway_client.delete_team.assert_called_once_with("team-abc-123")
+
+    def test_gateway_error_propagates(self, gateway_client):
+        gateway_client.delete_team.side_effect = AIGatewayAPIError(404, "team not found")
+
+        with pytest.raises(AIGatewayAPIError), KeyService(gateway_client) as service:
+            service.delete_team("team-abc-123")
