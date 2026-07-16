@@ -91,8 +91,8 @@ class KeyService:
         return plaintext_key
 
     def bulk_delete_keys(self, keys: list[str]) -> None:
-        """Bulk delete gateway keys for ``project``."""
-        if len(keys) > 0:
+        """Bulk delete gateway keys identified by their secrets."""
+        if keys:
             self._client.bulk_delete_keys(keys)
 
     def delete_team(self, team_id: str) -> None:
