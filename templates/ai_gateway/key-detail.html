@@ -5,12 +5,12 @@
      class="govuk-back-link">Back to {{ project.name }}</a>
 {% endblock back_link %}
 {% block content %}
-  {% if error_message %}
-    <div class="govuk-grid-column-full">
-      {% include "includes/error_message.html" with heading=error_message.heading message=error_message.message only %}
-    </div>
-  {% endif %}
   <div class="govuk-grid-row">
+    {% if error_message %}
+      <div class="govuk-grid-column-full">
+        {% include "includes/error_message.html" with heading=error_message.heading message=error_message.message only %}
+      </div>
+    {% endif %}
     <div class="govuk-grid-column-two-thirds">
       <span class="govuk-caption-l">Manage</span>
       <h1 class="govuk-heading-l">{{ key.name }}</h1>

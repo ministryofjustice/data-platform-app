@@ -321,7 +321,7 @@ class ProjectDeleteView(UUIDObjectMixin, DeleteView):
         ).distinct()
 
     def form_valid(self, form):
-        project = self.get_object()
+        project = self.object
 
         key_values = list(project.ai_gateway_keys.values_list("litellm_secret", flat=True))
         try:
