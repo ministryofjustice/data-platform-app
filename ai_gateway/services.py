@@ -90,6 +90,14 @@ class KeyService:
 
         return plaintext_key
 
+    def bulk_delete_keys(self, keys: list[str]) -> None:
+        """Bulk delete gateway keys for ``project``."""
+        self._client.bulk_delete_keys(keys)
+
+    def delete_team(self, team_id: str) -> None:
+        """Delete the gateway team identified by ``team_id``."""
+        self._client.delete_team(team_id)
+
     def get_models_for_key(self, key: Key) -> list[str]:
         """Return model names for ``key``, using a short-lived cache.
 

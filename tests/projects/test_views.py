@@ -1,8 +1,22 @@
+from unittest.mock import create_autospec, patch
+
+import pytest
 from django.urls import reverse
 from model_bakery import baker
 from pytest_django.asserts import assertContains, assertInHTML
 
+from ai_gateway.services import KeyService
 from projects.models import Project, ProjectUserPermissions
+
+
+@pytest.fixture
+def key_service():
+    service = create_autospec(KeyService, instance=True)
+    service.__enter__.return_value = service
+    service.__exit__.return_value = False
+
+    with patch("projects.views.KeyService.from_settings", return_value=service):
+        yield service
 
 
 class TestDetailView:
@@ -61,12 +75,36 @@ class TestProjectDeleteView:
 
         assert response.status_code == 404
 
-    def test_delete_project(self, client, user, project):
+    def test_delete_project(self, client, user, project, key_service):
         client.force_login(user)
         response = client.post(reverse("projects:project_delete", args=[project.uuid]))
 
         assert response.status_code == 302
         assert not Project.objects.filter(id=project.id).exists()
+        key_service.bulk_delete_keys.assert_not_called()
+        key_service.delete_team.assert_not_called()
+
+    def test_delete_project_deletes_gateway_keys_and_team(
+        self, client, user, project, key_service
+    ):
+        baker.make("ai_gateway.Team", project=project, litellm_team_id="team-123")
+        baker.make(
+            "ai_gateway.Key", project=project, litellm_secret="sk-secret-1", created_by=user
+        )
+        baker.make(
+            "ai_gateway.Key", project=project, litellm_secret="sk-secret-2", created_by=user
+        )
+
+        client.force_login(user)
+        response = client.post(reverse("projects:project_delete", args=[project.uuid]))
+
+        assert response.status_code == 302
+        assert not Project.objects.filter(id=project.id).exists()
+        key_service.bulk_delete_keys.assert_called_once()
+        key_service.delete_team.assert_called_once_with("team-123")
+
+        deleted_keys = key_service.bulk_delete_keys.call_args.args[0]
+        assert sorted(deleted_keys) == ["sk-secret-1", "sk-secret-2"]
 
 
 class TestProjectRemoveUserView:

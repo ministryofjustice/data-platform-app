@@ -7,6 +7,8 @@ from django.views.generic.detail import DetailView
 from django.views.generic.edit import DeleteView, FormView
 from django.views.generic.list import ListView
 
+from ai_gateway.models import Team
+from ai_gateway.services import KeyService
 from projects.forms import (
     ProjectCreateAddUsersDecisionForm,
     ProjectCreateForm,
@@ -313,6 +315,19 @@ class ProjectDeleteView(UUIDObjectMixin, DeleteView):
         ).distinct()
 
     def form_valid(self, form):
+        project = self.get_object()
+
+        key_values = list(project.ai_gateway_keys.values_list("litellm_secret", flat=True))
+        try:
+            team_id = project.ai_gateway_team.litellm_team_id
+        except Team.DoesNotExist:
+            team_id = None
+
+        with KeyService.from_settings() as service:
+            if key_values:
+                service.bulk_delete_keys(key_values)
+            if team_id:
+                service.delete_team(team_id)
 
         response = super().form_valid(form)
         self.request.session["success_message"] = {
