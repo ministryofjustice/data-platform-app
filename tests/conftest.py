@@ -47,5 +47,5 @@ def key_service():
     service.list_default_models.return_value = ["gpt-4", "claude-3"]
     service.get_models_for_key.return_value = ["gpt-4"]
 
-    with patch("ai_gateway.views.KeyService.from_settings", return_value=service):
+    with patch("ai_gateway.services.KeyService.from_settings", return_value=service):
         yield service
