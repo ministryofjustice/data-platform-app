@@ -7,6 +7,7 @@ from django.views.generic.detail import DetailView
 from django.views.generic.edit import DeleteView, FormView
 from django.views.generic.list import ListView
 
+from ai_gateway.exceptions import AIGatewayError
 from ai_gateway.models import Team
 from ai_gateway.services import KeyService
 from projects.forms import (
@@ -70,6 +71,11 @@ class ProjectDetailView(ProjectLayoutContextMixin, UUIDObjectMixin, DetailView):
             .prefetch_related("users", "user_permissions__user")
             .distinct()
         )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["error_message"] = self.request.session.pop("error_message", None)
+        return context
 
 
 class ProjectCreateView(FormView):
@@ -323,16 +329,24 @@ class ProjectDeleteView(UUIDObjectMixin, DeleteView):
         except Team.DoesNotExist:
             team_id = None
 
-        with KeyService.from_settings() as service:
-            if key_values:
-                service.bulk_delete_keys(key_values)
-            if team_id:
-                service.delete_team(team_id)
+        try:
+            # Local DB delete is atomic.
+            with transaction.atomic():
+                if key_values or team_id:
+                    with KeyService.from_settings() as service:
+                        if key_values:
+                            service.bulk_delete_keys(key_values)
+                        if team_id:
+                            service.delete_team(team_id)
 
-        response = super().form_valid(form)
-        self.request.session["success_message"] = {
-            "heading": "Project deleted",
-        }
+                response = super().form_valid(form)
+        except AIGatewayError:
+            self.request.session["error_message"] = {
+                "heading": "Could not delete project. Please try again later.",
+            }
+            return redirect("projects:project_detail", uuid=project.uuid)
+
+        self.request.session["success_message"] = {"heading": "Project deleted"}
         return response
 
 
