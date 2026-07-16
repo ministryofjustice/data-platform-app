@@ -94,6 +94,23 @@ class AIGatewayClient:
         """Return the model names available in the access group named ``name``."""
         return self._get_access_group(name)["access_model_names"]
 
+    def list_models_v1_info(self) -> list[dict[str, Any]]:
+        """Return the raw model info from the v1 models endpoint."""
+        data = self._request("GET", "/v1/model/info")
+        return cast("list[dict[str, Any]]", data.get("data", []))
+
+    def list_selectable_models_for_key(self) -> list[dict[str, Any]]:
+        """Return models that should be selectable when creating a key.
+
+        Returns full model records from ``/v1/model/info`` so callers can apply
+        additional filtering (for example by provider) without refetching.
+        """
+        return [
+            model
+            for model in self.list_models_v1_info()
+            if model.get("litellm_params", {}).get("ai_model_generally_available") is True
+        ]
+
     def create_team(self, team_alias: str, access_group_ids: list[str] | None = None) -> str:
         """Create a team with alias ``team_alias`` and return its generated team id."""
         post_data = {

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import secrets
+from typing import Any
 
 from django.conf import settings
 from django.core.cache import cache
@@ -46,6 +47,10 @@ class KeyService:
     def list_default_models(self) -> list[str]:
         """Return the model names in the default (generally available) access group."""
         return self._client.list_models_for_access_group(self._default_access_group_name())
+
+    def list_selectable_models_for_key(self) -> list[dict[str, Any]]:
+        """Return model records that can be selected when creating a key."""
+        return self._client.list_selectable_models_for_key()
 
     def create_key(self, project: Project, name: str, models: list[str], created_by: User) -> str:
         """Generate a gateway key for ``project`` and persist its metadata.

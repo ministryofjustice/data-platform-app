@@ -8,6 +8,7 @@ from pytest_django.asserts import assertContains, assertInHTML, assertTemplateUs
 from ai_gateway.exceptions import AIGatewayAPIError
 from ai_gateway.models import Key
 from ai_gateway.services import KeyService
+from ai_gateway.views import KeyCreateView
 
 PLAINTEXT_KEY = "sk-plaintext-key-value-123456"
 
@@ -18,7 +19,22 @@ def key_service():
     service = create_autospec(KeyService, instance=True)
     service.__enter__.return_value = service
     service.__exit__.return_value = False
-    service.list_default_models.return_value = ["gpt-4", "claude-3"]
+    service.list_selectable_models_for_key.return_value = [
+        {
+            "model_name": "gpt-4",
+            "litellm_params": {
+                "ai_model_name": "gpt-4",
+                "ai_model_provider": "OpenAI",
+            },
+        },
+        {
+            "model_name": "claude-3",
+            "litellm_params": {
+                "ai_model_name": "claude-3",
+                "ai_model_provider": "Anthropic",
+            },
+        },
+    ]
     service.get_models_for_key.return_value = ["gpt-4"]
 
     with patch("ai_gateway.views.KeyService.from_settings", return_value=service):
@@ -63,14 +79,48 @@ class TestKeyListView:
 
 
 class TestKeyCreateView:
+    def test_debug_models_do_not_overlap_with_seeded_gateway_models(self):
+        seeded_model_names = {
+            "bedrock-claude-sonnet-5",
+            "bedrock-claude-opus-4-8",
+        }
+
+        debug_model_names = {model["model_name"] for model in KeyCreateView._debug_extra_models()}
+
+        assert debug_model_names.isdisjoint(seeded_model_names)
+
     def test_get_renders_form(self, client, user, project, key_service):
         client.force_login(user)
         response = client.get(reverse("ai_gateway:key_create", args=[project.uuid]))
 
         assert response.status_code == 200
         assertTemplateUsed(response, "ai_gateway/key-create.html")
-        assertContains(response, 'data-module="app-multi-select-tags"')
+        assertContains(response, 'data-module="app-model-table-filter"')
+        assertContains(response, 'data-module="moj-multi-select"')
+        assertContains(response, "Search by name")
+        assertContains(response, "Filter by provider")
+        assertContains(response, "All providers")
         assertContains(response, "gpt-4")
+        assertContains(response, "OpenAI")
+
+    def test_get_applies_server_side_filters(self, client, user, project, key_service):
+        client.force_login(user)
+
+        response = client.get(
+            reverse("ai_gateway:key_create", args=[project.uuid]),
+            data={"model_name": "claude", "model_provider": "anthropic", "name": "my key"},
+        )
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "claude-3" in content
+        assert "gpt-4" not in content
+        assert 'value="claude"' in content
+        assert 'value="my key"' in content
+        assertInHTML(
+            '<option value="anthropic" selected>Anthropic</option>',
+            content,
+        )
 
     def test_post_renders_created_page(self, client, user, project, key_service):
         key_service.create_key.return_value = PLAINTEXT_KEY

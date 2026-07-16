@@ -1,15 +1,17 @@
 from __future__ import annotations
 
 from functools import cached_property
+from typing import Any
 
 import sentry_sdk
+from django.conf import settings
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
 from django.utils.cache import add_never_cache_headers
 from django.views.generic import DeleteView, DetailView, FormView, ListView
 
 from ai_gateway.exceptions import AIGatewayError
-from ai_gateway.forms import KeyCreateForm
+from ai_gateway.forms import KeyCreateForm, KeyModelFilterForm
 from ai_gateway.services import KeyService
 from projects.mixins import ProjectLayoutContextMixin
 from projects.models import Project
@@ -50,15 +52,95 @@ class KeyCreateView(ProjectScopedMixin, FormView):
     form_class = KeyCreateForm
 
     @cached_property
-    def available_models(self) -> list[str]:
+    def available_models(self) -> list[dict[str, Any]]:
         with KeyService.from_settings() as service:
-            return service.list_default_models()
+            models = service.list_selectable_models_for_key()
+
+        if settings.DEBUG:
+            return models + self._debug_extra_models()
+
+        return models
+
+    @cached_property
+    def model_providers(self) -> list[str]:
+        providers = {
+            model.get("litellm_params", {}).get("ai_model_provider")
+            for model in self.available_models
+            if model.get("litellm_params", {}).get("ai_model_provider")
+        }
+        return sorted(providers)
+
+    @cached_property
+    def model_filter_form(self) -> KeyModelFilterForm:
+        return KeyModelFilterForm(
+            self.request.GET or None,
+            provider_choices=self.model_providers,
+        )
+
+    @cached_property
+    def filtered_available_models(self) -> list[dict[str, Any]]:
+        return self.model_filter_form.filter_models(self.available_models)
+
+    @staticmethod
+    def _debug_extra_models() -> list[dict[str, Any]]:
+        """Return extra local models so browser filtering can be tested quickly."""
+        return [
+            {
+                "model_name": "debug-openai-gpt-4-1-mini",
+                "litellm_params": {
+                    "ai_model_name": "OpenAI GPT-4.1 Mini",
+                    "ai_model_provider": "OpenAI",
+                },
+            },
+            {
+                "model_name": "debug-gemini-2-5-pro",
+                "litellm_params": {
+                    "ai_model_name": "Gemini 2.5 Pro",
+                    "ai_model_provider": "Google",
+                },
+            },
+            {
+                "model_name": "debug-mistral-large-2",
+                "litellm_params": {
+                    "ai_model_name": "Mistral Large 2",
+                    "ai_model_provider": "Mistral",
+                },
+            },
+            {
+                "model_name": "debug-llama-3-3-70b",
+                "litellm_params": {
+                    "ai_model_name": "Llama 3.3 70B",
+                    "ai_model_provider": "Meta",
+                },
+            },
+            {
+                "model_name": "debug-bedrock-nova-pro",
+                "litellm_params": {
+                    "ai_model_name": "Amazon Nova Pro",
+                    "ai_model_provider": "Amazon Bedrock",
+                },
+            },
+        ]
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs["project"] = self.project
-        kwargs["available_models"] = self.available_models
+        kwargs["available_models"] = self.filtered_available_models
         return kwargs
+
+    def get_initial(self):
+        initial = super().get_initial()
+        key_name = self.request.GET.get("name", "").strip()
+        if key_name:
+            initial["name"] = key_name
+        return initial
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["project"] = self.project
+        context["available_models"] = self.filtered_available_models
+        context["model_filter_form"] = self.model_filter_form
+        return context
 
     def form_valid(self, form: KeyCreateForm) -> HttpResponse:
         with KeyService.from_settings() as service:

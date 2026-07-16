@@ -108,6 +108,84 @@ class TestListModelsForAccessGroup:
         ]
 
 
+class TestListModelsV1Info:
+    def test_returns_raw_models_from_v1_model_info(self):
+        def handler(request):
+            assert request.method == "GET"
+            assert request.url.path == "/v1/model/info"
+            return httpx.Response(
+                200,
+                json={
+                    "data": [
+                        {
+                            "model_name": "bedrock-claude-sonnet-5",
+                            "litellm_params": {
+                                "ai_model_generally_available": True,
+                                "ai_model_provider": "Amazon Bedrock",
+                            },
+                        }
+                    ]
+                },
+            )
+
+        client = build_client(handler)
+
+        assert client.list_models_v1_info() == [
+            {
+                "model_name": "bedrock-claude-sonnet-5",
+                "litellm_params": {
+                    "ai_model_generally_available": True,
+                    "ai_model_provider": "Amazon Bedrock",
+                },
+            }
+        ]
+
+    def test_returns_empty_list_when_data_is_missing(self):
+        client = build_client(lambda request: httpx.Response(200, json={}))
+
+        assert client.list_models_v1_info() == []
+
+
+class TestListSelectableModelsForKey:
+    def test_filters_to_generally_available_models_and_preserves_metadata(self):
+        def handler(request):
+            assert request.method == "GET"
+            assert request.url.path == "/v1/model/info"
+            return httpx.Response(
+                200,
+                json={
+                    "data": [
+                        {
+                            "model_name": "bedrock-claude-sonnet-5",
+                            "litellm_params": {
+                                "ai_model_generally_available": True,
+                                "ai_model_provider": "Amazon Bedrock",
+                            },
+                        },
+                        {
+                            "model_name": "bedrock-claude-opus-4-8",
+                            "litellm_params": {
+                                "ai_model_generally_available": False,
+                                "ai_model_provider": "Amazon Bedrock",
+                            },
+                        },
+                    ]
+                },
+            )
+
+        client = build_client(handler)
+
+        assert client.list_selectable_models_for_key() == [
+            {
+                "model_name": "bedrock-claude-sonnet-5",
+                "litellm_params": {
+                    "ai_model_generally_available": True,
+                    "ai_model_provider": "Amazon Bedrock",
+                },
+            }
+        ]
+
+
 class TestGetAccessGroupId:
     def test_returns_id_for_matching_group(self):
         client = build_client(access_group_list_handler)

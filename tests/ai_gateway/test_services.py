@@ -71,6 +71,31 @@ class TestKeyServiceListModels:
 
         gateway_client.list_models_for_access_group.assert_not_called()
 
+    def test_returns_selectable_models_for_key(self, gateway_client):
+        gateway_client.list_selectable_models_for_key.return_value = [
+            {
+                "model_name": "bedrock-claude-sonnet-5",
+                "litellm_params": {
+                    "ai_model_generally_available": True,
+                    "ai_model_provider": "Amazon Bedrock",
+                },
+            }
+        ]
+
+        with KeyService(gateway_client) as service:
+            result = service.list_selectable_models_for_key()
+
+        assert result == [
+            {
+                "model_name": "bedrock-claude-sonnet-5",
+                "litellm_params": {
+                    "ai_model_generally_available": True,
+                    "ai_model_provider": "Amazon Bedrock",
+                },
+            }
+        ]
+        gateway_client.list_selectable_models_for_key.assert_called_once_with()
+
 
 class TestKeyServiceCreateKey:
     def test_creates_team_lazily_and_persists_metadata(

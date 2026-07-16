@@ -8,7 +8,6 @@
 );
 @use "node_modules/@x-govuk/govuk-prototype-components/src/x-govuk";
 @use "components/copy-button/copy-button";
-@use "components/multi-select-tags/multi-select-tags";
 
 $masthead-background-color: #381a62;
 
@@ -116,6 +115,23 @@ $masthead-background-color: #381a62;
   max-width: 100%;
   overflow-wrap: anywhere;
   word-break: break-word;
+}
+
+.app-ai-gateway-model-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.app-ai-gateway-model-table__select {
+  width: 48px;
+}
+
+.app-ai-gateway-model-table__name {
+  width: 60%;
+}
+
+.app-ai-gateway-model-table__provider {
+  width: 40%;
 }
 
 .ai-gateway-key-detail {

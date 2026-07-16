@@ -14,8 +14,8 @@
       {% include "includes/forms/_error_summary.html" with form=form only %}
       <form method="post" action="{% url 'ai_gateway:key_create' project.uuid %}">
         {% csrf_token %}
-        {% include "includes/fields/_multi_select_tags.html" with field=form.models only %}
         {% include "includes/fields/_text_input.html" with field=form.name only %}
+        {% include "includes/ai_gateway/_model_multi_select.html" with field=form.models available_models=available_models model_filter_form=model_filter_form clear_filters_url=request.path only %}
         <div class="govuk-button-group">
           <button type="submit" class="govuk-button">Create</button>
           <a href="{% url 'ai_gateway:key_list' project.uuid %}"
