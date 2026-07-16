@@ -62,7 +62,7 @@ curl \
   --header "Content-Type: application/json" \
   --header "Authorization: Bearer sk-123456789" \
   --data '{
-    "model_name": "gemini-2.5-pro",
+    "model_name": "gemini-2-5-pro",
     "litellm_params": {
       "model": "vertex_ai/gemini-2.5-pro",
       "ai_model_provider": "Google Gemini Enterprise Agent Platform",
@@ -82,12 +82,12 @@ curl \
   --header "Content-Type: application/json" \
   --header "Authorization: Bearer sk-123456789" \
   --data '{
-    "model_name": "azure-gpt-5.2",
+    "model_name": "azure-gpt-5-2",
     "litellm_params": {
       "model": "azure/gpt-5.2",
       "ai_model_provider": "Microsoft Foundry",
-      "ai_model_family": "OpenAI ChatGPT",
-      "ai_model_name": "Microsoft GPT 5.2",
+      "ai_model_family": "OpenAI GPT",
+      "ai_model_name": "OpenAI GPT 5.2",
       "ai_model_generally_available": true
     },
     "model_info": {}
