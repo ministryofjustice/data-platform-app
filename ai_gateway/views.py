@@ -114,9 +114,6 @@ class KeyRegenerateView(ProjectScopedMixin, SingleObjectMixin, TemplateView):
 
         try:
             with KeyService.from_settings() as service:
-                raise AIGatewayError(
-                    "Simulated gateway error for testing"
-                )  # Simulate an error for testing
                 plaintext_key = service.regenerate_key(key=self.object)
         except AIGatewayError as error:
             sentry_sdk.capture_exception(error)
