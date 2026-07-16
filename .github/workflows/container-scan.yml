@@ -16,6 +16,6 @@ jobs:
       contents: read
       pull-requests: write
       security-events: write
-    uses: ministryofjustice/data-platform-github-actions/.github/workflows/container-scan.yml@92832dad5ea35a24fa25db98a932020e03a300ce # v4.0.2
+    uses: ministryofjustice/data-platform-github-actions/.github/workflows/container-scan.yml@6df010e45fdb953369f12ab2bc69107d3c487f15 # v4.0.8
     with:
       containerfile-path: Dockerfile
