@@ -58,7 +58,7 @@
     <div class="govuk-grid-column-two-thirds">
       <h2 class="govuk-heading-m">Regenerate key</h2>
       <p class="govuk-body">Replace the current key. You'll need to update applications with the new key. You will only be able to view the new key once.</p>
-      <a href="{% url 'ai_gateway:key_regenerate' project.uuid key.id %}"
+      <a href="{% url 'ai_gateway:key_regenerate' project.uuid key.pk %}"
          class="govuk-button govuk-button--secondary">Regenerate</a>
     </div>
   </div>
