@@ -46,6 +46,7 @@ curl \
     "litellm_params": {
       "model": "bedrock/eu.anthropic.claude-sonnet-5",
       "ai_model_provider": "Amazon Bedrock",
+      "ai_model_family": "Anthropic Claude",
       "ai_model_name": "Anthropic Claude Sonnet 5 (EU)",
       "ai_model_generally_available": true
     },
@@ -61,12 +62,33 @@ curl \
   --header "Content-Type: application/json" \
   --header "Authorization: Bearer sk-123456789" \
   --data '{
-    "model_name": "bedrock-claude-opus-4-8",
+    "model_name": "gemini-2-5-pro",
     "litellm_params": {
-      "model": "bedrock/eu.anthropic.claude-opus-4-8",
-      "ai_model_provider": "Amazon Bedrock",
-      "ai_model_name": "Anthropic Claude Opus 4.8 (EU)",
-      "ai_model_generally_available": false
+      "model": "vertex_ai/gemini-2.5-pro",
+      "ai_model_provider": "Google Gemini Enterprise Agent Platform",
+      "ai_model_family": "Google Gemini",
+      "ai_model_name": "Google Gemini 2.5 Pro",
+      "ai_model_generally_available": true
+    },
+    "model_info": {}
+  }'
+
+curl \
+  --silent \
+  --fail-with-body \
+  --show-error \
+  --request POST \
+  --url "http://localhost:4000/model/new" \
+  --header "Content-Type: application/json" \
+  --header "Authorization: Bearer sk-123456789" \
+  --data '{
+    "model_name": "azure-gpt-5-2",
+    "litellm_params": {
+      "model": "azure/gpt-5.2",
+      "ai_model_provider": "Microsoft Foundry",
+      "ai_model_family": "OpenAI GPT",
+      "ai_model_name": "OpenAI GPT 5.2",
+      "ai_model_generally_available": true
     },
     "model_info": {}
   }'
@@ -82,5 +104,5 @@ curl \
   --header "Authorization: Bearer sk-123456789" \
   --data '{
     "access_group_name": "generally-available-models",
-    "access_model_names": ["bedrock-claude-sonnet-5"]
+    "access_model_names": ["bedrock-claude-sonnet-5", "gemini-2-5-pro", "azure-gpt-5-2"]
   }'
