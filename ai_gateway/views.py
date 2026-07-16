@@ -112,11 +112,7 @@ class KeyRegenerateView(ProjectScopedMixin, SingleObjectMixin, TemplateView):
         self.object = self.get_object()
 
         with KeyService.from_settings() as service:
-            plaintext_key = service.regenerate_key(
-                project=self.project,
-                name=self.object.name,
-                key=self.object.litellm_secret,
-            )
+            plaintext_key = service.regenerate_key(key=self.object)
 
         response = render(
             request,

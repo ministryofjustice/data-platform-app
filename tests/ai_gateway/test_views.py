@@ -233,9 +233,7 @@ class TestKeyRegenerateView:
         assertContains(response, PLAINTEXT_KEY)
         assertContains(response, "Store your API Key")
         key_service.regenerate_key.assert_called_once_with(
-            project=project,
-            name=key.name,
-            key="sk-full-secret",
+            key=key,
         )
         assert response.headers["Cache-Control"]
 

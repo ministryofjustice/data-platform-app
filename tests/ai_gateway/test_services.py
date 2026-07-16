@@ -183,7 +183,7 @@ class TestKeyServiceRegenerateKey:
         )
 
         with KeyService(gateway_client) as service:
-            plaintext = service.regenerate_key(project, "primary-key", "sk-old-secret")
+            plaintext = service.regenerate_key(key)
 
         key.refresh_from_db()
         assert plaintext == "sk-regenerated-key-value-9999"
@@ -193,7 +193,18 @@ class TestKeyServiceRegenerateKey:
 
     def test_raises_when_key_row_is_missing(self, project, gateway_client):
         with KeyService(gateway_client) as service, pytest.raises(Key.DoesNotExist):
-            service.regenerate_key(project, "missing-key", "sk-old-secret")
+            service.regenerate_key(
+                Key(
+                    pk=9999,
+                    project=project,
+                    name="bad_key",
+                    litellm_alias="alias",
+                    litellm_secret="sk-1234",
+                    litellm_token="bad_token",
+                    masked_key="...bad_key",
+                    created_by=None,
+                )
+            )
 
 
 class TestKeyServiceDeleteKey:
