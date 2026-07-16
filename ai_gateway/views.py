@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from functools import cached_property
 
+import sentry_sdk
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils.cache import add_never_cache_headers
-from django.views.generic import FormView, ListView, TemplateView
+from django.views.generic import DetailView, FormView, ListView, TemplateView
 
+from ai_gateway.exceptions import AIGatewayError
 from ai_gateway.forms import KeyCreateForm
 from ai_gateway.services import KeyService
 from projects.mixins import ProjectLayoutContextMixin
@@ -26,6 +28,11 @@ class ProjectScopedMixin:
             uuid=self.kwargs["uuid"],
         )
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["project"] = self.project
+        return context
+
 
 class KeyListView(ProjectScopedMixin, ProjectLayoutContextMixin, ListView):
     template_name = "ai_gateway/key-list.html"
@@ -34,11 +41,6 @@ class KeyListView(ProjectScopedMixin, ProjectLayoutContextMixin, ListView):
 
     def get_queryset(self):
         return self.project.ai_gateway_keys.order_by("-created")
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["project"] = self.project
-        return context
 
 
 class KeyCreateView(ProjectScopedMixin, FormView):
@@ -51,11 +53,6 @@ class KeyCreateView(ProjectScopedMixin, FormView):
     def available_models(self) -> list[str]:
         with KeyService.from_settings() as service:
             return service.list_default_models()
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["project"] = self.project
-        return context
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -81,18 +78,37 @@ class KeyCreateView(ProjectScopedMixin, FormView):
         return response
 
 
+class KeyDetailView(ProjectScopedMixin, DetailView):
+    template_name = "ai_gateway/key-detail.html"
+    context_object_name = "key"
+
+    def get_queryset(self):
+        return self.project.ai_gateway_keys.all()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        with KeyService.from_settings() as service:
+            try:
+                context["models"] = service.get_models_for_key(self.object)
+            except AIGatewayError as error:
+                sentry_sdk.capture_exception(error)
+                context["models"] = []
+        return context
+
+
 class KeyRegenerateView(ProjectScopedMixin, TemplateView):
     template_name = "ai_gateway/key-regenerate.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["project"] = self.project
-        context["key_name"] = self.kwargs["key_name"]
+        existing_key = self.project.ai_gateway_keys.get(pk=self.kwargs["pk"])
+        context["key"] = existing_key
         return context
 
     def post(self, request, *args, **kwargs):
-        key_name = kwargs["key_name"]
-        existing_key = self.project.ai_gateway_keys.get(name=key_name)
+        key_id = kwargs["pk"]
+        existing_key = self.project.ai_gateway_keys.get(pk=key_id)
 
         with KeyService.from_settings() as service:
             plaintext_key = service.regenerate_key(

@@ -5,6 +5,7 @@ from __future__ import annotations
 import secrets
 
 from django.conf import settings
+from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
 from django.utils.text import slugify
@@ -88,6 +89,33 @@ class KeyService:
             db_key.save(update_fields=["litellm_secret", "masked_key", "modified"])
 
         return plaintext_key
+
+    def get_models_for_key(self, key: Key) -> list[str]:
+        """Return model names for ``key``, using a short-lived cache.
+
+        Cached entries are keyed by ``key.pk`` and ``key.modified`` so local
+        key updates immediately shift lookups to a new cache key. A timeout is
+        still applied to refresh data that may change remotely on the gateway.
+        """
+        cache_key = self._key_models_cache_key(key)
+        cached_models = cache.get(cache_key)
+        if cached_models is not None:
+            return cached_models
+
+        data = self._client.key_info(key.litellm_secret)
+        models = data.get("info", {}).get("models", [])
+        cache.set(cache_key, models, timeout=self._key_models_cache_timeout())
+        return models
+
+    @staticmethod
+    def _key_models_cache_key(key: Key) -> str:
+        """Return a versioned cache key for model names associated with ``key``."""
+        return f"ai_gateway:key-models:{key.pk}:{key.modified.isoformat()}"
+
+    @staticmethod
+    def _key_models_cache_timeout() -> int:
+        """Return model-cache timeout in seconds from settings or default."""
+        return int(getattr(settings, "AI_GATEWAY_KEY_MODELS_CACHE_TIMEOUT", 300))
 
     def _get_or_create_team(self, project: Project) -> Team:
         """Return the project's gateway team, creating it on the gateway if needed."""

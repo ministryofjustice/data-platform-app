@@ -4,24 +4,32 @@ from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
 
 
-@method_decorator(login_not_required, name="dispatch")
-class HomeView(TemplateView):
-    template_name = "home.html"
+class ProductPageMixin:
+    show_masthead = True
+    inverse_header = True
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["show_masthead"] = True
+        context["show_masthead"] = self.show_masthead
+        context["inverse_header"] = self.inverse_header
         return context
 
 
 @method_decorator(login_not_required, name="dispatch")
-class RoadmapView(TemplateView):
-    template_name = "roadmap.html"
+class HomeView(ProductPageMixin, TemplateView):
+    template_name = "home.html"
 
 
 @method_decorator(login_not_required, name="dispatch")
-class DataFactoriesView(TemplateView):
+class RoadmapView(ProductPageMixin, TemplateView):
+    template_name = "roadmap.html"
+    show_masthead = False
+
+
+@method_decorator(login_not_required, name="dispatch")
+class DataFactoriesView(ProductPageMixin, TemplateView):
     template_name = "data_factories.html"
+    show_masthead = False
 
 
 class LandingView(TemplateView):

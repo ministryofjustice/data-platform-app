@@ -8,7 +8,7 @@ import httpx
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
-from ai_gateway.exceptions import AIGatewayAPIError
+from ai_gateway.exceptions import AIGatewayAPIError, AIGatewayTransportError
 
 
 class AIGatewayClient:
@@ -56,9 +56,13 @@ class AIGatewayClient:
         method: str,
         path: str,
         json: dict[str, Any] | None = None,
+        params: dict[str, Any] | None = None,
     ) -> Any:
         """Send a request and return the parsed JSON body, raising on error responses."""
-        response = self._client.request(method, path, json=json)
+        try:
+            response = self._client.request(method, path, json=json, params=params)
+        except httpx.HTTPError as error:
+            raise AIGatewayTransportError(str(error)) from error
         if response.is_error:
             raise AIGatewayAPIError(response.status_code, response.text)
         return response.json()
@@ -140,3 +144,7 @@ class AIGatewayClient:
     def delete_key(self, key: str) -> None:
         """Delete the virtual key ``key``."""
         self._request("POST", "/key/delete", json={"keys": [key]})
+
+    def key_info(self, key: str) -> dict[str, Any]:
+        """Return metadata about the virtual key ``key``."""
+        return self._request("GET", "/key/info", params={"key": key})

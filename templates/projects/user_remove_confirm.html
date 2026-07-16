@@ -4,8 +4,8 @@
   Remove {{ project.name }} - Justice Data Platform | Ministry of Justice
 {% endblock title %}
 {% block back_link %}
-  <a href="{% url 'projects:project_detail' membership.project.uuid %}"
-     class="govuk-back-link">Back to project</a>
+  <a href="{% url 'projects:project_users' membership.project.uuid %}"
+     class="govuk-back-link">Back to {{ membership.project.name }}</a>
 {% endblock back_link %}
 {% block content %}
   <div class="govuk-grid-row">
@@ -22,7 +22,7 @@
                   class="govuk-button govuk-button--warning govuk-!-margin-right-2">
             Remove
           </button>
-          <a href="{% url 'projects:project_detail' membership.project.uuid %}"
+          <a href="{% url 'projects:project_users' membership.project.uuid %}"
              class="govuk-link">Cancel</a>
         </div>
       </form>
