@@ -111,8 +111,16 @@ class KeyRegenerateView(ProjectScopedMixin, SingleObjectMixin, TemplateView):
     def post(self, request, *args, **kwargs):
         self.object = self.get_object()
 
-        with KeyService.from_settings() as service:
-            plaintext_key = service.regenerate_key(key=self.object)
+        try:
+            with KeyService.from_settings() as service:
+                plaintext_key = service.regenerate_key(key=self.object)
+        except AIGatewayError as error:
+            sentry_sdk.capture_exception(error)
+            context = self.get_context_data(object=self.object)
+            context["error_message"] = {
+                "heading": "Could not regenerate key. Please try again later.",
+            }
+            return render(request, self.template_name, context, status=502)
 
         response = render(
             request,
