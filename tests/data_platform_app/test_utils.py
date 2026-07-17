@@ -13,7 +13,7 @@ class TestGetAzureRedirectUri:
 
         assert result == custom_uri
 
-    def test_returns_environment_variable_for_non_production(self, monkeypatch):
+    def test_returns_environment_variable_regardless_of_app_env(self, monkeypatch):
         """When AZURE_REDIRECT_URI env var is set, return its value regardless of app_env."""
         custom_uri = "https://custom.example.com/callback/"
         monkeypatch.setenv("AZURE_REDIRECT_URI", custom_uri)
