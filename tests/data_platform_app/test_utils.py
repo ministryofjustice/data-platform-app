@@ -37,6 +37,7 @@ class TestGetAzureRedirectUri:
         result = get_azure_redirect_uri("preproduction")
 
         assert result == "https://preproduction.data-platform.service.justice.gov.uk/sso/callback/"
+
     def test_development_uri_without_env_var(self, monkeypatch):
         """When app_env is development and env var not set, return development URI."""
         monkeypatch.delenv("AZURE_REDIRECT_URI", raising=False)
