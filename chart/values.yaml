@@ -85,8 +85,6 @@ app:
         secretKeyRef:
           name: app-rds
           key: dbname
-    - name: AZURE_REDIRECT_URI
-      value: https://development.data-platform.service.justice.gov.uk/sso/callback/
     - name: AZURE_AUTHORITY
       valueFrom:
         secretKeyRef:
