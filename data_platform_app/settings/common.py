@@ -164,7 +164,7 @@ SESSION_COOKIE_AGE = 8 * 60 * 60
 AZURE_AUTH = {
     "CLIENT_ID": os.environ.get("AZURE_CLIENT_ID"),
     "CLIENT_SECRET": os.environ.get("AZURE_CLIENT_SECRET"),
-    "REDIRECT_URI": get_azure_redirect_uri(),
+    "REDIRECT_URI": get_azure_redirect_uri(APP_ENV),
     "SCOPES": ["User.Read"],
     "AUTHORITY": os.environ.get("AZURE_AUTHORITY"),
     "USERNAME_ATTRIBUTE": "oid",
