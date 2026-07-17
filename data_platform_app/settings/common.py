@@ -15,6 +15,8 @@ from pathlib import Path
 
 from django.urls import reverse_lazy
 
+from data_platform_app.utils import get_azure_redirect_uri
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -29,7 +31,7 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 DEBUG = False
 
 ALLOWED_HOSTS = []
-
+APP_ENV = os.environ.get("APP_ENV", "development")
 
 # Application definition
 
@@ -162,7 +164,7 @@ SESSION_COOKIE_AGE = 8 * 60 * 60
 AZURE_AUTH = {
     "CLIENT_ID": os.environ.get("AZURE_CLIENT_ID"),
     "CLIENT_SECRET": os.environ.get("AZURE_CLIENT_SECRET"),
-    "REDIRECT_URI": os.environ.get("AZURE_REDIRECT_URI"),
+    "REDIRECT_URI": get_azure_redirect_uri(APP_ENV),
     "SCOPES": ["User.Read"],
     "AUTHORITY": os.environ.get("AZURE_AUTHORITY"),
     "USERNAME_ATTRIBUTE": "oid",

@@ -34,5 +34,5 @@ if os.environ.get("SENTRY_DSN"):
         # Add data like request headers and IP for users;
         # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
         send_default_pii=True,
-        environment=os.environ.get("SENTRY_ENVIRONMENT", "production"),
+        environment=os.environ.get("APP_ENV", "production"),
     )
