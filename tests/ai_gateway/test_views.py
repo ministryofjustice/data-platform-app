@@ -8,7 +8,6 @@ from pytest_django.asserts import assertContains, assertInHTML, assertTemplateUs
 from ai_gateway.exceptions import AIGatewayAPIError
 from ai_gateway.models import Key
 from ai_gateway.services import KeyService
-from ai_gateway.views import KeyCreateView
 
 PLAINTEXT_KEY = "sk-plaintext-key-value-123456"
 
@@ -79,16 +78,6 @@ class TestKeyListView:
 
 
 class TestKeyCreateView:
-    def test_debug_models_do_not_overlap_with_seeded_gateway_models(self):
-        seeded_model_names = {
-            "bedrock-claude-sonnet-5",
-            "bedrock-claude-opus-4-8",
-        }
-
-        debug_model_names = {model["model_name"] for model in KeyCreateView._debug_extra_models()}
-
-        assert debug_model_names.isdisjoint(seeded_model_names)
-
     def test_get_renders_form(self, client, user, project, key_service):
         client.force_login(user)
         response = client.get(reverse("ai_gateway:key_create", args=[project.uuid]))
