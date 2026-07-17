@@ -106,10 +106,7 @@ app:
           name: app-secrets
           key: field-encryption-key
     - name: AI_GATEWAY_URL
-      valueFrom:
-        secretKeyRef:
-          name: app-secrets
-          key: ai-gateway-url
+      value: http://litellm-admin.ai-gateway.svc.cluster.local:4000
     - name: AI_GATEWAY_MASTER_KEY
       valueFrom:
         secretKeyRef:
