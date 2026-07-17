@@ -4,8 +4,7 @@
   AI gateway keys - {{ project.name }} - Justice Data Platform | Ministry of Justice
 {% endblock title %}
 {% block back_link %}
-  <a href="{% url 'projects:project_detail' project.uuid %}"
-     class="govuk-back-link">Back to {{ project.name }}</a>
+  <a href="{% url 'projects:projects_list' %}" class="govuk-back-link">Back to projects</a>
 {% endblock back_link %}
 {% block project_main_content %}
   <div class="govuk-grid-row">

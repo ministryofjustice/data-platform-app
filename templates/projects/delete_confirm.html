@@ -5,7 +5,7 @@
 {% endblock title %}
 {% block back_link %}
   <a href="{% url 'projects:project_detail' project.uuid %}"
-     class="govuk-back-link">Back to project</a>
+     class="govuk-back-link">Back to {{ project.name }}</a>
 {% endblock back_link %}
 {% block content %}
   <div class="govuk-grid-row">

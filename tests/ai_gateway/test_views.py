@@ -1,28 +1,13 @@
-from unittest.mock import create_autospec, patch
+from unittest.mock import patch
 
-import pytest
 from django.urls import reverse
 from model_bakery import baker
 from pytest_django.asserts import assertContains, assertInHTML, assertTemplateUsed
 
 from ai_gateway.exceptions import AIGatewayAPIError
 from ai_gateway.models import Key
-from ai_gateway.services import KeyService
 
 PLAINTEXT_KEY = "sk-plaintext-key-value-123456"
-
-
-@pytest.fixture
-def key_service():
-    """Patch KeyService.from_settings with an autospecced instance used as a context manager."""
-    service = create_autospec(KeyService, instance=True)
-    service.__enter__.return_value = service
-    service.__exit__.return_value = False
-    service.list_default_models.return_value = ["gpt-4", "claude-3"]
-    service.get_models_for_key.return_value = ["gpt-4"]
-
-    with patch("ai_gateway.views.KeyService.from_settings", return_value=service):
-        yield service
 
 
 class TestKeyListView:
@@ -204,6 +189,63 @@ class TestKeyDetailView:
         response = client.get(reverse("ai_gateway:key_detail", args=[project.uuid, other_key.pk]))
 
         assert response.status_code == 404
+
+
+class TestKeyRegenerateView:
+    def test_renders_for_member(self, client, user, project, key):
+        client.force_login(user)
+        response = client.get(reverse("ai_gateway:key_regenerate", args=[project.uuid, key.pk]))
+
+        assert response.status_code == 200
+        assert "ai_gateway/key-regenerate.html" in [t.name for t in response.templates]
+
+    def test_non_member_gets_404(self, client, non_project_user, project, key):
+        client.force_login(non_project_user)
+        response = client.get(reverse("ai_gateway:key_regenerate", args=[project.uuid, key.pk]))
+
+        assert response.status_code == 404
+
+    def test_post_regenerates_key_and_renders_created_template(
+        self, client, user, project, key, key_service
+    ):
+        client.force_login(user)
+        key_service.regenerate_key.return_value = PLAINTEXT_KEY
+
+        response = client.post(reverse("ai_gateway:key_regenerate", args=[project.uuid, key.pk]))
+
+        assert response.status_code == 200
+        assertTemplateUsed(response, "ai_gateway/key-created.html")
+        assertContains(response, PLAINTEXT_KEY)
+        assertContains(response, "Store your API Key")
+        key_service.regenerate_key.assert_called_once_with(
+            key=key,
+        )
+        assert response.headers["Cache-Control"]
+
+    def test_post_non_member_gets_404(self, client, non_project_user, project, key, key_service):
+        client.force_login(non_project_user)
+
+        response = client.post(reverse("ai_gateway:key_regenerate", args=[project.uuid, key.pk]))
+
+        assert response.status_code == 404
+        key_service.regenerate_key.assert_not_called()
+
+    def test_post_gateway_error_redirects_to_key_detail_with_error_message(
+        self, client, user, project, key, key_service
+    ):
+        key_service.regenerate_key.side_effect = AIGatewayAPIError(500, "gateway error")
+        client.force_login(user)
+
+        with patch("ai_gateway.views.sentry_sdk.capture_exception") as capture_exception:
+            response = client.post(
+                reverse("ai_gateway:key_regenerate", args=[project.uuid, key.pk])
+            )
+
+        assert response.status_code == 302
+        assert response.url == reverse("ai_gateway:key_detail", args=[project.uuid, key.pk])
+        key.refresh_from_db()
+        assert key.litellm_secret == "sk-full-secret"  # unchanged
+        capture_exception.assert_called_once()
 
 
 class TestKeyRevokeView:

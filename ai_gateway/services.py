@@ -7,6 +7,7 @@ import secrets
 from django.conf import settings
 from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
+from django.db import transaction
 from django.utils.text import slugify
 
 from ai_gateway.client import AIGatewayClient
@@ -73,6 +74,30 @@ class KeyService:
             created_by=created_by,
         )
         return plaintext_key
+
+    def regenerate_key(self, key: Key) -> str:
+        """Regenerate a gateway key for ``key`` and persist its metadata."""
+
+        # Avoid holding a DB row lock while making a network call to the gateway.
+        old_secret = Key.objects.values_list("litellm_secret", flat=True).get(pk=key.pk)
+        plaintext_key = self._client.regenerate_key(old_secret)
+
+        with transaction.atomic():
+            db_key = Key.objects.select_for_update().get(pk=key.pk)
+            db_key.litellm_secret = plaintext_key
+            db_key.masked_key = self._mask_key(plaintext_key)
+            db_key.save(update_fields=["litellm_secret", "masked_key", "modified"])
+
+        return plaintext_key
+
+    def bulk_delete_keys(self, keys: list[str]) -> None:
+        """Bulk delete gateway keys identified by their secrets."""
+        if keys:
+            self._client.bulk_delete_keys(keys)
+
+    def delete_team(self, team_id: str) -> None:
+        """Delete the gateway team identified by ``team_id``."""
+        self._client.delete_team(team_id)
 
     def get_models_for_key(self, key: Key) -> list[str]:
         """Return model names for ``key``, using a short-lived cache.

@@ -6,6 +6,11 @@
 {% endblock back_link %}
 {% block content %}
   <div class="govuk-grid-row">
+    {% if error_message %}
+      <div class="govuk-grid-column-full">
+        {% include "includes/error_message.html" with heading=error_message.heading message=error_message.message only %}
+      </div>
+    {% endif %}
     <div class="govuk-grid-column-two-thirds">
       <span class="govuk-caption-l">Manage</span>
       <h1 class="govuk-heading-l">{{ key.name }}</h1>
@@ -53,7 +58,8 @@
     <div class="govuk-grid-column-two-thirds">
       <h2 class="govuk-heading-m">Regenerate key</h2>
       <p class="govuk-body">Replace the current key. You'll need to update applications with the new key. You will only be able to view the new key once.</p>
-      <a href="#TODO" class="govuk-button govuk-button--secondary">Regenerate</a>
+      <a href="{% url 'ai_gateway:key_regenerate' project.uuid key.pk %}"
+         class="govuk-button govuk-button--secondary">Regenerate</a>
     </div>
   </div>
   <div class="govuk-grid-row">
