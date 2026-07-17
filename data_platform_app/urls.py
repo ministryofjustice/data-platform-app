@@ -15,18 +15,33 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
+from azure_auth.views import azure_auth_callback, azure_auth_login, azure_auth_logout
 from django.conf import settings
 from django.contrib import admin
+from django.contrib.auth.decorators import login_not_required
 from django.urls import path
+from django.urls.conf import include
 
-from data_platform_app.views import DataFactoriesView, HomeView, RoadmapView, healthcheck
+from data_platform_app.views import (
+    DataFactoriesView,
+    HomeView,
+    LandingView,
+    RoadmapView,
+    healthcheck,
+)
 
 urlpatterns = [
+    path("app/projects/<uuid:uuid>/ai-gateway/", include("ai_gateway.urls")),
+    path("app/projects/", include("projects.urls")),
     path("", HomeView.as_view(), name="home"),
     path("roadmap/", RoadmapView.as_view(), name="roadmap"),
     path("data-factories/", DataFactoriesView.as_view(), name="data_factories"),
+    path("app/", LandingView.as_view(), name="landing"),
     path("admin/", admin.site.urls),
     path("healthcheck/", healthcheck, name="healthcheck"),
+    path("login/", login_not_required(azure_auth_login), name="login"),
+    path("logout/", login_not_required(azure_auth_logout), name="logout"),
+    path("sso/callback/", login_not_required(azure_auth_callback), name="auth_callback"),
 ]
 
 if settings.DEBUG and "debug_toolbar" in settings.INSTALLED_APPS:

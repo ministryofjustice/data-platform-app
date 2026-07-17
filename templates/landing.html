@@ -1,0 +1,25 @@
+{% extends "base/base.html" %}
+{% load static %}
+{% block title %}
+  Landing - Justice Data Platform | Ministry of Justice
+{% endblock title %}
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h2 class="govuk-heading-l">Justice Data Platform</h2>
+      <p class="govuk-body">
+        Keep your data and models secure, reproducible, and scalable. You can also transfer data and manage access, all in one place.
+      </p>
+    </div>
+    <div class="govuk-grid-column-full">
+      <div class="info-panel">
+        <h4 class="govuk-heading-m">Projects</h4>
+        <p class="govuk-body">
+          Access a wide range of large language models and AI tools from within the project, using the AI gateway API.
+        </p>
+        <a class="govuk-button moj-button govuk-!-margin-bottom-1"
+           href="{% url 'projects:projects_list' %}">Go to projects</a>
+      </div>
+    </div>
+  </div>
+{% endblock content %}

@@ -7,6 +7,8 @@
   $moj-assets-path: $govuk-assets-path
 );
 @use "node_modules/@x-govuk/govuk-prototype-components/src/x-govuk";
+@use "components/copy-button/copy-button";
+@use "components/multi-select-tags/multi-select-tags";
 
 $masthead-background-color: #381a62;
 
@@ -19,10 +21,6 @@ $masthead-background-color: #381a62;
   background-color: $masthead-background-color;
 }
 
-.moj-header {
-  border-bottom-color: govuk-colour("black");
-}
-
 .moj-header--inverse {
   background-color: $masthead-background-color;
   border-bottom-color: $masthead-background-color;
@@ -30,6 +28,8 @@ $masthead-background-color: #381a62;
 
 .govuk-service-navigation--inverse {
   background-color: $masthead-background-color;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 
   .govuk-width-container {
     border-color: govuk-colour("white");
@@ -37,11 +37,28 @@ $masthead-background-color: #381a62;
 }
 
 .info-panel {
-  max-width: 652px;
-  width: 100%;
   background-color: #f4f8fb;
   padding: govuk-spacing(3);
   border: 1px solid #8eb8fc;
+}
+
+.app-key-panel {
+  padding: govuk-spacing(3);
+  border: 1px solid $govuk-border-colour;
+}
+
+.app-key-token {
+  display: inline-block;
+  box-sizing: border-box;
+  @include govuk-font($size: 19, $line-height: 19px, $weight: bold);
+  padding: 8px govuk-spacing(2) 7px;
+  border: 1px solid govuk-colour("blue");
+  background-color: govuk-colour("blue", $variant: "tint-95");
+  vertical-align: baseline;
+}
+
+.info-panel-home-width {
+  max-width: 652px;
 }
 
 .home-image {
@@ -52,7 +69,56 @@ $masthead-background-color: #381a62;
 
 .masthead-image {
   display: block;
-  max-width: 80%;
+  max-width: 90%;
   height: auto;
-  margin-top: govuk-spacing(8);
+  margin-top: govuk-spacing(7);
+}
+
+.moj-button {
+  background-color: govuk-colour("blue");
+  box-shadow: 0 2px 0 govuk-colour("blue", $variant: "shade-50");
+}
+
+.moj-button:hover {
+  background-color: govuk-colour("blue", $variant: "shade-25");
+}
+
+.project-link {
+  font-weight: bold;
+  text-decoration: none;
+  font-size: 24px;
+  line-height: 32px;
+}
+
+.app-ai-gateway-key-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.app-ai-gateway-key-table__name {
+  width: 20%;
+}
+
+.app-ai-gateway-key-table__key-id {
+  width: 50%;
+}
+
+.app-ai-gateway-key-table__created-on {
+  width: 20%;
+}
+
+.app-ai-gateway-key-table__actions {
+  width: 10%;
+}
+
+.app-ai-gateway-key-table__value {
+  display: inline-block;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.ai-gateway-key-detail {
+  background-color: govuk-colour("blue", $variant: "tint-95");
+  padding: govuk-spacing(4);
 }

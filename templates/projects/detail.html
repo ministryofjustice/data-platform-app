@@ -1,0 +1,30 @@
+{% extends "base/project_layout.html" %}
+{% load static %}
+{% block title %}
+  {{ project.name }} - Justice Data Platform | Ministry of Justice
+{% endblock title %}
+{% block back_link %}
+  <a href="{% url 'projects:projects_list' %}" class="govuk-back-link">Back to projects</a>
+{% endblock back_link %}
+{% block project_main_content %}
+  <h3 class="govuk-heading-m">Project ID</h3>
+  <span id="copy-alert" class="govuk-visually-hidden" aria-live="polite"></span>
+  <span id="project-id" class="govuk-body">{{ project.public_id }}</span>
+  <button class="govuk-button copy-button govuk-!-margin-bottom-0 govuk-!-margin-left-2"
+          type="button"
+          data-module="copy-button"
+          data-text-selector="#project-id"
+          data-success-message="Project ID copied">Copy</button>
+  <hr class="govuk-section-break govuk-section-break--xl govuk-section-break--visible">
+  <h3 class="govuk-heading-m">Business Unit</h3>
+  <p class="govuk-body">{{ project.business_unit.name }}</p>
+  <hr class="govuk-section-break govuk-section-break--xl govuk-section-break--visible">
+  <h3 class="govuk-heading-m">About this project</h3>
+  <p class="govuk-body">{{ project.description }}</p>
+  <hr class="govuk-section-break govuk-section-break--xl govuk-section-break--visible">
+  <h3 class="govuk-heading-m">Project owner</h3>
+  <p class="govuk-body">{{ project.created_by.full_name }}</p>
+  <p class="govuk-body">Created {{ project.created|date:"d F Y" }}</p>
+  <a href="{% url 'projects:project_delete' project.uuid %}"
+     class="govuk-link">Remove this project</a>
+{% endblock project_main_content %}

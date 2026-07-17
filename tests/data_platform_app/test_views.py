@@ -14,6 +14,7 @@ class TestHomeView:
         response = client.get(reverse("home"))
 
         assert response.context["show_masthead"] is True
+        assert response.context["inverse_header"] is True
         assert "service_navigation_items" in response.context
 
 
@@ -28,6 +29,8 @@ class TestRoadmapView:
 
     def test_context(self, client):
         response = client.get(reverse("roadmap"))
+        assert response.context["show_masthead"] is False
+        assert response.context["inverse_header"] is True
         assert "service_navigation_items" in response.context
 
 
@@ -42,7 +45,27 @@ class TestDataFactoriesView:
 
     def test_context(self, client):
         response = client.get(reverse("data_factories"))
+        assert response.context["show_masthead"] is False
+        assert response.context["inverse_header"] is True
         assert "service_navigation_items" in response.context
+
+
+class TestLandingView:
+    """Tests for the login-protected LandingView."""
+
+    def test_redirects_anonymous_user_to_login(self, client):
+        response = client.get(reverse("landing"))
+
+        assert response.status_code == 302
+        assert response.url.startswith(reverse("login"))
+
+    def test_renders_for_authenticated_user(self, client, user):
+        client.force_login(user)
+
+        response = client.get(reverse("landing"))
+
+        assert response.status_code == 200
+        assert "landing.html" in [t.name for t in response.templates]
 
 
 class TestHealthcheckView:

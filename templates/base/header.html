@@ -1,4 +1,5 @@
-<header class="moj-header moj-header--inverse" role="banner">
+<header class="moj-header{% if inverse_header %} moj-header--inverse{% endif %}"
+        role="banner">
   <div class="moj-header__container">
     <div class="moj-header__logo">
       {% include "base/moj_header.svg" %}
@@ -10,7 +11,18 @@
     <div class="moj-header__content">
       <nav class="moj-header__navigation" aria-label="Account navigation">
         <ul class="moj-header__navigation-list">
-          <li class="moj-header__navigation-item"></li>
+          {% if user.is_authenticated %}
+            <li class="moj-header__navigation-item">
+              <a class="moj-header__navigation-link" href="{% url 'landing' %}">{{ request.user.email }}</a>
+            </li>
+            <li class="moj-header__navigation-item">
+              <a class="moj-header__navigation-link" href="{% url 'logout' %}">Sign out</a>
+            </li>
+          {% else %}
+            <li class="moj-header__navigation-item">
+              <a class="moj-header__navigation-link" href="{% url 'login' %}">Sign in</a>
+            </li>
+          {% endif %}
         </ul>
       </nav>
     </div>

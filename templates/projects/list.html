@@ -1,0 +1,37 @@
+{% extends "base/base.html" %}
+{% load static %}
+{% block title %}
+  Your projects - Justice Data Platform | Ministry of Justice
+{% endblock title %}
+{% block content %}
+  <div class="govuk-grid-row">
+    {% if success_message %}
+      <div class="govuk-grid-column-full">
+        {% include "includes/success_message.html" with heading=success_message.heading message=success_message.message only %}
+      </div>
+    {% endif %}
+    <div class="govuk-grid-column-two-thirds">
+      <h2 class="govuk-heading-l">Projects</h2>
+    </div>
+    <div class="govuk-grid-column-one-third govuk-!-text-align-right">
+      <a class="govuk-button govuk-button--secondary"
+         href="{% url 'projects:project_create' %}">Create a project</a>
+    </div>
+    <div class="govuk-grid-column-two-thirds">
+      <p class="govuk-body">
+        Create a project to get access to a wide range of large language models and AI tools through the AI gateway API.
+      </p>
+    </div>
+    {% if user_projects %}
+      {% for project in user_projects %}
+        <div class="govuk-grid-column-one-half govuk-!-margin-bottom-3">
+          <div class="info-panel">
+            <a href="{% url 'projects:project_detail' project.uuid %}"
+               class="govuk-link project-link">{{ project.name }}</a>
+            <p class="govuk-body">{{ project.description }}</p>
+          </div>
+        </div>
+      {% endfor %}
+    {% endif %}
+  </div>
+{% endblock content %}

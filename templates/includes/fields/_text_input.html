@@ -1,0 +1,23 @@
+{% comment %}
+  Reusable text input form field.
+
+  Expects:
+    field - a bound CharField (or compatible text-like bound field)
+{% endcomment %}
+<div class="govuk-form-group{% if field.errors %} govuk-form-group--error{% endif %}">
+  {% include "includes/fields/_label.html" with field=field only %}
+  {% if field.help_text %}
+    <div id="{{ field.html_name }}-hint" class="govuk-hint">{{ field.help_text }}</div>
+  {% endif %}
+  {% for error in field.errors %}
+    <p id="{{ field.html_name }}-error" class="govuk-error-message">
+      <span class="govuk-visually-hidden">Error:</span> {{ error }}
+    </p>
+  {% endfor %}
+  <input class="govuk-input govuk-!-width-two-thirds{% if field.errors %} govuk-input--error{% endif %}"
+         id="{{ field.id_for_label }}"
+         name="{{ field.html_name }}"
+         type="text"
+         value="{{ field.value|default:'' }}"
+         aria-describedby="{% if field.help_text %}{{ field.html_name }}-hint{% endif %}{% if field.errors %} {{ field.html_name }}-error{% endif %}">
+</div>

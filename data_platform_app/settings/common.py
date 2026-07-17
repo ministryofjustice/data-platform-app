@@ -13,6 +13,10 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 import os
 from pathlib import Path
 
+from django.urls import reverse_lazy
+
+from data_platform_app.utils import get_azure_redirect_uri
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -27,7 +31,7 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 DEBUG = False
 
 ALLOWED_HOSTS = []
-
+APP_ENV = os.environ.get("APP_ENV", "development")
 
 # Application definition
 
@@ -39,6 +43,10 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "users",
+    "projects",
+    "ai_gateway",
+    "simple_history",
+    "django_extensions",
 ]
 
 MIDDLEWARE = [
@@ -49,6 +57,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.auth.middleware.LoginRequiredMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -141,3 +150,36 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Django looks in these locations for additional static assets to collect
 STATICFILES_DIRS = [BASE_DIR / "static"]
+
+
+# Authentication
+INSTALLED_APPS += ["azure_auth"]
+AUTHENTICATION_BACKENDS = ["azure_auth.backends.AzureBackend"]
+
+LOGIN_URL = reverse_lazy("login")
+LOGIN_REDIRECT_URL = reverse_lazy("landing")
+
+SESSION_COOKIE_AGE = 8 * 60 * 60
+
+AZURE_AUTH = {
+    "CLIENT_ID": os.environ.get("AZURE_CLIENT_ID"),
+    "CLIENT_SECRET": os.environ.get("AZURE_CLIENT_SECRET"),
+    "REDIRECT_URI": get_azure_redirect_uri(APP_ENV),
+    "SCOPES": ["User.Read"],
+    "AUTHORITY": os.environ.get("AZURE_AUTHORITY"),
+    "USERNAME_ATTRIBUTE": "oid",
+    "USER_MAPPING_FN": "users.auth.user_mapping_fn",
+}
+
+
+# AI Gateway (LiteLLM)
+AI_GATEWAY_URL = os.environ.get("AI_GATEWAY_URL")
+AI_GATEWAY_MASTER_KEY = os.environ.get("AI_GATEWAY_MASTER_KEY")
+DEFAULT_ACCESS_GROUP_NAME = os.environ.get(
+    "DEFAULT_ACCESS_GROUP_NAME", "generally-available-models"
+)
+
+# Keys used to encrypt sensitive model fields at rest
+FIELD_ENCRYPTION_KEYS = [
+    key.strip() for key in os.environ.get("FIELD_ENCRYPTION_KEY", "").split(",") if key.strip()
+]

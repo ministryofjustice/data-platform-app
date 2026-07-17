@@ -104,5 +104,5 @@ curl \
   --header "Authorization: Bearer sk-123456789" \
   --data '{
     "access_group_name": "generally-available-models",
-    "access_model_names": ["bedrock-claude-sonnet-5"]
+    "access_model_names": ["bedrock-claude-sonnet-5", "gemini-2-5-pro", "azure-gpt-5-2"]
   }'

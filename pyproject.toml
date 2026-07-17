@@ -6,19 +6,25 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "django==6.0.6",
+    "django-azure-auth==2.6.0",
+    "django-extensions==4.1",
+    "django-simple-history==3.11.0",
     "gunicorn==26.0.0",
+    "httpx==0.28.1",
+    "model-bakery==1.24.0",
     "python-dotenv==1.2.2",
     "psycopg[binary]==3.3.4",
     "pytest-django==4.12.0",
     "pytest-cov==7.1.0",
     "whitenoise==6.12.0",
+    "cryptography==49.0.0",
+    "sentry-sdk==2.64.0",
 ]
 
 [dependency-groups]
 dev = [
     "djlint==1.40.1",
     "django-debug-toolbar==7.0.0",
-    "model-bakery==1.24.0",
     "pre-commit==4.6.0",
     "pytest==9.1.1",
     "ruff==0.15.20",
@@ -51,7 +57,7 @@ select = [
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "data_platform_app.settings.test"
-addopts = "-v --tb=auto --cov=data_platform_app --cov=users --cov-branch --cov-report=term-missing --cov-report=xml --cov-fail-under=90"
+addopts = "-v --tb=auto --cov=data_platform_app --cov=users --cov=projects --cov=ai_gateway --cov-branch --cov-report=term-missing --cov-report=xml --cov-fail-under=90"
 testpaths = ["tests"]
 
 [tool.coverage.run]

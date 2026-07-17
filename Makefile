@@ -1,4 +1,4 @@
-.PHONY: run install build-css build-js build-static lint format lint-templates format-templates test start-ai-gateway stop-ai-gateway
+.PHONY: run install npm-install build-css build-js build-static lint format lint-templates format-templates test start-ai-gateway stop-ai-gateway
 
 run:
 	uv run python manage.py makemigrations --check
@@ -7,11 +7,14 @@ run:
 
 install:
 	uv sync --locked
+	$(MAKE) npm-install
 	uv run pre-commit install --hook-type pre-commit --hook-type pre-push
 	$(MAKE) build-static
 
-build-css:
+npm-install:
 	npm ci
+
+build-css:
 	rm -rf static/assets/fonts
 	rm -rf static/assets/images
 	rm -rf static/assets/css
@@ -25,10 +28,13 @@ build-css:
 	npm run css
 
 build-js:
-	npm ci
 	rm -rf static/assets/js
 	mkdir -p static/assets/js
+	npm run build:js
 	cp node_modules/govuk-frontend/dist/govuk/govuk-frontend.min.js static/assets/js/govuk-frontend.min.js
+	cp node_modules/govuk-frontend/dist/govuk/govuk-frontend.min.js.map static/assets/js/govuk-frontend.min.js.map
+	cp node_modules/@ministryofjustice/frontend/moj/moj-frontend.min.js static/assets/js/moj-frontend.min.js
+	cp node_modules/@ministryofjustice/frontend/moj/moj-frontend.min.js.map static/assets/js/moj-frontend.min.js.map
 	cp node_modules/@x-govuk/govuk-prototype-components/dist/govuk-prototype-components.min.js static/assets/js/govuk-prototype-components.min.js
 	cp node_modules/@x-govuk/govuk-prototype-components/dist/govuk-prototype-components.min.js.map static/assets/js/govuk-prototype-components.min.js.map
 

@@ -10,7 +10,7 @@
 
 1. Clone this repository.
 2. Open the project in Visual Studio Code.
-3. Add .env file from [1pass](https://ministryofjustice.1password.eu/app#/WEXD5VMFTVBH7LG7FFDWUV7MC4/Vault/WEXD5VMFTVBH7LG7FFDWUV7MC4:skgdudwgk3ojqiwigoxrmpngle:2cjgikrcktdhwpoeleoo4jomr4?itemListId=WEXD5VMFTVBH7LG7FFDWUV7MC4%3Askgdudwgk3ojqiwigoxrmpngle)
+3. Add .env file from [1pass](https://ministryofjustice.1password.eu/app#/WEXD5VMFTVBH7LG7FFDWUV7MC4/Vault/WEXD5VMFTVBH7LG7FFDWUV7MC4:tahmy4wjhm2zr2ld5qbqxl4ufi:civa53euwau6iiayay3pyphcwm?itemListId=WEXD5VMFTVBH7LG7FFDWUV7MC4%3Atahmy4wjhm2zr2ld5qbqxl4ufi)
 4. Reopen in the devcontainer when prompted.
    - You can also run: `Dev Containers: Reopen in Container` from the command palette.
 5. Wait for the devcontainer setup to complete.
@@ -76,6 +76,44 @@ For initial development, we are using SQLite locally.
 
 When we move toward deployment, we will switch local development to PostgreSQL so that development and production environments are aligned.
 
+## Authentication (Microsoft Entra ID)
+
+Users sign in with Microsoft Entra ID (OAuth 2.0 / OpenID Connect), via
+[django-azure-auth](https://github.com/Weird-Sheep-Labs/django-azure-auth).
+
+Entra ID is the **sole authentication provider in every environment** — there is
+no separate local login, so running the app locally requires real Entra
+credentials, set as environment variables (e.g. in your `.env`):
+
+| Variable              | Description                                                |
+| --------------------- | ---------------------------------------------------------- |
+| `AZURE_CLIENT_ID`     | Application (client) ID from the Entra app registration.   |
+| `AZURE_CLIENT_SECRET` | Client secret from the Entra app registration.             |
+| `AZURE_AUTHORITY`     | `https://login.microsoftonline.com/<tenant-id>`.           |
+| `AZURE_REDIRECT_URI`  | Reply URL registered in Entra, ending in `/sso/callback/`. |
+
+The test suite needs no tenant: tests use `force_login`, and `settings/test.py`
+supplies dummy credentials so the app boots without one.
+
+### Enforcement
+
+Login is enforced centrally by Django's `LoginRequiredMiddleware` (deny by
+default): every view requires an authenticated user unless it is explicitly
+marked `@login_not_required`. The allowlist is the public product pages (home,
+roadmap, data factories) and the auth flow itself (`login`, `logout` and the
+Entra `callback`, which must stay open because the user is still anonymous while
+signing in).
+
+Sessions have an absolute 8-hour lifetime (`SESSION_COOKIE_AGE`), so a user who
+loses Entra access is forced back through the provider within a working day.
+While their Entra session is still valid this re-login is a silent SSO redirect.
+
+### Admin access
+
+Admin access is granted manually. To do this locally, sign in via Entra once to
+create your `User`, then promote it with `make manage shell`. In real
+environments you will need to speak to an existing admin.
+
 ## Static assets
 
 Static assets are built as part of `make install` (this runs `make build-static`).
@@ -109,6 +147,35 @@ make start-ai-gateway
 ```
 
 You can then access the AI Gateway at <http://localhost:4000>. The username is `admin` and the password is the value of `LITELLM_MASTER_KEY` in [contrib/docker-compose-ai-gateway.yml](./contrib/docker-compose-ai-gateway.yml).
+
+To have this Django app use your local gateway, add these variables to your `.env`:
+
+```bash
+AI_GATEWAY_URL=http://localhost:4000
+AI_GATEWAY_MASTER_KEY=sk-123456789 # gitleaks:allow
+DEFAULT_ACCESS_GROUP_NAME=generally-available-models
+```
+
+`AI_GATEWAY_MASTER_KEY` must match the gateway's `LITELLM_MASTER_KEY` value. If you changed it in Docker compose or your environment, use that value instead. `DEFAULT_ACCESS_GROUP_NAME` is the name of the access group that defines which models are available by default; the app looks up its ID on the gateway at runtime.
+
+The app stores each generated key's secret encrypted at rest (Fernet), so you must
+also set a `FIELD_ENCRYPTION_KEY`. Generate one with:
+
+```bash
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
+Then add it to your `.env`:
+
+```bash
+FIELD_ENCRYPTION_KEY=your-generated-fernet-key
+```
+
+To rotate the encryption key later, set `FIELD_ENCRYPTION_KEY` to a comma-separated
+list with the new key first (e.g. `new-key,old-key`); all keys are tried when
+decrypting, while only the first is used to encrypt.
+
+After updating `.env`, restart the Django app (`make run`) so the new settings are loaded.
 
 You can also connect to it programmatically using cURL, for example
 

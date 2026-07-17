@@ -1,0 +1,45 @@
+{% extends "base/base.html" %}
+{% block title %}
+  Confirm members - {{ project.name }} - Justice Data Platform | Ministry of Justice
+{% endblock title %}
+{% block back_link %}
+  <a href="{% url 'projects:project_users_add' project.uuid %}"
+     class="govuk-back-link">Back</a>
+{% endblock back_link %}
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h1 class="govuk-heading-l">Check details</h1>
+      <p class="govuk-body">These members will be added to {{ project.name }}.</p>
+      <table class="govuk-table">
+        <thead class="govuk-table__head">
+          <tr class="govuk-table__row">
+            <th scope="col" class="govuk-table__header govuk-visually-hidden">title</th>
+            <th scope="col" class="govuk-table__header govuk-visually-hidden">user email</th>
+            <th scope="col" class="govuk-table__header govuk-visually-hidden">actions</th>
+          </tr>
+        </thead>
+        <tbody class="govuk-table__body">
+          {% for user in selected_users %}
+            <tr class="govuk-table__row">
+              <td class="govuk-table__cell govuk-!-font-weight-bold">Email</td>
+              <td class="govuk-table__cell">{{ user.email }}</td>
+              <td class="govuk-table__cell govuk-!-text-align-right">
+                <a href="{% url 'projects:project_users_add' project.uuid %}"
+                   class="govuk-link">change</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="govuk-button-group">
+          <button type="submit" class="govuk-button">Add members</button>
+          <a href="{% url 'projects:project_users' project.uuid %}"
+             class="govuk-link">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock content %}
