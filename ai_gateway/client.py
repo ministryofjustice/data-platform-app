@@ -18,6 +18,7 @@ class AIGatewayClient:
     DEFAULT_TEAM_BUDGET_DURATION = "monthly"
     DEFAULT_TEAM_TPM_LIMIT = 500_000
     DEFAULT_TEAM_RPM_LIMIT = 100
+    DEFAULT_TEAM_ORGANIZATION_NAME = "Ministry of Justice"
 
     def __init__(
         self,
@@ -90,18 +91,46 @@ class AIGatewayClient:
         """Return the id of the access group named ``name``."""
         return self._get_access_group(name)["access_group_id"]
 
+    def _get_organization(self, name: str) -> dict[str, Any]:
+        """Return the organisation whose alias exactly matches ``name``.
+
+        Resolves by alias and raises if no organisation or more than one
+        organisation matches.
+        """
+        organisations = cast(
+            "list[dict[str, Any]]",
+            self._request("GET", "/organization/list", params={"org_alias": name}),
+        )
+        matches = [
+            organization
+            for organization in organisations
+            if organization.get("organization_alias") == name
+        ]
+        if not matches:
+            raise AIGatewayAPIError(404, f"No organisation named {name!r}")
+        if len(matches) > 1:
+            raise AIGatewayAPIError(409, f"Multiple organisations named {name!r}")
+        return matches[0]
+
+    def get_organization_id(self, name: str) -> str:
+        """Return the id of the organisation named ``name``."""
+        return self._get_organization(name)["organization_id"]
+
     def list_models_for_access_group(self, name: str) -> list[str]:
         """Return the model names available in the access group named ``name``."""
         return self._get_access_group(name)["access_model_names"]
 
     def create_team(self, team_alias: str, access_group_ids: list[str] | None = None) -> str:
         """Create a team with alias ``team_alias`` and return its generated team id."""
+        organization_id = self.get_organization_id(self.DEFAULT_TEAM_ORGANIZATION_NAME)
         post_data = {
             "team_alias": team_alias,
             "max_budget": self.DEFAULT_TEAM_BUDGET,
             "budget_duration": self.DEFAULT_TEAM_BUDGET_DURATION,
             "tpm_limit": self.DEFAULT_TEAM_TPM_LIMIT,
             "rpm_limit": self.DEFAULT_TEAM_RPM_LIMIT,
+            "models": ["no-default-models"],
+            "organization_id": organization_id,
         }
         if access_group_ids is not None:
             post_data["access_group_ids"] = access_group_ids

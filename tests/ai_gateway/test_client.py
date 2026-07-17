@@ -43,6 +43,9 @@ class TestListModels:
 class TestCreateTeam:
     def test_sends_team_alias_and_returns_team_id(self):
         def handler(request):
+            if request.url.path == "/organization/list":
+                return organization_list_handler(request)
+
             assert request.method == "POST"
             assert request.url.path == "/team/new"
             assert json.loads(request.read()) == {
@@ -51,6 +54,8 @@ class TestCreateTeam:
                 "budget_duration": "monthly",
                 "tpm_limit": 500000,
                 "rpm_limit": 100,
+                "models": ["no-default-models"],
+                "organization_id": "org-123",
             }
             return httpx.Response(200, json={"team_id": "team-123"})
 
@@ -60,6 +65,9 @@ class TestCreateTeam:
 
     def test_includes_access_group_ids_when_given(self):
         def handler(request):
+            if request.url.path == "/organization/list":
+                return organization_list_handler(request)
+
             assert request.method == "POST"
             assert request.url.path == "/team/new"
             assert json.loads(request.read()) == {
@@ -68,6 +76,8 @@ class TestCreateTeam:
                 "budget_duration": "monthly",
                 "tpm_limit": 500000,
                 "rpm_limit": 100,
+                "models": ["no-default-models"],
+                "organization_id": "org-123",
                 "access_group_ids": ["ag-123", "ag-456"],
             }
             return httpx.Response(200, json={"team_id": "team-123"})
@@ -75,6 +85,22 @@ class TestCreateTeam:
         client = build_client(handler)
 
         assert client.create_team("project-uuid", ["ag-123", "ag-456"]) == "team-123"
+
+
+def organization_list_handler(request):
+    """Serve the /organization/list endpoint for the MOJ organisation."""
+    assert request.method == "GET"
+    assert request.url.path == "/organization/list"
+    assert request.url.params.get("org_alias") == "Ministry of Justice"
+    return httpx.Response(
+        200,
+        json=[
+            {
+                "organization_id": "org-123",
+                "organization_alias": "Ministry of Justice",
+            }
+        ],
+    )
 
 
 def access_group_list_handler(request):
