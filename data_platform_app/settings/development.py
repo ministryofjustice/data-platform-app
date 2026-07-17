@@ -1,7 +1,3 @@
-import os
-
-os.environ.setdefault("SENTRY_ENVIRONMENT", "development")
-
 from .production import *  # noqa: F401, F403
 
 DEBUG = False
