@@ -1,7 +1,5 @@
 import os
 
-from django.conf import settings
-
 
 def get_azure_redirect_uri() -> str:
     uri = os.environ.get("AZURE_REDIRECT_URI")
@@ -11,7 +9,7 @@ def get_azure_redirect_uri() -> str:
 
     protocol = "https://"
     base_url = "data-platform.service.justice.gov.uk/sso/callback/"
-    environment = settings.APP_ENV
+    environment = os.environ.get("APP_ENV", "development")
 
     if environment == "production":
         return f"{protocol}{base_url}"
