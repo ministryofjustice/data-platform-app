@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-07-17T12:29:56.331373+00:00'
+generated_at: '2026-07-17T13:01:29.755002+00:00'
 apm_version: 0.24.0
 dependencies:
 - repo_url: ministryofjustice/data-platform-ai-toolkit
