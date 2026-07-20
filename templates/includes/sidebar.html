@@ -8,7 +8,7 @@
       </li>
       <li class="moj-side-navigation__item{% if active_project_section == 'ai_gateway' %} moj-side-navigation__item--active{% endif %}">
         <a href="{% url 'ai_gateway:key_list' project.uuid %}"
-           {% if active_project_section == 'ai_gateway' %}aria-current="location"{% endif %}>AI gateway</a>
+           {% if active_project_section == 'ai_gateway' %}aria-current="location"{% endif %}>AI Gateway</a>
       </li>
       <li class="moj-side-navigation__item{% if active_project_section == 'members' %} moj-side-navigation__item--active{% endif %}">
         <a href="{% url 'projects:project_users' project.uuid %}"

@@ -16,7 +16,7 @@ class TestKeyListView:
         response = client.get(reverse("ai_gateway:key_list", args=[project.uuid]))
         current_ai_gateway_link = (
             f'<a href="{reverse("ai_gateway:key_list", args=[project.uuid])}" '
-            'aria-current="location">AI gateway</a>'
+            'aria-current="location">AI Gateway</a>'
         )
 
         assert response.status_code == 200
@@ -148,7 +148,7 @@ class TestKeyDetailView:
         key_service.get_models_for_key.side_effect = AIGatewayAPIError(503, "gateway unavailable")
         client.force_login(user)
         expected_error_message = (
-            "Error retrieving models from the AI gateway. "
+            "Error retrieving models from the AI Gateway. "
             "Please contact support if the issue persists."
         )
 
