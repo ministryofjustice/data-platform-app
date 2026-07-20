@@ -14,7 +14,7 @@ from ai_gateway.exceptions import AIGatewayAPIError, AIGatewayTransportError
 class AIGatewayClient:
     """Talks to the LiteLLM AI Gateway management API."""
 
-    DEFAULT_TEAM_BUDGET = 1000
+    DEFAULT_TEAM_BUDGET = 500
     DEFAULT_TEAM_BUDGET_DURATION = "monthly"
     DEFAULT_TEAM_TPM_LIMIT = 500_000
     DEFAULT_TEAM_RPM_LIMIT = 100
