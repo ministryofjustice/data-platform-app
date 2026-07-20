@@ -50,7 +50,7 @@ class TestCreateTeam:
             assert request.url.path == "/team/new"
             assert json.loads(request.read()) == {
                 "team_alias": "project-uuid",
-                "max_budget": 1000,
+                "max_budget": 500,
                 "budget_duration": "monthly",
                 "tpm_limit": 500000,
                 "rpm_limit": 100,
@@ -72,7 +72,7 @@ class TestCreateTeam:
             assert request.url.path == "/team/new"
             assert json.loads(request.read()) == {
                 "team_alias": "project-uuid",
-                "max_budget": 1000,
+                "max_budget": 500,
                 "budget_duration": "monthly",
                 "tpm_limit": 500000,
                 "rpm_limit": 100,
