@@ -37,7 +37,7 @@ class TestProjectUsersDetailView:
         response = client.get(reverse("projects:project_users", args=[project.uuid]))
         current_members_link = (
             f'<a href="{reverse("projects:project_users", args=[project.uuid])}" '
-            'aria-current="location">Project Members</a>'
+            'aria-current="location">Project members</a>'
         )
 
         assert response.status_code == 200
