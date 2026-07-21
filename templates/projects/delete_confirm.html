@@ -13,7 +13,7 @@
       <span class="govuk-caption-xl">{{ project.name }}</span>
       <h1 class="govuk-heading-xl">Remove project</h1>
       <h2 class="govuk-heading-m">Are you sure you want to remove this project?</h2>
-      <p class="govuk-body">You are about to remove this project and revoke all AI gateway keys associated with it.</p>
+      <p class="govuk-body">You are about to remove this project and revoke all AI Gateway keys associated with it.</p>
       <form method="post"
             action="{% url 'projects:project_delete' project.uuid %}">
         {% csrf_token %}
