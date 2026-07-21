@@ -36,6 +36,12 @@ $masthead-background-color: #381a62;
   }
 }
 
+@include govuk-media-query($from: tablet) {
+  .app-service-navigation__item--go-to-app {
+    margin-left: auto;
+  }
+}
+
 .info-panel {
   background-color: #f4f8fb;
   padding: govuk-spacing(3);

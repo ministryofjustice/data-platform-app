@@ -17,6 +17,11 @@
                    {% if item.active %}aria-current="true"{% endif %}>{{ item.name }}</a>
               </li>
             {% endfor %}
+            {% if user.is_authenticated and request.path|slice:':5' != '/app/' %}
+              <li class="govuk-service-navigation__item app-service-navigation__item--go-to-app">
+                <a class="govuk-service-navigation__link" href="{% url 'landing' %}">Go to app</a>
+              </li>
+            {% endif %}
           </ul>
         </nav>
       </div>
