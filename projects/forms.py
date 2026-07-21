@@ -103,6 +103,9 @@ def build_project_add_member_formset(*, project, data=None, initial=None, extra=
 class ProjectCreateForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["business_unit"].queryset = self.fields["business_unit"].queryset.order_by(
+            "name"
+        )
         self.fields["business_unit"].empty_label = "Select a business unit"
 
     class Meta:

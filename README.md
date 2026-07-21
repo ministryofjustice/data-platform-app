@@ -10,7 +10,7 @@
 
 1. Clone this repository.
 2. Open the project in Visual Studio Code.
-3. Add .env file from [1pass](https://ministryofjustice.1password.eu/app#/WEXD5VMFTVBH7LG7FFDWUV7MC4/Vault/WEXD5VMFTVBH7LG7FFDWUV7MC4:tahmy4wjhm2zr2ld5qbqxl4ufi:civa53euwau6iiayay3pyphcwm?itemListId=WEXD5VMFTVBH7LG7FFDWUV7MC4%3Atahmy4wjhm2zr2ld5qbqxl4ufi)
+3. Add .env file from [1Password](https://ministryofjustice.1password.eu/app#/WEXD5VMFTVBH7LG7FFDWUV7MC4/Vault/WEXD5VMFTVBH7LG7FFDWUV7MC4:tahmy4wjhm2zr2ld5qbqxl4ufi:civa53euwau6iiayay3pyphcwm?itemListId=WEXD5VMFTVBH7LG7FFDWUV7MC4%3Atahmy4wjhm2zr2ld5qbqxl4ufi)
 4. Reopen in the devcontainer when prompted.
    - You can also run: `Dev Containers: Reopen in Container` from the command palette.
 5. Wait for the devcontainer setup to complete.
@@ -162,7 +162,7 @@ The app stores each generated key's secret encrypted at rest (Fernet), so you mu
 also set a `FIELD_ENCRYPTION_KEY`. Generate one with:
 
 ```bash
-python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+uv run python -c "import base64, os; print(base64.urlsafe_b64encode(os.urandom(32)).decode())"
 ```
 
 Then add it to your `.env`:
