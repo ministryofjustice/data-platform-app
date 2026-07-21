@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from functools import cached_property
+from typing import Any
 
 import sentry_sdk
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
@@ -51,15 +52,30 @@ class KeyCreateView(ProjectScopedMixin, FormView):
     form_class = KeyCreateForm
 
     @cached_property
-    def available_models(self) -> list[str]:
+    def available_models(self) -> list[dict[str, Any]]:
         with KeyService.from_settings() as service:
             return service.list_default_models()
+
+    @cached_property
+    def model_providers(self) -> list[str]:
+        providers = {
+            model.get("litellm_params", {}).get("ai_model_provider")
+            for model in self.available_models
+            if model.get("litellm_params", {}).get("ai_model_provider")
+        }
+        return sorted(providers)
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs["project"] = self.project
         kwargs["available_models"] = self.available_models
         return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["project"] = self.project
+        context["available_models"] = self.available_models
+        return context
 
     def form_valid(self, form: KeyCreateForm) -> HttpResponse:
         with KeyService.from_settings() as service:

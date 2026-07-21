@@ -1,3 +1,5 @@
+from typing import Any
+
 from django import forms
 
 from ai_gateway.models import Key
@@ -21,10 +23,27 @@ class KeyCreateForm(forms.ModelForm):
         model = Key
         fields = ["name"]
 
-    def __init__(self, *args, project: Project, available_models: list[str], **kwargs):
+    def __init__(
+        self,
+        *args,
+        project: Project,
+        available_models: list[dict[str, Any]],
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
         self.project = project
-        self.fields["models"].choices = [(model, model) for model in available_models]
+        choices: list[tuple[str, str]] = []
+        for model in available_models:
+            model_name = model.get("model_name")
+            if not model_name:
+                continue
+
+            litellm_params = model.get("litellm_params", {})
+            label = litellm_params.get("ai_model_name") or model_name
+
+            choices.append((model_name, label))
+
+        self.fields["models"].choices = choices
 
     def clean_name(self) -> str:
         name = self.cleaned_data["name"].strip()
