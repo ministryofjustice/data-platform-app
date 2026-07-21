@@ -45,8 +45,8 @@ class KeyService:
         self._client.close()
 
     def list_default_models(self) -> list[str]:
-        """Return the model names in the default (generally available) access group."""
-        return self._client.list_models_for_access_group(self._default_access_group_name())
+        """Return the models marked as generally available."""
+        return self._client.list_generally_available_models()
 
     def create_key(self, project: Project, name: str, models: list[str], created_by: User) -> str:
         """Generate a gateway key for ``project`` and persist its metadata.
