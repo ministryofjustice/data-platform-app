@@ -11,7 +11,10 @@
     <div class="govuk-grid-column-two-thirds">
       <h1 class="govuk-heading-l">Check details</h1>
       <p class="govuk-body">These members will be added to {{ project.name }}.</p>
-      <table class="govuk-table">
+      <table class="govuk-table app-check-details-table">
+        <col class="app-check-details-table__label">
+        <col class="app-check-details-table__value">
+        <col class="app-check-details-table__action">
         <thead class="govuk-table__head">
           <tr class="govuk-table__row">
             <th scope="col" class="govuk-table__header govuk-visually-hidden">Heading</th>
@@ -24,21 +27,21 @@
             <td class="govuk-table__cell govuk-!-font-weight-bold">Project name</td>
             <td class="govuk-table__cell">{{ project.name }}</td>
             <td class="govuk-table__cell govuk-!-text-align-right">
-              <a href="{% url 'projects:project_create' %}" class="govuk-link">change</a>
+              <a href="{% url 'projects:project_create' %}" class="govuk-link">Change</a>
             </td>
           </tr>
           <tr class="govuk-table__row">
             <td class="govuk-table__cell govuk-!-font-weight-bold">Business unit</td>
             <td class="govuk-table__cell">{{ business_unit.name }}</td>
             <td class="govuk-table__cell govuk-!-text-align-right">
-              <a href="{% url 'projects:project_create' %}" class="govuk-link">change</a>
+              <a href="{% url 'projects:project_create' %}" class="govuk-link">Change</a>
             </td>
           </tr>
           <tr class="govuk-table__row">
             <td class="govuk-table__cell govuk-!-font-weight-bold">Description</td>
             <td class="govuk-table__cell">{{ project.description }}</td>
             <td class="govuk-table__cell govuk-!-text-align-right">
-              <a href="{% url 'projects:project_create' %}" class="govuk-link">change</a>
+              <a href="{% url 'projects:project_create' %}" class="govuk-link">Change</a>
             </td>
           </tr>
           {% if selected_users %}
@@ -52,7 +55,7 @@
               </td>
               <td class="govuk-table__cell govuk-!-text-align-right">
                 <a href="{% url 'projects:project_create_add_users' %}"
-                   class="govuk-link">change</a>
+                   class="govuk-link">Change</a>
               </td>
             </tr>
           {% endif %}
