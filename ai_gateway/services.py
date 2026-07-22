@@ -46,7 +46,24 @@ class KeyService:
 
     def list_default_models(self) -> list[str]:
         """Return the models marked as generally available."""
-        return self._client.list_generally_available_models()
+        models = []
+        for model in self._client.list_models_v1_info():
+            litellm_params = model.get("litellm_params", {})
+
+            if litellm_params.get("ai_model_generally_available") is not True:
+                continue
+
+            model = model.copy()
+            model_info = model.get("model_info", {})
+
+            model["input_cost_per_million"] = model_info.get("input_cost_per_token", 0) * 1_000_000
+            model["output_cost_per_million"] = (
+                model_info.get("output_cost_per_token", 0) * 1_000_000
+            )
+
+            models.append(model)
+
+        return models
 
     def create_key(self, project: Project, name: str, models: list[str], created_by: User) -> str:
         """Generate a gateway key for ``project`` and persist its metadata.

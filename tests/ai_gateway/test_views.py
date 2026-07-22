@@ -54,7 +54,7 @@ class TestKeyCreateView:
 
         assert response.status_code == 200
         assertTemplateUsed(response, "ai_gateway/key-create.html")
-        assertContains(response, 'data-module="app-multi-select-tags"')
+        assertContains(response, 'data-module="moj-multi-select"')
         assertContains(response, "gpt-4")
 
     def test_post_renders_created_page(self, client, user, project, key_service):

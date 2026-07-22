@@ -14,7 +14,7 @@
       <span class="govuk-visually-hidden">Error:</span> {{ error }}
     </p>
   {% endfor %}
-  <input class="govuk-input govuk-!-width-two-thirds{% if field.errors %} govuk-input--error{% endif %}"
+  <input class="govuk-input{% if width %} {{ width }}{% else %} govuk-!-width-two-thirds{% endif %}{% if field.errors %} govuk-input--error{% endif %}"
          id="{{ field.id_for_label }}"
          name="{{ field.html_name }}"
          type="text"

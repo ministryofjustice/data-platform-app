@@ -3,7 +3,6 @@ from unittest.mock import create_autospec
 
 import pytest
 from django.core.cache import cache
-from django.core.exceptions import ImproperlyConfigured
 
 from ai_gateway.client import AIGatewayClient
 from ai_gateway.exceptions import AIGatewayAPIError
@@ -53,24 +52,41 @@ class TestBuildAlias:
 
 
 class TestKeyServiceListModels:
-    def test_returns_client_models_for_default_access_group(self, gateway_client, settings):
-        settings.DEFAULT_ACCESS_GROUP_NAME = "generally-available-models"
-        gateway_client.list_models_for_access_group.return_value = ["gpt-4", "claude-3"]
+    def test_returns_generally_available_models_with_costs(self, gateway_client):
+        gateway_client.list_models_v1_info.return_value = [
+            {
+                "model_name": "gpt-4",
+                "litellm_params": {"ai_model_generally_available": True},
+                "model_info": {
+                    "input_cost_per_token": 0.00003,
+                    "output_cost_per_token": 0.00006,
+                },
+            },
+            {
+                "model_name": "internal-only",
+                "litellm_params": {"ai_model_generally_available": False},
+                "model_info": {},
+            },
+        ]
 
         with KeyService(gateway_client) as service:
-            assert service.list_default_models() == ["gpt-4", "claude-3"]
+            models = service.list_default_models()
 
-        gateway_client.list_models_for_access_group.assert_called_once_with(
-            "generally-available-models"
-        )
+        assert [model["model_name"] for model in models] == ["gpt-4"]
+        assert models[0]["input_cost_per_million"] == pytest.approx(30.0)
+        assert models[0]["output_cost_per_million"] == pytest.approx(60.0)
 
-    def test_raises_when_default_access_group_is_not_configured(self, gateway_client, settings):
-        settings.DEFAULT_ACCESS_GROUP_NAME = None
+    def test_excludes_models_not_generally_available(self, gateway_client):
+        gateway_client.list_models_v1_info.return_value = [
+            {
+                "model_name": "internal-only",
+                "litellm_params": {"ai_model_generally_available": False},
+                "model_info": {},
+            },
+        ]
 
-        with KeyService(gateway_client) as service, pytest.raises(ImproperlyConfigured):
-            service.list_default_models()
-
-        gateway_client.list_models_for_access_group.assert_not_called()
+        with KeyService(gateway_client) as service:
+            assert service.list_default_models() == []
 
 
 class TestKeyServiceCreateKey:
