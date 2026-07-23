@@ -119,6 +119,18 @@ $masthead-background-color: #381a62;
   word-break: break-word;
 }
 
+.app-check-details-table__column--35 {
+  width: 35%;
+}
+
+.app-check-details-table__column--50 {
+  width: 50%;
+}
+
+.app-check-details-table__column--15 {
+  width: 15%;
+}
+
 .ai-gateway-key-detail {
   background-color: govuk-colour("blue", $variant: "tint-95");
   padding: govuk-spacing(4);
