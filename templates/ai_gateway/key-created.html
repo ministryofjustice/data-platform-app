@@ -1,12 +1,12 @@
 {% extends "base/base.html" %}
 {% load static %}
 {% block title %}
-  Store your API Key - {{ project.name }} - Justice Data Platform | Ministry of Justice
+  Store your API key - {{ project.name }} - Justice Data Platform | Ministry of Justice
 {% endblock title %}
 {% block content %}
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-two-thirds">
-      <h1 class="govuk-heading-xl">Store your API Key</h1>
+      <h1 class="govuk-heading-xl">Store your API key</h1>
       <p class="govuk-body">
         You've
         {% if regenerated %}
@@ -28,7 +28,7 @@
                   data-text-selector="#plaintext-key"
                   data-success-message="API key copied">Copy</button>
         </div>
-        <p class="govuk-body">API keys are secret and should not be shared</p>
+        <p class="govuk-body-s">API keys are secret and should not be shared</p>
       </div>
       <h2 class="govuk-heading-m">Next steps</h2>
       <ol class="govuk-list govuk-list--number">
