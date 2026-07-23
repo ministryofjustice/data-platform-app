@@ -35,7 +35,7 @@ class TestServiceNavigationItems:
         ("path", "expected_active_name"),
         [
             ("/app/", "Home"),
-            ("/app/projects/", "Projects"),
+            ("/app/projects/", "Home"),
         ],
     )
     def test_returns_app_only_nav_for_app_routes(self, rf, user, path, expected_active_name):
@@ -44,7 +44,7 @@ class TestServiceNavigationItems:
 
         items = _service_navigation_items_for_request(request)
 
-        assert [item["name"] for item in items] == ["Home", "Projects"]
+        assert [item["name"] for item in items] == ["Home"]
 
         for item in items:
             if item["name"] == expected_active_name:
@@ -70,7 +70,7 @@ class TestServiceNavigationItems:
             ("/data-factories/", "Data factories"),
             ("/data-factories/analytics/", "Data factories"),
             ("/app/", "Home"),
-            ("/app/projects/", "Projects"),
+            ("/app/projects/", "Home"),
             ("/other/", None),
         ],
     )

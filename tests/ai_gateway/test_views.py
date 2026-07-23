@@ -216,7 +216,7 @@ class TestKeyRegenerateView:
         assert response.status_code == 200
         assertTemplateUsed(response, "ai_gateway/key-created.html")
         assertContains(response, PLAINTEXT_KEY)
-        assertContains(response, "Store your API Key")
+        assertContains(response, "Store your API key")
         key_service.regenerate_key.assert_called_once_with(
             key=key,
         )
