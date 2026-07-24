@@ -1,6 +1,6 @@
 {% extends "base/base.html" %}
 {% block title %}
-  Revoke key - {{ project.name }} - Justice Data Platform | Ministry of Justice
+  Revoke key {{ key.name }} - {{ project.name }} - Justice Data Platform | Ministry of Justice
 {% endblock title %}
 {% block back_link %}
   <a href="{% url 'projects:project_detail' project.uuid %}"

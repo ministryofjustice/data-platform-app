@@ -1,6 +1,6 @@
 {% extends "base/base.html" %}
 {% block title %}
-  {{ key.name }} - AI Gateway key - {{ project.name }} - Justice Data Platform | Ministry of Justice
+  Manage {{ key.name }} - AI Gateway key - {{ project.name }} - Justice Data Platform | Ministry of Justice
 {% endblock title %}
 {% block back_link %}
   <a href="{% url 'ai_gateway:key_list' project.uuid %}"

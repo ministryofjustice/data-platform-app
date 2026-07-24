@@ -1,7 +1,7 @@
 {% extends "base/base.html" %}
 {% load static %}
 {% block title %}
-  Regenerate key - {{ project.name }} - Justice Data Platform | Ministry of Justice
+  Regenerate key {{ key.name }} - {{ project.name }} - Justice Data Platform | Ministry of Justice
 {% endblock title %}
 {% block back_link %}
   <a href="{% url 'ai_gateway:key_list' project.uuid %}"
