@@ -1,0 +1,24 @@
+lockfile_version: '1'
+generated_at: '2026-07-17T13:01:29.755002+00:00'
+apm_version: 0.24.0
+dependencies:
+- repo_url: ministryofjustice/data-platform-ai-toolkit
+  name: software-engineering
+  host: github.com
+  resolved_commit: 208a806c71988322cf112ad2c0b33964793112c2
+  resolved_ref: main
+  version: 1.0.0
+  virtual_path: toolkits/software-engineering
+  is_virtual: true
+  package_type: apm_package
+  content_hash: sha256:88fd3129213f0edce7527c5b4b4156f73744cd985243178e9a9463e9c758ff80
+- repo_url: ministryofjustice/data-platform-ai-toolkit
+  name: universal
+  host: github.com
+  resolved_commit: 208a806c71988322cf112ad2c0b33964793112c2
+  resolved_ref: main
+  version: 1.0.0
+  virtual_path: toolkits/universal
+  is_virtual: true
+  package_type: apm_package
+  content_hash: sha256:d375ca1db8fc999bc92d31994eba9aa81611fb48d0750d557e4d27ab1249f68e
