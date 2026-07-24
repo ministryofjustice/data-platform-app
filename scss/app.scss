@@ -44,6 +44,7 @@ $masthead-background-color: #381a62;
 
 .app-key-panel {
   padding: govuk-spacing(3);
+  margin-bottom: 30px;
   border: 1px solid $govuk-border-colour;
 }
 
@@ -52,7 +53,7 @@ $masthead-background-color: #381a62;
   box-sizing: border-box;
   @include govuk-font($size: 19, $line-height: 19px, $weight: bold);
   padding: 8px govuk-spacing(2) 7px;
-  border: 1px solid govuk-colour("blue");
+  border: 1px solid $govuk-border-colour;
   background-color: govuk-colour("blue", $variant: "tint-95");
   vertical-align: baseline;
 }
@@ -118,7 +119,28 @@ $masthead-background-color: #381a62;
   word-break: break-word;
 }
 
+.app-check-details-table__column--35 {
+  width: 35%;
+}
+
+.app-check-details-table__column--50 {
+  width: 50%;
+}
+
+.app-check-details-table__column--15 {
+  width: 15%;
+}
+
 .ai-gateway-key-detail {
   background-color: govuk-colour("blue", $variant: "tint-95");
   padding: govuk-spacing(4);
+
+  .govuk-summary-list__row {
+    padding: 0;
+  }
+
+  .govuk-summary-list__key,
+  .govuk-summary-list__value {
+    padding: 0;
+  }
 }
