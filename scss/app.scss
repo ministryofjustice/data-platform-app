@@ -143,3 +143,10 @@ $masthead-background-color: #381a62;
     padding: 0;
   }
 }
+
+.ai-gateway-model-filters {
+  border: 1px solid govuk-colour("blue", $variant: "tint-50");
+  padding: govuk-spacing(4);
+  padding-bottom: govuk-spacing(0);
+  background-color: govuk-colour("blue", $variant: "tint-95");
+}

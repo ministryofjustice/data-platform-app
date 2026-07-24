@@ -15,8 +15,18 @@
       <form method="post" action="{% url 'ai_gateway:key_create' project.uuid %}">
         {% csrf_token %}
         {% include "includes/fields/_text_input.html" with field=form.name width='govuk-!-width-one-half' only %}
-        <h2 class="govuk-heading-m">Select models</h2>
-        {% include "includes/ai_gateway/_model_filters.html" %}
+        <div class="govuk-form-group">
+          <label class="govuk-label govuk-label--m">Select models</label>
+          <div class="govuk-hint">Search or filter to find models you need.</div>
+        </div>
+        <details class="govuk-details">
+          <summary class="govuk-details__summary">
+            <span class="govuk-details__summary-text">Show filter</span>
+          </summary>
+          <div class="ai-gateway-model-filters">
+            {% include "includes/ai_gateway/_model_filters.html" %}
+          </div>
+        </details>
         {% if form.models.errors %}
           <p id="models-error" class="govuk-error-message">
             <span class="govuk-visually-hidden">Error:</span> {{ form.models.errors|join:", " }}

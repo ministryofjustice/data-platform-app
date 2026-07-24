@@ -24,7 +24,6 @@ let initialised = false;
 
 const App = {
   init: function () {
-
     if (initialised) {
       return;
     }
