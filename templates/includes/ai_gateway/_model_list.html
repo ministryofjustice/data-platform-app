@@ -1,0 +1,71 @@
+{% load static %}
+{% if request.htmx %}
+  <div id="model-status" hx-swap-oob="innerHTML">
+    <p class="govuk-body">
+      Showing {{ visible_count }} of {{ match_count }} model{{ match_count|pluralize }}.
+    </p>
+  </div>
+{% endif %}
+{% for model_name in hidden_selected_models %}
+  <input type="hidden" name="models" value="{{ model_name }}">
+{% endfor %}
+<table class="govuk-table moj-multi-select"
+       data-module="moj-multi-select"
+       data-id-prefix="models-">
+  <thead class="govuk-table__head">
+    <tr class="govuk-table__row">
+      <th class="govuk-table__header" scope="col">
+        <div id="models-select-all"></div>
+        <span class="govuk-visually-hidden">Select model</span>
+      </th>
+      <th class="govuk-table__header" scope="col">Name</th>
+      <th class="govuk-table__header" scope="col">Family</th>
+      <th class="govuk-table__header" scope="col">Provider</th>
+      <th class="govuk-table__header" scope="col">Cost per million tokens</th>
+    </tr>
+  </thead>
+  <tbody class="govuk-table__body">
+    {% for model in visible_models %}
+      <tr class="govuk-table__row">
+        <td class="govuk-table__cell">
+          <div class="govuk-checkboxes govuk-checkboxes--small">
+            <div class="govuk-checkboxes__item">
+              <input class="govuk-checkboxes__input"
+                     id="models-{{ model.model_name|slugify }}"
+                     name="models"
+                     type="checkbox"
+                     value="{{ model.model_name }}"
+                     {% if model.model_name in selected_models %}checked{% endif %}>
+              <label class="govuk-label govuk-checkboxes__label"
+                     for="models-{{ model.model_name|slugify }}">
+                <span class="govuk-visually-hidden">Select {{ model.litellm_params.ai_model_name|default:model.model_name }}</span>
+              </label>
+            </div>
+          </div>
+        </td>
+        <td class="govuk-table__cell">{{ model.litellm_params.ai_model_name|default:model.model_name }}</td>
+        <td class="govuk-table__cell">{{ model.litellm_params.ai_model_family|default:"-" }}</td>
+        <td class="govuk-table__cell">{{ model.litellm_params.ai_model_provider|default:"-" }}</td>
+        <td class="govuk-table__cell">
+          <p class="govuk-body-s govuk-!-margin-bottom-0">Input: ${{ model.input_cost_per_million|floatformat:2 }}</p>
+          <p class="govuk-body-s govuk-!-margin-bottom-0">Output: ${{ model.output_cost_per_million|floatformat:2 }}</p>
+        </td>
+      </tr>
+    {% empty %}
+      <tr class="govuk-table__row">
+        <td class="govuk-table__cell" colspan="5">No models match your filters.</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% if has_more %}
+  <button type="submit"
+          formmethod="get"
+          name="expanded"
+          value="1"
+          class="govuk-button govuk-button--secondary"
+          hx-get="{% url 'ai_gateway:key_create' project.uuid %}"
+          hx-include="closest form"
+          hx-target="#model-list"
+          hx-swap="innerHTML">Show all {{ match_count }} models</button>
+{% endif %}

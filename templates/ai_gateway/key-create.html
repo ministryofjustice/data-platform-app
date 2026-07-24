@@ -9,15 +9,31 @@
 {% endblock back_link %}
 {% block content %}
   <div class="govuk-grid-row">
-    <div class="govuk-grid-column-two-thirds">
+    <div class="govuk-grid-column-full">
       <h1 class="govuk-heading-xl">Create a key</h1>
       {% include "includes/forms/_error_summary.html" with form=form only %}
       <form method="post" action="{% url 'ai_gateway:key_create' project.uuid %}">
         {% csrf_token %}
-        {% include "includes/fields/_text_input.html" with field=form.name only %}
-        {% include "includes/ai_gateway/_model_multi_select.html" with field=form.models available_models=available_models only %}
+        {% include "includes/fields/_text_input.html" with field=form.name width='govuk-!-width-one-half' only %}
+        <h2 class="govuk-heading-m">Select models</h2>
+        {% include "includes/ai_gateway/_model_filters.html" %}
+        {% if form.models.errors %}
+          <p id="models-error" class="govuk-error-message">
+            <span class="govuk-visually-hidden">Error:</span> {{ form.models.errors|join:", " }}
+          </p>
+        {% endif %}
+        <div id="model-list">{% include "includes/ai_gateway/_model_list.html" %}</div>
+        <div id="model-status"
+             class="govuk-!-margin-bottom-2"
+             role="status"
+             aria-live="polite"
+             aria-atomic="true">
+          <p class="govuk-body">
+            Showing {{ visible_count }} of {{ match_count }} model{{ match_count|pluralize }}.
+          </p>
+        </div>
         <div class="govuk-button-group">
-          <button type="submit" class="govuk-button">Create</button>
+          <button type="submit" class="govuk-button">Continue</button>
           <a href="{% url 'ai_gateway:key_list' project.uuid %}"
              class="govuk-link">Cancel</a>
         </div>

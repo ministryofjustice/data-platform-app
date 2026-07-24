@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "ai_gateway",
     "simple_history",
     "django_extensions",
+    "django_htmx",
 ]
 
 MIDDLEWARE = [
@@ -60,6 +61,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.LoginRequiredMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "django_htmx.middleware.HtmxMiddleware",
 ]
 
 ROOT_URLCONF = "data_platform_app.urls"

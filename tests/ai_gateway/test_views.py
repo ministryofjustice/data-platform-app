@@ -2,7 +2,13 @@ from unittest.mock import patch
 
 from django.urls import reverse
 from model_bakery import baker
-from pytest_django.asserts import assertContains, assertInHTML, assertTemplateUsed
+from pytest_django.asserts import (
+    assertContains,
+    assertInHTML,
+    assertNotContains,
+    assertTemplateNotUsed,
+    assertTemplateUsed,
+)
 
 from ai_gateway.exceptions import AIGatewayAPIError
 from ai_gateway.models import Key
@@ -124,6 +130,91 @@ class TestKeyCreateView:
         assert response.status_code == 404
         assert not Key.objects.filter(project=project).exists()
         key_service.create_key.assert_not_called()
+
+
+class TestKeyCreateViewFiltering:
+    def test_get_renders_provider_and_family_filters(self, client, user, project, key_service):
+        client.force_login(user)
+
+        response = client.get(reverse("ai_gateway:key_create", args=[project.uuid]))
+
+        assertContains(response, 'name="provider"')
+        assertContains(response, 'name="family"')
+        assertContains(response, "OpenAI")
+        assertContains(response, "Anthropic")
+        assertContains(response, "GPT")
+        assertContains(response, "Claude")
+
+    def test_filters_models_by_provider(self, client, user, project, key_service):
+        client.force_login(user)
+
+        response = client.get(
+            reverse("ai_gateway:key_create", args=[project.uuid]),
+            {"provider": "Anthropic"},
+        )
+
+        assertContains(response, 'value="claude-3"')
+        assertNotContains(response, 'value="gpt-4"')
+
+    def test_htmx_request_returns_the_fragment_only(self, client, user, project, key_service):
+        client.force_login(user)
+
+        response = client.get(
+            reverse("ai_gateway:key_create", args=[project.uuid]),
+            headers={"HX-Request": "true"},
+        )
+
+        assert response.status_code == 200
+        assertTemplateUsed(response, "includes/ai_gateway/_model_list.html")
+        assertTemplateNotUsed(response, "ai_gateway/key-create.html")
+        assertContains(response, 'data-module="moj-multi-select"')
+
+    def test_selection_outside_the_filter_is_kept_as_hidden_input(
+        self, client, user, project, key_service
+    ):
+        client.force_login(user)
+
+        response = client.get(
+            reverse("ai_gateway:key_create", args=[project.uuid]),
+            {"provider": "Anthropic", "models": ["gpt-4"]},
+        )
+
+        assertContains(
+            response,
+            '<input type="hidden" name="models" value="gpt-4">',
+            html=True,
+        )
+        assertContains(response, 'value="claude-3"')
+
+    def test_show_more_reveals_all_matches(self, client, user, project, key_service):
+        key_service.list_default_models.return_value = [
+            {
+                "model_name": f"model-{index}",
+                "litellm_params": {
+                    "ai_model_name": f"Model {index}",
+                    "ai_model_family": "Test",
+                    "ai_model_provider": "TestProvider",
+                },
+                "input_cost_per_million": 1.0,
+                "output_cost_per_million": 2.0,
+            }
+            for index in range(12)
+        ]
+        client.force_login(user)
+
+        collapsed = client.get(reverse("ai_gateway:key_create", args=[project.uuid]))
+
+        assertContains(collapsed, "Show all 12 models")
+        assertContains(collapsed, 'value="model-0"')
+        assertNotContains(collapsed, 'value="model-11"')
+
+        expanded = client.get(
+            reverse("ai_gateway:key_create", args=[project.uuid]),
+            {"expanded": "1"},
+        )
+
+        assertContains(expanded, 'value="model-11"')
+        assertNotContains(expanded, "Show all 12 models")
 
 
 class TestKeyDetailView:

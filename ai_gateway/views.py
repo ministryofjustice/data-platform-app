@@ -11,6 +11,7 @@ from django.views.generic import DeleteView, DetailView, FormView, ListView, Tem
 from django.views.generic.detail import SingleObjectMixin
 
 from ai_gateway.exceptions import AIGatewayError
+from ai_gateway.filtering import VISIBLE_LIMIT, filter_models
 from ai_gateway.forms import KeyCreateForm
 from ai_gateway.services import KeyService
 from projects.mixins import ProjectLayoutContextMixin
@@ -65,16 +66,83 @@ class KeyCreateView(ProjectScopedMixin, FormView):
         }
         return sorted(providers)
 
+    @cached_property
+    def model_families(self) -> list[str]:
+        families = {
+            model.get("litellm_params", {}).get("ai_model_family")
+            for model in self.available_models
+            if model.get("litellm_params", {}).get("ai_model_family")
+        }
+        return sorted(families)
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs["project"] = self.project
         kwargs["available_models"] = self.available_models
         return kwargs
 
+    def get_initial(self):
+        initial = super().get_initial()
+        initial["name"] = self.request.GET.get("name", "")
+        return initial
+
+    def _model_list_context(self) -> dict[str, Any]:
+        """Build the filtered, paged model-selection context from the request.
+
+        Selection is stateless: the currently selected model ids are read straight
+        from the submitted ``models`` values. Selected models that fall outside the
+        visible slice are rendered as hidden inputs by the template so they survive
+        filtering and paging without a session.
+        """
+        params = self.request.POST if self.request.method == "POST" else self.request.GET
+
+        search = params.get("search", "")
+        provider = params.get("provider", "")
+        family = params.get("family", "")
+        expanded = params.get("expanded") == "1"
+        selected_models = set(params.getlist("models"))
+
+        matches = filter_models(
+            self.available_models,
+            search=search,
+            provider=provider,
+            family=family,
+        )
+        visible_models = matches if expanded else matches[:VISIBLE_LIMIT]
+        visible_names = {model["model_name"] for model in visible_models}
+
+        hidden_selected_models = [
+            model["model_name"]
+            for model in self.available_models
+            if model["model_name"] in selected_models and model["model_name"] not in visible_names
+        ]
+
+        return {
+            "model_providers": self.model_providers,
+            "model_families": self.model_families,
+            "visible_models": visible_models,
+            "hidden_selected_models": hidden_selected_models,
+            "selected_models": selected_models,
+            "filter_search": search,
+            "filter_provider": provider,
+            "filter_family": family,
+            "expanded": expanded,
+            "match_count": len(matches),
+            "visible_count": len(visible_models),
+            "selected_count": len(selected_models),
+            "has_more": len(matches) > len(visible_models),
+        }
+
+    def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+        if request.htmx:
+            context = {"project": self.project, **self._model_list_context()}
+            return render(request, "includes/ai_gateway/_model_list.html", context)
+        return super().get(request, *args, **kwargs)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["project"] = self.project
-        context["available_models"] = self.available_models
+        context.update(self._model_list_context())
         return context
 
     def form_valid(self, form: KeyCreateForm) -> HttpResponse:
