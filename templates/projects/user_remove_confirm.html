@@ -1,7 +1,7 @@
 {% extends "base/base.html" %}
 {% load static %}
 {% block title %}
-  Remove {{ project.name }} - Justice Data Platform | Ministry of Justice
+  Remove {{ membership.user.full_name }} - Justice Data Platform | Ministry of Justice
 {% endblock title %}
 {% block back_link %}
   <a href="{% url 'projects:project_users' membership.project.uuid %}"
