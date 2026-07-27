@@ -1,7 +1,7 @@
 {% extends "base/base.html" %}
 {% load static %}
 {% block title %}
-  Regenerate key - {{ project.name }} - Justice Data Platform | Ministry of Justice
+  Regenerate key {{ key.name }} - {{ project.name }} - Justice Data Platform | Ministry of Justice
 {% endblock title %}
 {% block back_link %}
   <a href="{% url 'ai_gateway:key_list' project.uuid %}"
@@ -11,7 +11,7 @@
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-two-thirds">
       <span class="govuk-caption-xl">{{ key.name }}</span>
-      <h1 class="govuk-heading-xl">Regenerate Key</h1>
+      <h1 class="govuk-heading-xl">Regenerate key</h1>
       <h2 class="govuk-heading-m">Are you sure you want to regenerate this API key?</h2>
       <p class="govuk-body">You'll need to update applications with the new key.</p>
       <p class="govuk-body">You will only be able to view the new key once.</p>

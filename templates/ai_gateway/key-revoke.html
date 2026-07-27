@@ -1,6 +1,6 @@
 {% extends "base/base.html" %}
 {% block title %}
-  Revoke key - {{ block.super }}
+  Revoke key {{ key.name }} - {{ project.name }} - Justice Data Platform | Ministry of Justice
 {% endblock title %}
 {% block back_link %}
   <a href="{% url 'projects:project_detail' project.uuid %}"
@@ -18,7 +18,8 @@
             action="{% url 'ai_gateway:key_revoke' project.uuid key.pk %}">
         {% csrf_token %}
         <div class="govuk-button-group">
-          <button type="submit" class="govuk-button govuk-!-margin-right-2">Revoke</button>
+          <button type="submit"
+                  class="govuk-button govuk-button--warning govuk-!-margin-right-2">Revoke</button>
           <a href="{% url 'ai_gateway:key_detail' project.uuid key.pk %}"
              class="govuk-link">Cancel</a>
         </div>

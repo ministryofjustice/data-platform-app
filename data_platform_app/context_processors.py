@@ -10,7 +10,6 @@ def _service_navigation_items_for_request(request):
     ]
     app_items = [
         {"name": "Home", "url": app_url},
-        {"name": "Projects", "url": reverse("projects:projects_list")},
     ]
 
     on_app_route = request.path.startswith(app_url)

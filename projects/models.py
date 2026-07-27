@@ -62,21 +62,6 @@ class Project(TimeStampedModel):
     def __str__(self):
         return self.name
 
-    @property
-    def public_id(self) -> str:
-        return f"prj-{self.uuid}"
-
-    @staticmethod
-    def get_by_public_id(public_id: str):
-        if not public_id.startswith("prj-"):
-            raise ValueError("Invalid public ID format")
-        uuid_str = public_id[4:]
-        try:
-            project_uuid = uuid.UUID(uuid_str)
-        except ValueError as err:
-            raise ValueError("Invalid UUID in public ID") from err
-        return Project.objects.get(uuid=project_uuid)
-
     def get_absolute_url(self) -> str:
         return reverse(viewname="projects:project_detail", kwargs={"uuid": self.uuid})
 
