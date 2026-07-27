@@ -52,4 +52,4 @@ class TestFilterModels:
         assert [model["model_name"] for model in result] == ["gpt-4o-mini"]
 
     def test_no_matches_returns_empty_list(self):
-        assert filter_models(MODELS, provider="Nonexistent") == []
+        assert filter_models(MODELS, provider="Non-existent") == []

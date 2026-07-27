@@ -155,7 +155,6 @@ class KeyCreateView(ProjectScopedMixin, AvailableModelsMixin, FormView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["project"] = self.project
         context.update(self._model_list_context())
         return context
 

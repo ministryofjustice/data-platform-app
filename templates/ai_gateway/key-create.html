@@ -15,7 +15,7 @@
         {% csrf_token %}
         {% include "includes/fields/_text_input.html" with field=form.name width='govuk-!-width-one-half' only %}
         <div class="govuk-form-group">
-          <label class="govuk-label govuk-label--m">Select models</label>
+          <h2 class="govuk-label govuk-label--m">Select models</h2>
           <div class="govuk-hint">Search or filter to find models you need.</div>
         </div>
         <details class="govuk-details">
