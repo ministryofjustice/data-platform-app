@@ -28,13 +28,13 @@
           <div class="govuk-checkboxes govuk-checkboxes--small">
             <div class="govuk-checkboxes__item">
               <input class="govuk-checkboxes__input"
-                     id="models-{{ model.model_name|slugify }}"
+                     id="models-{{ forloop.counter }}"
                      name="models"
                      type="checkbox"
                      value="{{ model.model_name }}"
                      {% if model.model_name in selected_models %}checked{% endif %}>
               <label class="govuk-label govuk-checkboxes__label"
-                     for="models-{{ model.model_name|slugify }}">
+                     for="models-{{ forloop.counter }}">
                 <span class="govuk-visually-hidden">Select {{ model.display_name }}</span>
               </label>
             </div>

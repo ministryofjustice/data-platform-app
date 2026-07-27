@@ -93,7 +93,7 @@ class TestKeyCreateView:
         assertContains(response, 'value="primary-key"')
         assertContains(
             response,
-            '<input class="govuk-checkboxes__input" id="models-claude-3" '
+            '<input class="govuk-checkboxes__input" id="models-2" '
             'name="models" type="checkbox" value="claude-3" checked>',
             html=True,
         )
