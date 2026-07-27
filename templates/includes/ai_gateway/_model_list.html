@@ -15,7 +15,7 @@
         <div id="models-select-all"></div>
         <span class="govuk-visually-hidden">Select model</span>
       </th>
-      <th class="govuk-table__header" scope="col">Name</th>
+      <th class="govuk-table__header" scope="col">Model</th>
       <th class="govuk-table__header" scope="col">Family</th>
       <th class="govuk-table__header" scope="col">Provider</th>
       <th class="govuk-table__header" scope="col">Cost per million tokens</th>
@@ -50,7 +50,11 @@
       </tr>
     {% empty %}
       <tr class="govuk-table__row">
-        <td class="govuk-table__cell" colspan="5">No models match your filters.</td>
+        <td class="govuk-table__cell" colspan="5">
+          No results found.
+          <br>
+          Try another search or different filters to search again.
+        </td>
       </tr>
     {% endfor %}
   </tbody>

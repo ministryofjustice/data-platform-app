@@ -33,15 +33,25 @@
       <h2 class="govuk-heading-m">Next steps</h2>
       <ol class="govuk-list govuk-list--number">
         <li>Store your API key securely, such as in a password manager.</li>
-        <li>Test your key in code in your integrated development environment. Never commit your API key in Git.</li>
-        <li>If you're using automated workflows in Airflow or another tool, host your key in a secure place these tools can access (such as AWS Secrets Manager).  </li>
+        <li>
+          Test your key in code in your integrated development environment.
+          <br>
+          Never commit your API key in Git.
+          <br>
+          <a class="govuk-link"
+             href="#todo-add-link"
+             target="_blank"
+             rel="noopener noreferrer">See how to test your key (opens in new tab)</a>
+        </li>
+        <li>
+          If you're using automated workflows in Airflow or another tool, host your key in a secure place these tools can access (such as AWS Secrets Manager).
+          <br>
+          <a class="govuk-link"
+             href="https://user-guide.cloud-platform.service.justice.gov.uk/documentation/deploying-an-app/add-secrets-to-deployment.html"
+             target="_blank"
+             rel="noopener noreferrer">Learn about adding secrets to an application (opens in new tab)</a>
+        </li>
       </ol>
-      <p class="govuk-body">
-        <a class="govuk-link"
-           href="https://user-guide.cloud-platform.service.justice.gov.uk/documentation/deploying-an-app/add-secrets-to-deployment.html"
-           target="_blank"
-           rel="noopener noreferrer">Learn about adding secrets to an application (opens in a new tab)</a>
-      </p>
       <p class="govuk-body">
         <a class="govuk-button moj-button"
            href="{% url 'ai_gateway:key_list' project.uuid %}">Done</a>
