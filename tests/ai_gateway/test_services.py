@@ -76,6 +76,48 @@ class TestKeyServiceListModels:
         assert models[0]["input_cost_per_million"] == pytest.approx(30.0)
         assert models[0]["output_cost_per_million"] == pytest.approx(60.0)
 
+    def test_enriches_models_with_display_fields(self, gateway_client):
+        gateway_client.list_models_v1_info.return_value = [
+            {
+                "model_name": "gpt-4",
+                "litellm_params": {
+                    "ai_model_generally_available": True,
+                    "ai_model_name": "GPT-4",
+                    "ai_model_family": "GPT",
+                    "ai_model_provider": "OpenAI",
+                },
+                "model_info": {},
+            },
+            {
+                "model_name": "bare-model",
+                "litellm_params": {"ai_model_generally_available": True},
+                "model_info": {},
+            },
+        ]
+
+        with KeyService(gateway_client) as service:
+            models = service.list_default_models()
+
+        assert models[0]["display_name"] == "GPT-4"
+        assert models[0]["family"] == "GPT"
+        assert models[0]["provider"] == "OpenAI"
+        assert models[1]["display_name"] == "bare-model"
+
+    def test_costs_are_none_when_pricing_is_missing(self, gateway_client):
+        gateway_client.list_models_v1_info.return_value = [
+            {
+                "model_name": "gpt-4",
+                "litellm_params": {"ai_model_generally_available": True},
+                "model_info": {},
+            },
+        ]
+
+        with KeyService(gateway_client) as service:
+            models = service.list_default_models()
+
+        assert models[0]["input_cost_per_million"] is None
+        assert models[0]["output_cost_per_million"] is None
+
     def test_excludes_models_not_generally_available(self, gateway_client):
         gateway_client.list_models_v1_info.return_value = [
             {

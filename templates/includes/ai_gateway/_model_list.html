@@ -38,17 +38,17 @@
                      {% if model.model_name in selected_models %}checked{% endif %}>
               <label class="govuk-label govuk-checkboxes__label"
                      for="models-{{ model.model_name|slugify }}">
-                <span class="govuk-visually-hidden">Select {{ model.litellm_params.ai_model_name|default:model.model_name }}</span>
+                <span class="govuk-visually-hidden">Select {{ model.display_name }}</span>
               </label>
             </div>
           </div>
         </td>
-        <td class="govuk-table__cell">{{ model.litellm_params.ai_model_name|default:model.model_name }}</td>
-        <td class="govuk-table__cell">{{ model.litellm_params.ai_model_family|default:"-" }}</td>
-        <td class="govuk-table__cell">{{ model.litellm_params.ai_model_provider|default:"-" }}</td>
+        <td class="govuk-table__cell">{{ model.display_name }}</td>
+        <td class="govuk-table__cell">{{ model.family|default:"-" }}</td>
+        <td class="govuk-table__cell">{{ model.provider|default:"-" }}</td>
         <td class="govuk-table__cell">
-          <p class="govuk-body-s govuk-!-margin-bottom-0">Input: ${{ model.input_cost_per_million|floatformat:2 }}</p>
-          <p class="govuk-body-s govuk-!-margin-bottom-0">Output: ${{ model.output_cost_per_million|floatformat:2 }}</p>
+          <p class="govuk-body-s govuk-!-margin-bottom-0">Input: {% if model.input_cost_per_million is not None %}${{ model.input_cost_per_million|floatformat:2 }}{% else %}Not available{% endif %}</p>
+          <p class="govuk-body-s govuk-!-margin-bottom-0">Output: {% if model.output_cost_per_million is not None %}${{ model.output_cost_per_million|floatformat:2 }}{% else %}Not available{% endif %}</p>
         </td>
       </tr>
     {% empty %}

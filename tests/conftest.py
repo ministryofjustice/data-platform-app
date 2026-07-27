@@ -47,23 +47,17 @@ def key_service():
     service.list_default_models.return_value = [
         {
             "model_name": "gpt-4",
-            "litellm_params": {
-                "ai_model_name": "GPT-4",
-                "ai_model_family": "GPT",
-                "ai_model_provider": "OpenAI",
-                "ai_model_generally_available": True,
-            },
+            "display_name": "GPT-4",
+            "family": "GPT",
+            "provider": "OpenAI",
             "input_cost_per_million": 30.0,
             "output_cost_per_million": 60.0,
         },
         {
             "model_name": "claude-3",
-            "litellm_params": {
-                "ai_model_name": "Claude 3",
-                "ai_model_family": "Claude",
-                "ai_model_provider": "Anthropic",
-                "ai_model_generally_available": True,
-            },
+            "display_name": "Claude 3",
+            "family": "Claude",
+            "provider": "Anthropic",
             "input_cost_per_million": 15.0,
             "output_cost_per_million": 75.0,
         },

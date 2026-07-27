@@ -27,6 +27,7 @@
     "delenv",
     "djlint",
     "docstrings",
+    "doseq",
     "dotenv",
     "evenodd",
     "color",

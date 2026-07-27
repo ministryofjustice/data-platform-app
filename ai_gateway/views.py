@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from functools import cached_property
 from typing import Any
+from urllib.parse import urlencode
 
 import sentry_sdk
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils.cache import add_never_cache_headers
-from django.views.generic import DeleteView, DetailView, FormView, ListView, TemplateView
+from django.views.generic import DeleteView, DetailView, FormView, ListView, TemplateView, View
 from django.views.generic.detail import SingleObjectMixin
 
 from ai_gateway.exceptions import AIGatewayError
@@ -46,11 +48,8 @@ class KeyListView(ProjectScopedMixin, ProjectLayoutContextMixin, ListView):
         return self.project.ai_gateway_keys.order_by("-created")
 
 
-class KeyCreateView(ProjectScopedMixin, FormView):
-    """Generates a virtual key for a project and renders it from the POST response."""
-
-    template_name = "ai_gateway/key-create.html"
-    form_class = KeyCreateForm
+class AvailableModelsMixin:
+    """Shared access to the models offered by the AI gateway."""
 
     @cached_property
     def available_models(self) -> list[dict[str, Any]]:
@@ -60,25 +59,42 @@ class KeyCreateView(ProjectScopedMixin, FormView):
     @cached_property
     def model_providers(self) -> list[str]:
         providers = {
-            model.get("litellm_params", {}).get("ai_model_provider")
-            for model in self.available_models
-            if model.get("litellm_params", {}).get("ai_model_provider")
+            model.get("provider") for model in self.available_models if model.get("provider")
         }
         return sorted(providers)
 
     @cached_property
     def model_families(self) -> list[str]:
-        families = {
-            model.get("litellm_params", {}).get("ai_model_family")
-            for model in self.available_models
-            if model.get("litellm_params", {}).get("ai_model_family")
-        }
+        families = {model.get("family") for model in self.available_models if model.get("family")}
         return sorted(families)
+
+    @cached_property
+    def available_models_by_name(self) -> dict[str, dict[str, Any]]:
+        """
+        Return a mapping of model_name to model dict for the available models for easier lookup.
+        """
+        return {model["model_name"]: model for model in self.available_models}
+
+    def _model_display_names(self, model_ids: list[str]) -> list[str]:
+        return [
+            self.available_models_by_name[model_id]["display_name"]
+            for model_id in model_ids
+            if model_id in self.available_models_by_name
+        ]
+
+
+class KeyCreateView(ProjectScopedMixin, AvailableModelsMixin, FormView):
+    """Collects a key name and model selection, then hands off to the confirmation step."""
+
+    template_name = "ai_gateway/key-create.html"
+    form_class = KeyCreateForm
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs["project"] = self.project
         kwargs["available_models"] = self.available_models
+        if self.request.method == "GET" and self.request.GET.get("show_errors") == "1":
+            kwargs["data"] = self.request.GET
         return kwargs
 
     def get_initial(self):
@@ -129,7 +145,6 @@ class KeyCreateView(ProjectScopedMixin, FormView):
             "expanded": expanded,
             "match_count": len(matches),
             "visible_count": len(visible_models),
-            "selected_count": len(selected_models),
             "has_more": len(matches) > len(visible_models),
         }
 
@@ -146,16 +161,78 @@ class KeyCreateView(ProjectScopedMixin, FormView):
         return context
 
     def form_valid(self, form: KeyCreateForm) -> HttpResponse:
+        query = urlencode(
+            {"name": form.cleaned_data["name"], "models": form.cleaned_data["models"]},
+            doseq=True,
+        )
+        url = reverse("ai_gateway:key_create_confirm", kwargs={"uuid": self.project.uuid})
+        return redirect(f"{url}?{query}")
+
+
+class KeyCreateConfirmView(ProjectScopedMixin, AvailableModelsMixin, View):
+    """Reviews the submitted key details and creates the key on confirmation."""
+
+    template_name = "ai_gateway/key-create-confirm.html"
+
+    def _key_create_url(self, name: str, model_ids: list[str], show_errors: bool = False) -> str:
+        params = {"name": name, "models": model_ids}
+        if show_errors:
+            params["show_errors"] = "1"
+        query = urlencode(params, doseq=True)
+        url = reverse("ai_gateway:key_create", kwargs={"uuid": self.project.uuid})
+        return f"{url}?{query}"
+
+    def _get_form(self, data) -> KeyCreateForm:
+        return KeyCreateForm(
+            data=data,
+            project=self.project,
+            available_models=self.available_models,
+        )
+
+    def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+        form = self._get_form(request.GET)
+        if not form.is_valid():
+            return redirect(
+                self._key_create_url(
+                    name=request.GET.get("name", ""),
+                    model_ids=request.GET.getlist("models"),
+                    show_errors=True,
+                )
+            )
+
+        name = form.cleaned_data["name"]
+        model_ids = form.cleaned_data["models"]
+
+        context = {
+            "project": self.project,
+            "key_name": name,
+            "selected_model_ids": model_ids,
+            "selected_model_names": self._model_display_names(model_ids),
+            "change_url": self._key_create_url(name=name, model_ids=model_ids),
+        }
+        return render(request, self.template_name, context)
+
+    def post(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+        form = self._get_form(request.POST)
+        if not form.is_valid():
+            return redirect(
+                self._key_create_url(
+                    name=request.POST.get("name", ""),
+                    model_ids=request.POST.getlist("models"),
+                    show_errors=True,
+                )
+            )
+
         with KeyService.from_settings() as service:
             plaintext_key = service.create_key(
                 project=self.project,
                 name=form.cleaned_data["name"],
                 models=form.cleaned_data["models"],
-                created_by=self.request.user,
+                created_by=request.user,
             )
 
         response = render(
-            self.request,
+            request,
             "ai_gateway/key-created.html",
             {"project": self.project, "plaintext_key": plaintext_key},
         )

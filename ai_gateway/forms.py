@@ -32,18 +32,9 @@ class KeyCreateForm(forms.ModelForm):
     ):
         super().__init__(*args, **kwargs)
         self.project = project
-        choices: list[tuple[str, str]] = []
-        for model in available_models:
-            model_name = model.get("model_name")
-            if not model_name:
-                continue
-
-            litellm_params = model.get("litellm_params", {})
-            label = litellm_params.get("ai_model_name") or model_name
-
-            choices.append((model_name, label))
-
-        self.fields["models"].choices = choices
+        self.fields["models"].choices = [
+            (model["model_name"], model["display_name"]) for model in available_models
+        ]
 
     def clean_name(self) -> str:
         name = self.cleaned_data["name"].strip()

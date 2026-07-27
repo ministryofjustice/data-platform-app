@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import secrets
+from typing import Any
 
 from django.conf import settings
 from django.core.cache import cache
@@ -44,7 +45,7 @@ class KeyService:
         """Close the underlying gateway client."""
         self._client.close()
 
-    def list_default_models(self) -> list[str]:
+    def list_default_models(self) -> list[dict[str, Any]]:
         """Return the models marked as generally available."""
         models = []
         for model in self._client.list_models_v1_info():
@@ -56,10 +57,18 @@ class KeyService:
             model = model.copy()
             model_info = model.get("model_info", {})
 
-            model["input_cost_per_million"] = model_info.get("input_cost_per_token", 0) * 1_000_000
-            model["output_cost_per_million"] = (
-                model_info.get("output_cost_per_token", 0) * 1_000_000
+            input_cost = model_info.get("input_cost_per_token")
+            output_cost = model_info.get("output_cost_per_token")
+
+            model["input_cost_per_million"] = (
+                input_cost * 1_000_000 if input_cost is not None else None
             )
+            model["output_cost_per_million"] = (
+                output_cost * 1_000_000 if output_cost is not None else None
+            )
+            model["display_name"] = litellm_params.get("ai_model_name") or model.get("model_name")
+            model["provider"] = litellm_params.get("ai_model_provider")
+            model["family"] = litellm_params.get("ai_model_family")
 
             models.append(model)
 

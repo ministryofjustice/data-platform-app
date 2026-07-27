@@ -5,12 +5,6 @@ from typing import Any
 VISIBLE_LIMIT = 10
 
 
-def model_display_name(model: dict[str, Any]) -> str:
-    """Return the human-facing name used to display and search a model."""
-    litellm_params = model.get("litellm_params", {})
-    return litellm_params.get("ai_model_name") or model.get("model_name", "")
-
-
 def filter_models(
     models: list[dict[str, Any]],
     search: str = "",
@@ -26,13 +20,11 @@ def filter_models(
 
     matches: list[dict[str, Any]] = []
     for model in models:
-        litellm_params = model.get("litellm_params", {})
-
-        if provider and litellm_params.get("ai_model_provider") != provider:
+        if provider and model.get("provider") != provider:
             continue
-        if family and litellm_params.get("ai_model_family") != family:
+        if family and model.get("family") != family:
             continue
-        if normalised_search and normalised_search not in model_display_name(model).lower():
+        if normalised_search and normalised_search not in model.get("display_name", "").lower():
             continue
 
         matches.append(model)
