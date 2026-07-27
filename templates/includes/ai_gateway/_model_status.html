@@ -4,9 +4,6 @@
     <a class="govuk-link"
        href="{% url 'ai_gateway:key_create' project.uuid %}?expanded=1"
        hx-get="{% url 'ai_gateway:key_create' project.uuid %}"
-       hx-vals='{"expanded": "1"}'
-       hx-target="#model-list"
-       hx-include="closest form"
-       hx-swap="innerHTML">Show all</a>
+       hx-vals='{"expanded": "1"}'>Show all</a>
   {% endif %}
 </p>

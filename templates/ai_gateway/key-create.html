@@ -14,30 +14,36 @@
       <form method="post" action="{% url 'ai_gateway:key_create' project.uuid %}">
         {% csrf_token %}
         {% include "includes/fields/_text_input.html" with field=form.name width='govuk-!-width-one-half' only %}
-        <div class="govuk-form-group">
-          <h2 class="govuk-label govuk-label--m">Select models</h2>
-          <div class="govuk-hint">Search or filter to find the models you need.</div>
-        </div>
-        <details class="govuk-details">
-          <summary class="govuk-details__summary">
-            <span class="govuk-details__summary-text">Show filter</span>
-          </summary>
-          <div class="ai-gateway-model-filters">
-            {% include "includes/ai_gateway/_model_filters.html" %}
+        <div class="ai-gateway-model-selection"
+             hx-params="not csrfmiddlewaretoken"
+             hx-include="closest form"
+             hx-target="#model-list"
+             hx-swap="innerHTML">
+          <div class="govuk-form-group">
+            <h2 class="govuk-label govuk-label--m">Select models</h2>
+            <div class="govuk-hint">Search or filter to find the models you need.</div>
           </div>
-        </details>
-        {% if form.models.errors %}
-          <p id="models-error" class="govuk-error-message">
-            <span class="govuk-visually-hidden">Error:</span> {{ form.models.errors|join:", " }}
-          </p>
-        {% endif %}
-        <div id="{{ form.models.id_for_label }}" tabindex="-1"></div>
-        <div id="model-list">{% include "includes/ai_gateway/_model_list.html" %}</div>
-        <div id="model-status"
-             class="govuk-!-margin-bottom-2"
-             role="status"
-             aria-live="polite"
-             aria-atomic="true">{% include "includes/ai_gateway/_model_status.html" %}</div>
+          <details class="govuk-details">
+            <summary class="govuk-details__summary">
+              <span class="govuk-details__summary-text">Show filter</span>
+            </summary>
+            <div class="ai-gateway-model-filters">
+              {% include "includes/ai_gateway/_model_filters.html" %}
+            </div>
+          </details>
+          {% if form.models.errors %}
+            <p id="models-error" class="govuk-error-message">
+              <span class="govuk-visually-hidden">Error:</span> {{ form.models.errors|join:", " }}
+            </p>
+          {% endif %}
+          <div id="{{ form.models.id_for_label }}" tabindex="-1"></div>
+          <div id="model-list">{% include "includes/ai_gateway/_model_list.html" %}</div>
+          <div id="model-status"
+               class="govuk-!-margin-bottom-2"
+               role="status"
+               aria-live="polite"
+               aria-atomic="true">{% include "includes/ai_gateway/_model_status.html" %}</div>
+        </div>
         <div class="govuk-button-group">
           <button type="submit" class="govuk-button">Continue</button>
           <a href="{% url 'ai_gateway:key_list' project.uuid %}"
