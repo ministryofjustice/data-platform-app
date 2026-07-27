@@ -116,8 +116,7 @@ class KeyCreateView(ProjectScopedMixin, AvailableModelsMixin, FormView):
         provider = params.get("provider", "")
         family = params.get("family", "")
         expanded = params.get("expanded") == "1"
-        selected_models = set(params.getlist("models"))
-
+        selected_models = set(params.getlist("models")) & self.available_models_by_name.keys()
         matches = filter_models(
             self.available_models,
             search=search,
