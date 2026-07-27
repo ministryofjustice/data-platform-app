@@ -220,7 +220,7 @@ class TestKeyCreateViewFiltering:
 
         collapsed = client.get(reverse("ai_gateway:key_create", args=[project.uuid]))
 
-        assertContains(collapsed, "Show all 12 models")
+        assertContains(collapsed, "Show all")
         assertContains(collapsed, 'value="model-0"')
         assertNotContains(collapsed, 'value="model-11"')
 
@@ -230,7 +230,7 @@ class TestKeyCreateViewFiltering:
         )
 
         assertContains(expanded, 'value="model-11"')
-        assertNotContains(expanded, "Show all 12 models")
+        assertNotContains(expanded, "Show all")
 
 
 class TestKeyCreateConfirmView:

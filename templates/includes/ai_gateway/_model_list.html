@@ -1,9 +1,6 @@
-{% load static %}
 {% if request.htmx %}
   <div id="model-status" hx-swap-oob="innerHTML">
-    <p class="govuk-body">
-      Showing {{ visible_count }} of {{ match_count }} model{{ match_count|pluralize }}.
-    </p>
+    {% include "includes/ai_gateway/_model_status.html" %}
   </div>
 {% endif %}
 {% for model_name in hidden_selected_models %}
@@ -58,14 +55,3 @@
     {% endfor %}
   </tbody>
 </table>
-{% if has_more %}
-  <button type="submit"
-          formmethod="get"
-          name="expanded"
-          value="1"
-          class="govuk-button govuk-button--secondary"
-          hx-get="{% url 'ai_gateway:key_create' project.uuid %}"
-          hx-include="closest form"
-          hx-target="#model-list"
-          hx-swap="innerHTML">Show all {{ match_count }} models</button>
-{% endif %}
