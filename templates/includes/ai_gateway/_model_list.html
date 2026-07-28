@@ -1,0 +1,61 @@
+{% if request.htmx %}
+  <div id="model-status" hx-swap-oob="innerHTML">
+    {% include "includes/ai_gateway/_model_status.html" %}
+  </div>
+{% endif %}
+{% for model_name in hidden_selected_models %}
+  <input type="hidden" name="models" value="{{ model_name }}">
+{% endfor %}
+<table class="govuk-table moj-multi-select"
+       data-module="moj-multi-select"
+       data-id-prefix="models-">
+  <thead class="govuk-table__head">
+    <tr class="govuk-table__row">
+      <th class="govuk-table__header" scope="col">
+        <div id="models-select-all"></div>
+        <span class="govuk-visually-hidden">Select model</span>
+      </th>
+      <th class="govuk-table__header" scope="col">Model</th>
+      <th class="govuk-table__header" scope="col">Family</th>
+      <th class="govuk-table__header" scope="col">Provider</th>
+      <th class="govuk-table__header" scope="col">Cost per million tokens</th>
+    </tr>
+  </thead>
+  <tbody class="govuk-table__body">
+    {% for model in visible_models %}
+      <tr class="govuk-table__row">
+        <td class="govuk-table__cell">
+          <div class="govuk-checkboxes govuk-checkboxes--small">
+            <div class="govuk-checkboxes__item">
+              <input class="govuk-checkboxes__input"
+                     id="models-{{ forloop.counter }}"
+                     name="models"
+                     type="checkbox"
+                     value="{{ model.model_name }}"
+                     {% if model.model_name in selected_models %}checked{% endif %}>
+              <label class="govuk-label govuk-checkboxes__label"
+                     for="models-{{ forloop.counter }}">
+                <span class="govuk-visually-hidden">Select {{ model.display_name }}</span>
+              </label>
+            </div>
+          </div>
+        </td>
+        <td class="govuk-table__cell">{{ model.display_name }}</td>
+        <td class="govuk-table__cell">{{ model.family|default:"-" }}</td>
+        <td class="govuk-table__cell">{{ model.provider|default:"-" }}</td>
+        <td class="govuk-table__cell">
+          <p class="govuk-body-s govuk-!-margin-bottom-0">Input: {% if model.input_cost_per_million is not None %}${{ model.input_cost_per_million|floatformat:2 }}{% else %}Not available{% endif %}</p>
+          <p class="govuk-body-s govuk-!-margin-bottom-0">Output: {% if model.output_cost_per_million is not None %}${{ model.output_cost_per_million|floatformat:2 }}{% else %}Not available{% endif %}</p>
+        </td>
+      </tr>
+    {% empty %}
+      <tr class="govuk-table__row">
+        <td class="govuk-table__cell" colspan="5">
+          No results found.
+          <br>
+          Try another search or different filters to search again.
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>

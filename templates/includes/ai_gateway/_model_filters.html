@@ -1,0 +1,62 @@
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-one-third">
+    <div class="govuk-form-group">
+      <label class="govuk-label govuk-!-font-weight-bold" for="model-search">Search</label>
+      <input class="govuk-input"
+             id="model-search"
+             name="search"
+             type="text"
+             value="{{ filter_search }}"
+             autocomplete="off"
+             hx-get="{% url 'ai_gateway:key_create' project.uuid %}"
+             hx-trigger="keyup changed delay:300ms">
+    </div>
+  </div>
+  <div class="govuk-grid-column-one-third">
+    <div class="govuk-form-group">
+      <label class="govuk-label govuk-!-font-weight-bold" for="model-family">Family</label>
+      <select class="govuk-select govuk-!-width-full"
+              id="model-family"
+              name="family"
+              hx-get="{% url 'ai_gateway:key_create' project.uuid %}"
+              hx-trigger="change">
+        <option value="">All families</option>
+        {% for family in model_families %}
+          <option value="{{ family }}"
+                  {% if family == filter_family %}selected{% endif %}>{{ family }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+  <div class="govuk-grid-column-one-third">
+    <div class="govuk-form-group">
+      <label class="govuk-label govuk-!-font-weight-bold" for="model-provider">Provider</label>
+      <select class="govuk-select"
+              id="model-provider"
+              name="provider"
+              hx-get="{% url 'ai_gateway:key_create' project.uuid %}"
+              hx-trigger="change">
+        <option value="">All providers</option>
+        {% for provider in model_providers %}
+          <option value="{{ provider }}"
+                  {% if provider == filter_provider %}selected{% endif %}>{{ provider }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+</div>
+<div class="govuk-grid-row">
+  <div class="govuk-grid-column-full">
+    <div class="govuk-button-group">
+      <button type="submit"
+              class="govuk-button moj-button"
+              hx-get="{% url 'ai_gateway:key_create' project.uuid %}"
+              formmethod="get">Apply filters</button>
+      <a href="{% url 'ai_gateway:key_create' project.uuid %}"
+         hx-get="{% url 'ai_gateway:key_create' project.uuid %}"
+         hx-vals='{"search": "", "provider": "", "family": ""}'
+         hx-on::after-request=" if (event.detail.successful) { document.getElementById('model-search').value = ''; document.getElementById('model-provider').value = ''; document.getElementById('model-family').value = ''; }"
+         class="govuk-link">Clear filters</a>
+    </div>
+  </div>
+</div>

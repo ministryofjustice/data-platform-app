@@ -8,7 +8,6 @@
 );
 @use "node_modules/@x-govuk/govuk-prototype-components/src/x-govuk";
 @use "components/copy-button/copy-button";
-@use "components/multi-select-tags/multi-select-tags";
 
 $masthead-background-color: #381a62;
 
@@ -143,4 +142,11 @@ $masthead-background-color: #381a62;
   .govuk-summary-list__value {
     padding: 0;
   }
+}
+
+.ai-gateway-model-filters {
+  border: 1px solid govuk-colour("blue", $variant: "tint-50");
+  padding: govuk-spacing(4);
+  padding-bottom: govuk-spacing(0);
+  background-color: govuk-colour("blue", $variant: "tint-95");
 }

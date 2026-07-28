@@ -1,0 +1,57 @@
+{% extends "base/base.html" %}
+{% load static %}
+{% block title %}
+  Check details - {{ project.name }} - Justice Data Platform | Ministry of Justice
+{% endblock title %}
+{% block back_link %}
+  <a href="{{ change_url }}" class="govuk-back-link">Back</a>
+{% endblock back_link %}
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h1 class="govuk-heading-xl">Check details</h1>
+      <dl class="govuk-summary-list">
+        <div class="govuk-summary-list__row">
+          <dt class="govuk-summary-list__key">Key name</dt>
+          <dd class="govuk-summary-list__value">
+            {{ key_name }}
+          </dd>
+          <dd class="govuk-summary-list__actions">
+            <a class="govuk-link" href="{{ change_url }}">
+              Change<span class="govuk-visually-hidden">key name</span>
+            </a>
+          </dd>
+        </div>
+        <div class="govuk-summary-list__row">
+          <dt class="govuk-summary-list__key">Models selected</dt>
+          <dd class="govuk-summary-list__value">
+            <ul class="govuk-list govuk-list--bullet govuk-!-margin-bottom-8">
+              {% for name in selected_model_names %}
+                <li>{{ name }}</li>
+              {% endfor %}
+            </ul>
+          </dd>
+          <dd class="govuk-summary-list__actions">
+            <a class="govuk-link" href="{{ change_url }}">
+              Change<span class="govuk-visually-hidden">models selected</span>
+            </a>
+          </dd>
+        </div>
+      </dl>
+      <form method="post"
+            action="{% url 'ai_gateway:key_create_confirm' project.uuid %}"
+            novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="name" value="{{ key_name }}">
+        {% for model_id in selected_model_ids %}
+          <input type="hidden" name="models" value="{{ model_id }}">
+        {% endfor %}
+        <div class="govuk-button-group">
+          <button type="submit" class="govuk-button">Create key</button>
+          <a href="{% url 'ai_gateway:key_list' project.uuid %}"
+             class="govuk-link">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock content %}

@@ -44,7 +44,24 @@ def key_service():
     service = create_autospec(KeyService, instance=True)
     service.__enter__.return_value = service
     service.__exit__.return_value = False
-    service.list_default_models.return_value = ["gpt-4", "claude-3"]
+    service.list_default_models.return_value = [
+        {
+            "model_name": "gpt-4",
+            "display_name": "GPT-4",
+            "family": "GPT",
+            "provider": "OpenAI",
+            "input_cost_per_million": 30.0,
+            "output_cost_per_million": 60.0,
+        },
+        {
+            "model_name": "claude-3",
+            "display_name": "Claude 3",
+            "family": "Claude",
+            "provider": "Anthropic",
+            "input_cost_per_million": 15.0,
+            "output_cost_per_million": 75.0,
+        },
+    ]
     service.get_models_for_key.return_value = ["gpt-4"]
 
     with patch("ai_gateway.services.KeyService.from_settings", return_value=service):

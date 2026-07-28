@@ -120,6 +120,11 @@ class AIGatewayClient:
         """Return the model names available in the access group named ``name``."""
         return self._get_access_group(name)["access_model_names"]
 
+    def list_models_v1_info(self) -> list[dict[str, Any]]:
+        """Return the raw model info from the v1 models endpoint."""
+        data = self._request("GET", "/v1/model/info")
+        return cast("list[dict[str, Any]]", data.get("data", []))
+
     def create_team(self, team_alias: str, access_group_ids: list[str] | None = None) -> str:
         """Create a team with alias ``team_alias`` and return its generated team id."""
         organization_id = self.get_organization_id(self.DEFAULT_TEAM_ORGANIZATION_NAME)

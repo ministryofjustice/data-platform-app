@@ -19,6 +19,7 @@ dependencies = [
     "whitenoise==6.12.0",
     "cryptography==49.0.0",
     "sentry-sdk==2.64.0",
+    "django-htmx==1.28.0",
 ]
 
 [dependency-groups]

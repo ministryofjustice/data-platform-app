@@ -1,8 +1,15 @@
 from unittest.mock import patch
 
+import pytest
 from django.urls import reverse
 from model_bakery import baker
-from pytest_django.asserts import assertContains, assertInHTML, assertTemplateUsed
+from pytest_django.asserts import (
+    assertContains,
+    assertInHTML,
+    assertNotContains,
+    assertTemplateNotUsed,
+    assertTemplateUsed,
+)
 
 from ai_gateway.exceptions import AIGatewayAPIError
 from ai_gateway.models import Key
@@ -54,11 +61,10 @@ class TestKeyCreateView:
 
         assert response.status_code == 200
         assertTemplateUsed(response, "ai_gateway/key-create.html")
-        assertContains(response, 'data-module="app-multi-select-tags"')
+        assertContains(response, 'data-module="moj-multi-select"')
         assertContains(response, "gpt-4")
 
-    def test_post_renders_created_page(self, client, user, project, key_service):
-        key_service.create_key.return_value = PLAINTEXT_KEY
+    def test_post_redirects_to_confirm_with_params(self, client, user, project, key_service):
         client.force_login(user)
 
         response = client.post(
@@ -66,12 +72,30 @@ class TestKeyCreateView:
             data={"name": "primary-key", "models": ["gpt-4", "claude-3"]},
         )
 
+        assert response.status_code == 302
+        confirm_url = reverse("ai_gateway:key_create_confirm", args=[project.uuid])
+        assert response.url.startswith(f"{confirm_url}?")
+        assert "name=primary-key" in response.url
+        assert "models=gpt-4" in response.url
+        assert "models=claude-3" in response.url
+        key_service.create_key.assert_not_called()
+        assert not Key.objects.filter(project=project).exists()
+
+    def test_get_prefills_name_and_selection_from_params(self, client, user, project, key_service):
+        client.force_login(user)
+
+        response = client.get(
+            reverse("ai_gateway:key_create", args=[project.uuid]),
+            data={"name": "primary-key", "models": ["claude-3"]},
+        )
+
         assert response.status_code == 200
-        assertTemplateUsed(response, "ai_gateway/key-created.html")
-        assertContains(response, PLAINTEXT_KEY)
-        assert "no-store" in response["Cache-Control"]
-        key_service.create_key.assert_called_once_with(
-            project, "primary-key", ["gpt-4", "claude-3"], user
+        assertContains(response, 'value="primary-key"')
+        assertContains(
+            response,
+            '<input class="govuk-checkboxes__input" id="models-2" '
+            'name="models" type="checkbox" value="claude-3" checked>',
+            html=True,
         )
 
     def test_post_rejects_unknown_model(self, client, user, project, key_service):
@@ -124,6 +148,184 @@ class TestKeyCreateView:
         assert response.status_code == 404
         assert not Key.objects.filter(project=project).exists()
         key_service.create_key.assert_not_called()
+
+
+class TestKeyCreateViewFiltering:
+    def test_get_renders_provider_and_family_filters(self, client, user, project, key_service):
+        client.force_login(user)
+
+        response = client.get(reverse("ai_gateway:key_create", args=[project.uuid]))
+
+        assertContains(response, 'name="provider"')
+        assertContains(response, 'name="family"')
+        assertContains(response, "OpenAI")
+        assertContains(response, "Anthropic")
+        assertContains(response, "GPT")
+        assertContains(response, "Claude")
+
+    def test_filters_models_by_provider(self, client, user, project, key_service):
+        client.force_login(user)
+
+        response = client.get(
+            reverse("ai_gateway:key_create", args=[project.uuid]),
+            {"provider": "Anthropic"},
+        )
+
+        assertContains(response, 'value="claude-3"')
+        assertNotContains(response, 'value="gpt-4"')
+
+    def test_htmx_request_returns_the_fragment_only(self, client, user, project, key_service):
+        client.force_login(user)
+
+        response = client.get(
+            reverse("ai_gateway:key_create", args=[project.uuid]),
+            headers={"HX-Request": "true"},
+        )
+
+        assert response.status_code == 200
+        assertTemplateUsed(response, "includes/ai_gateway/_model_list.html")
+        assertTemplateNotUsed(response, "ai_gateway/key-create.html")
+        assertContains(response, 'data-module="moj-multi-select"')
+
+    def test_selection_outside_the_filter_is_kept_as_hidden_input(
+        self, client, user, project, key_service
+    ):
+        client.force_login(user)
+
+        response = client.get(
+            reverse("ai_gateway:key_create", args=[project.uuid]),
+            {"provider": "Anthropic", "models": ["gpt-4"]},
+        )
+
+        assertContains(
+            response,
+            '<input type="hidden" name="models" value="gpt-4">',
+            html=True,
+        )
+        assertContains(response, 'value="claude-3"')
+
+    def test_show_more_reveals_all_matches(self, client, user, project, key_service):
+        key_service.list_default_models.return_value = [
+            {
+                "model_name": f"model-{index}",
+                "display_name": f"Model {index}",
+                "family": "Test",
+                "provider": "TestProvider",
+                "input_cost_per_million": 1.0,
+                "output_cost_per_million": 2.0,
+            }
+            for index in range(12)
+        ]
+        client.force_login(user)
+
+        collapsed = client.get(reverse("ai_gateway:key_create", args=[project.uuid]))
+
+        assertContains(collapsed, "Show all")
+        assertContains(collapsed, 'value="model-0"')
+        assertNotContains(collapsed, 'value="model-11"')
+
+        expanded = client.get(
+            reverse("ai_gateway:key_create", args=[project.uuid]),
+            {"expanded": "1"},
+        )
+
+        assertContains(expanded, 'value="model-11"')
+        assertNotContains(expanded, "Show all")
+
+
+class TestKeyCreateConfirmView:
+    def _confirm_url(self, project):
+        return reverse("ai_gateway:key_create_confirm", args=[project.uuid])
+
+    def test_get_renders_confirmation_page(self, client, user, project, key_service):
+        client.force_login(user)
+
+        response = client.get(
+            self._confirm_url(project),
+            data={"name": "primary-key", "models": ["gpt-4", "claude-3"]},
+        )
+
+        assert response.status_code == 200
+        assertTemplateUsed(response, "ai_gateway/key-create-confirm.html")
+        assertContains(response, "primary-key")
+        assertContains(response, "GPT-4")
+        assertContains(response, "Claude 3")
+
+    def test_get_without_params_redirects_to_key_create(self, client, user, project, key_service):
+        client.force_login(user)
+
+        response = client.get(self._confirm_url(project))
+
+        assert response.status_code == 302
+        assert response.url.startswith(reverse("ai_gateway:key_create", args=[project.uuid]))
+
+    def test_get_without_models_redirects_to_key_create(self, client, user, project, key_service):
+        client.force_login(user)
+
+        response = client.get(self._confirm_url(project), data={"name": "primary-key"})
+
+        assert response.status_code == 302
+        assert response.url.startswith(reverse("ai_gateway:key_create", args=[project.uuid]))
+
+    def test_post_creates_key_and_renders_created_page(self, client, user, project, key_service):
+        key_service.create_key.return_value = PLAINTEXT_KEY
+        client.force_login(user)
+
+        response = client.post(
+            self._confirm_url(project),
+            data={"name": "primary-key", "models": ["gpt-4", "claude-3"]},
+        )
+
+        assert response.status_code == 200
+        assertTemplateUsed(response, "ai_gateway/key-created.html")
+        assertContains(response, PLAINTEXT_KEY)
+        assert "no-store" in response["Cache-Control"]
+        key_service.create_key.assert_called_once_with(
+            project=project,
+            name="primary-key",
+            models=["gpt-4", "claude-3"],
+            created_by=user,
+        )
+
+    def test_post_without_data_redirects_to_key_create(self, client, user, project, key_service):
+        client.force_login(user)
+
+        response = client.post(self._confirm_url(project))
+
+        assert response.status_code == 302
+        assert response.url.startswith(reverse("ai_gateway:key_create", args=[project.uuid]))
+        key_service.create_key.assert_not_called()
+
+    def test_post_gateway_error_propagates(self, client, user, project, key_service):
+        key_service.create_key.side_effect = AIGatewayAPIError(500, "gateway error")
+        client.force_login(user)
+
+        with pytest.raises(AIGatewayAPIError):
+            client.post(
+                self._confirm_url(project),
+                data={"name": "primary-key", "models": ["gpt-4"]},
+            )
+
+    def test_post_duplicate_name_redirects_to_key_create(
+        self, client, user, project, key, key_service
+    ):
+        client.force_login(user)
+
+        response = client.post(
+            self._confirm_url(project),
+            data={"name": key.name, "models": ["gpt-4"]},
+        )
+
+        assert response.status_code == 302
+        assert response.url.startswith(reverse("ai_gateway:key_create", args=[project.uuid]))
+        key_service.create_key.assert_not_called()
+
+    def test_non_member_gets_404(self, client, non_project_user, project, key_service):
+        client.force_login(non_project_user)
+
+        response = client.get(self._confirm_url(project))
+
+        assert response.status_code == 404
 
 
 class TestKeyDetailView:
