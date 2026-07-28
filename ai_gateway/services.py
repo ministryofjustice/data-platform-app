@@ -27,6 +27,8 @@ class KeyService:
             service.create_key(project, name, models, created_by)
     """
 
+    GENERALLY_AVAILABLE_KEY = "ai_model_generally_available"
+
     def __init__(self, client: AIGatewayClient) -> None:
         self._client = client
 
@@ -51,7 +53,7 @@ class KeyService:
         for model in self._client.list_models_v1_info():
             litellm_params = model.get("litellm_params", {})
 
-            if litellm_params.get("ai_model_generally_available") is not True:
+            if litellm_params.get(self.GENERALLY_AVAILABLE_KEY) is not True:
                 continue
 
             model = model.copy()

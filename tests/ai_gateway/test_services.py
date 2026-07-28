@@ -56,7 +56,7 @@ class TestKeyServiceListModels:
         gateway_client.list_models_v1_info.return_value = [
             {
                 "model_name": "gpt-4",
-                "litellm_params": {"ai_model_generally_available": True},
+                "litellm_params": {KeyService.GENERALLY_AVAILABLE_KEY: True},
                 "model_info": {
                     "input_cost_per_token": 0.00003,
                     "output_cost_per_token": 0.00006,
@@ -64,7 +64,7 @@ class TestKeyServiceListModels:
             },
             {
                 "model_name": "internal-only",
-                "litellm_params": {"ai_model_generally_available": False},
+                "litellm_params": {KeyService.GENERALLY_AVAILABLE_KEY: False},
                 "model_info": {},
             },
         ]
@@ -81,7 +81,7 @@ class TestKeyServiceListModels:
             {
                 "model_name": "gpt-4",
                 "litellm_params": {
-                    "ai_model_generally_available": True,
+                    KeyService.GENERALLY_AVAILABLE_KEY: True,
                     "ai_model_name": "GPT-4",
                     "ai_model_family": "GPT",
                     "ai_model_provider": "OpenAI",
@@ -90,7 +90,7 @@ class TestKeyServiceListModels:
             },
             {
                 "model_name": "bare-model",
-                "litellm_params": {"ai_model_generally_available": True},
+                "litellm_params": {KeyService.GENERALLY_AVAILABLE_KEY: True},
                 "model_info": {},
             },
         ]
@@ -107,7 +107,7 @@ class TestKeyServiceListModels:
         gateway_client.list_models_v1_info.return_value = [
             {
                 "model_name": "gpt-4",
-                "litellm_params": {"ai_model_generally_available": True},
+                "litellm_params": {KeyService.GENERALLY_AVAILABLE_KEY: True},
                 "model_info": {},
             },
         ]
@@ -122,7 +122,7 @@ class TestKeyServiceListModels:
         gateway_client.list_models_v1_info.return_value = [
             {
                 "model_name": "internal-only",
-                "litellm_params": {"ai_model_generally_available": False},
+                "litellm_params": {KeyService.GENERALLY_AVAILABLE_KEY: False},
                 "model_info": {},
             },
         ]
