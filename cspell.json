@@ -33,6 +33,7 @@
     "color",
     "contrib",
     "cooldown",
+    "csrfmiddlewaretoken",
     "fernet",
     "forloop",
     "Formset",
