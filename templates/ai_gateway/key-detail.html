@@ -20,8 +20,8 @@
         <dl class="govuk-summary-list govuk-summary-list--no-border govuk-!-margin-0">
           <div class="govuk-summary-list__row">
             <dt class="govuk-summary-list__key">Key ID</dt>
-            <dd class="govuk-summary-list__value">
-              {{ key.litellm_token }}
+            <dd class="govuk-summary-list__value" title="{{ key.litellm_token }}">
+              ...{{ key.litellm_token|slice:"-8:" }}
             </dd>
           </div>
           <div class="govuk-summary-list__row">

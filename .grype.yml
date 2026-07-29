@@ -17,3 +17,27 @@ ignore:
     package:
       name: gzip
       type: deb
+
+  - vulnerability: CVE-2026-5450
+    package:
+      type: deb
+      name: libc-bin|libc-gconv-modules-extra|libc6
+    expires: 2026-08-28
+
+  - vulnerability: CVE-2026-4046
+    package:
+      type: deb
+      name: libc-bin|libc-gconv-modules-extra|libc6
+    expires: 2026-08-28
+
+  - vulnerability: CVE-2026-5928
+    package:
+      type: deb
+      name: libc-bin|libc-gconv-modules-extra|libc6
+    expires: 2026-08-28
+
+  - vulnerability: CVE-2026-5435
+    package:
+      type: deb
+      name: libc-bin|libc-gconv-modules-extra|libc6
+    expires: 2026-08-28
