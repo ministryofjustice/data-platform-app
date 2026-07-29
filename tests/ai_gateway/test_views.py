@@ -7,6 +7,7 @@ from pytest_django.asserts import (
     assertContains,
     assertInHTML,
     assertNotContains,
+    assertNotInHTML,
     assertTemplateNotUsed,
     assertTemplateUsed,
 )
@@ -35,7 +36,25 @@ class TestKeyListView:
         client.force_login(user)
         response = client.get(reverse("ai_gateway:key_list", args=[project.uuid]))
 
-        assertContains(response, key.litellm_token)
+        assertContains(response, f"...{key.litellm_token[-8:]}")
+
+    def test_key_id_is_truncated_and_full_value_not_shown(self, client, user, project):
+        client.force_login(user)
+        long_token = "test_token_12345"
+        baker.make(
+            "ai_gateway.Key",
+            project=project,
+            name="long-token-key",
+            litellm_secret="sk-full-secret",
+            litellm_token=long_token,
+            masked_key="sk-abc...secret",
+            created_by=user,
+        )
+
+        response = client.get(reverse("ai_gateway:key_list", args=[project.uuid]))
+
+        assertContains(response, "...3c4d5e6f")
+        assertNotInHTML(long_token, response.content.decode())
 
     def test_lists_manage_link_to_key_detail(self, client, user, project, key):
         client.force_login(user)
@@ -337,7 +356,7 @@ class TestKeyDetailView:
         assert response.status_code == 200
         assertTemplateUsed(response, "ai_gateway/key-detail.html")
         assertContains(response, key.name)
-        assertContains(response, key.litellm_token)
+        assertContains(response, f"...{key.litellm_token[-8:]}")
         assertContains(response, "gpt-4")
         assertContains(
             response,
