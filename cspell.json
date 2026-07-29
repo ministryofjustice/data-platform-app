@@ -6,7 +6,8 @@
     "package-lock.json",
     "uv.lock",
     "static/assets/**",
-    "**/*.svg"
+    "**/*.svg",
+    ".grype.yml"
   ],
   "words": [
     "autospecced",
