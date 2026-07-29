@@ -44,8 +44,6 @@
                   <span class="app-ai-gateway-key-table__value">{{ key.name }}</span>
                 </td>
                 <td class="govuk-table__cell">
-                  <!-- Key ID truncated to last 8 chars ('...abcd1234').
-                       Full value kept in the title attribute for debugging / copy-paste. -->
                   <span class="app-ai-gateway-key-table__value"
                         title="{{ key.litellm_token }}">...{{ key.litellm_token|slice:"-8:" }}</span>
                 </td>
