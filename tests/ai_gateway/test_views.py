@@ -53,7 +53,7 @@ class TestKeyListView:
 
         response = client.get(reverse("ai_gateway:key_list", args=[project.uuid]))
 
-        assertContains(response, "...3c4d5e6f")
+        assertContains(response, f"...{long_token[-8:]}")
         assertNotInHTML(long_token, response.content.decode())
 
     def test_lists_manage_link_to_key_detail(self, client, user, project, key):
