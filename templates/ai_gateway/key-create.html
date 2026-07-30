@@ -14,7 +14,7 @@
       <form method="post" action="{% url 'ai_gateway:key_create' project.uuid %}">
         {% csrf_token %}
         {% include "includes/fields/_text_input.html" with field=form.name width='govuk-!-width-one-half' only %}
-        <div class="ai-gateway-model-selection govuk-form-group{% if form.models.errors %} govuk-form-group--error{% endif %}"
+        <div class="ai-gateway-model-selection{% if form.models.errors %} govuk-form-group--error{% endif %}"
              hx-params="not csrfmiddlewaretoken"
              hx-include="closest form"
              hx-target="#model-list"
