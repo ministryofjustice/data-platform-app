@@ -32,6 +32,12 @@ class DataFactoriesView(ProductPageMixin, TemplateView):
     show_masthead = False
 
 
+@method_decorator(login_not_required, name="dispatch")
+class AccessibilityStatementView(ProductPageMixin, TemplateView):
+    template_name = "accessibility_statement.html"
+    show_masthead = False
+
+
 class LandingView(TemplateView):
     template_name = "landing.html"
 

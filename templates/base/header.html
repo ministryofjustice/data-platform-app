@@ -3,7 +3,8 @@
   <div class="moj-header__container">
     <div class="moj-header__logo">
       {% include "base/moj_header.svg" %}
-      <a class="moj-header__link" href="{% url 'home' %}">
+      <a class="moj-header__link"
+         href="{% if on_app_route %}{% url 'landing' %}{% else %}{% url 'home' %}{% endif %}">
         <span class="moj-header__link--organisation-name">Ministry of Justice</span>
         <span class="moj-header__link--service-name">Justice Data Platform</span>
       </a>

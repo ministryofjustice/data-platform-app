@@ -10,6 +10,10 @@ def _service_navigation_items_for_request(request):
     ]
     app_items = [
         {"name": "Home", "url": app_url},
+        {
+            "name": "User guide",
+            "url": "https://user-guide.data-platform.service.justice.gov.uk/",
+        },
     ]
 
     on_app_route = request.path.startswith(app_url)
@@ -28,7 +32,13 @@ def _service_navigation_items_for_request(request):
     return visible_items
 
 
+def _is_on_app_route(request):
+    """Return True if the current request path is within the JDP service (/app/)."""
+    return request.path.startswith(reverse("landing"))
+
+
 def service_navigation(request):
     return {
         "service_navigation_items": _service_navigation_items_for_request(request),
+        "on_app_route": _is_on_app_route(request),
     }
