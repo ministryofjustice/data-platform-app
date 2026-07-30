@@ -44,8 +44,7 @@
                   <span class="app-ai-gateway-key-table__value">{{ key.name }}</span>
                 </td>
                 <td class="govuk-table__cell">
-                  <span class="app-ai-gateway-key-table__value"
-                        title="{{ key.litellm_token }}">...{{ key.litellm_token|slice:"-8:" }}</span>
+                  <span class="app-ai-gateway-key-table__value">{{ key.litellm_token }}</span>
                 </td>
                 <td class="govuk-table__cell"
                     data-sort-value="{{ key.created|date:'U' }}">{{ key.created|date:"d F Y" }}</td>

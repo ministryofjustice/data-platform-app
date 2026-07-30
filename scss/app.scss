@@ -116,6 +116,9 @@ $masthead-background-color: #381a62;
   max-width: 100%;
   overflow-wrap: anywhere;
   word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .app-check-details-table__column--35 {
