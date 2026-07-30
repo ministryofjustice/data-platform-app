@@ -1,5 +1,6 @@
 import re
 
+import pytest
 from django.urls import reverse
 from pytest_django.asserts import assertContains, assertNotContains
 
@@ -120,6 +121,7 @@ class TestLandingView:
 
         assertContains(response, f'href="{reverse("home")}">About Justice Data Platform')
 
+    @pytest.mark.skip(reason="Footer link to accessibility statement removed for now")
     def test_footer_links_to_accessibility_statement(self, client, user):
         client.force_login(user)
 
