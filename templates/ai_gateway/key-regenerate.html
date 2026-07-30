@@ -13,8 +13,7 @@
       <span class="govuk-caption-xl">{{ key.name }}</span>
       <h1 class="govuk-heading-xl">Regenerate key</h1>
       <h2 class="govuk-heading-m">Are you sure you want to regenerate this API key?</h2>
-      <p class="govuk-body">You'll need to update applications with the new key.</p>
-      <p class="govuk-body">You will only be able to view the new key once.</p>
+      <p class="govuk-body">You'll need to update applications with the new key. You will only be able to view the new key once.</p>
       <form method="post"
             action="{% url 'ai_gateway:key_regenerate' project.uuid key.pk %}">
         {% csrf_token %}

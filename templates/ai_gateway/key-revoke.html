@@ -12,8 +12,7 @@
       <span class="govuk-caption-xl">{{ key.name }}</span>
       <h1 class="govuk-heading-xl">Revoke key</h1>
       <h2 class="govuk-heading-m">Are you sure you want to revoke this API key?</h2>
-      <p class="govuk-body">You'll permanently disable this API key. Applications using this key will stop working.</p>
-      <p class="govuk-body">This cannot be undone.</p>
+      <p class="govuk-body">You'll permanently disable this API key. Applications using this key will stop working. This cannot be undone.</p>
       <form method="post"
             action="{% url 'ai_gateway:key_revoke' project.uuid key.pk %}">
         {% csrf_token %}

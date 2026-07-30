@@ -103,11 +103,11 @@ def build_project_add_member_formset(*, project, data=None, initial=None, extra=
 class ProjectCreateForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["business_unit"].empty_label = "Select a business unit"
+        self.fields["business_unit"].empty_label = "No business unit selected"
 
     class Meta:
         model = Project
-        fields = ["name", "description", "business_unit"]
+        fields = ["name", "business_unit", "description"]
         widgets = {
             "name": forms.TextInput(attrs={"class": "govuk-input"}),
             "description": forms.Textarea(attrs={"class": "govuk-textarea", "rows": 5}),
