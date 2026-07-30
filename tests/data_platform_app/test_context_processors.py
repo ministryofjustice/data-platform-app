@@ -3,7 +3,6 @@ import pytest
 from data_platform_app.context_processors import (
     _is_on_app_route,
     _service_navigation_items_for_request,
-    google_analytics,
     service_navigation,
 )
 
