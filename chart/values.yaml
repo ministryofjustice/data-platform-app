@@ -112,6 +112,9 @@ app:
         secretKeyRef:
           name: app-secrets
           key: ai-gateway-master-key
+    # override per environment in modernisation-platform-environments
+    - name: GOOGLE_ANALYTICS_ID
+      value: ""
     # avoid writing __pycache__ in read-only code paths
     - name: PYTHONDONTWRITEBYTECODE
       value: "1"

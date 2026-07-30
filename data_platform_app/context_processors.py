@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.urls import reverse
 
 
@@ -41,4 +42,10 @@ def service_navigation(request):
     return {
         "service_navigation_items": _service_navigation_items_for_request(request),
         "on_app_route": _is_on_app_route(request),
+    }
+
+
+def google_analytics(request):
+    return {
+        "google_analytics_id": settings.GOOGLE_ANALYTICS_ID,
     }

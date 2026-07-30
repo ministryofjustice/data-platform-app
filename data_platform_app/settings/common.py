@@ -78,6 +78,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "data_platform_app.context_processors.service_navigation",
+                "data_platform_app.context_processors.google_analytics",
             ],
         },
     },
@@ -118,6 +119,8 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 AUTH_USER_MODEL = "users.User"
+
+GOOGLE_ANALYTICS_ID = os.environ.get("GOOGLE_ANALYTICS_ID", "")
 
 STORAGES = {
     "default": {
