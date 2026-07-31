@@ -26,7 +26,7 @@ dependencies = [
 dev = [
     "djlint==1.42.2",
     "django-debug-toolbar==7.0.0",
-    "pre-commit==4.6.0",
+    "pre-commit==4.6.1",
     "pytest==9.1.1",
     "ruff==0.16.0",
 ]
