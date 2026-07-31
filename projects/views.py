@@ -7,6 +7,7 @@ from django.views.generic.base import View
 from django.views.generic.detail import DetailView
 from django.views.generic.edit import DeleteView, FormView
 from django.views.generic.list import ListView
+from simple_history.utils import bulk_create_with_history
 
 from ai_gateway.exceptions import AIGatewayError
 from ai_gateway.models import Team
@@ -260,7 +261,7 @@ class ProjectCreateConfirmView(ProjectUserSelectionSessionMixin, View):
             if owner_user_id not in selected_user_ids:
                 selected_user_ids.append(owner_user_id)
 
-            ProjectUserPermissions.objects.bulk_create(
+            bulk_create_with_history(
                 [
                     ProjectUserPermissions(
                         project=project,
@@ -269,7 +270,9 @@ class ProjectCreateConfirmView(ProjectUserSelectionSessionMixin, View):
                     )
                     for user_id in selected_user_ids
                 ],
+                ProjectUserPermissions,
                 ignore_conflicts=True,
+                default_user=self.request.user,
             )
 
         clear_project_create_session(self.request)
@@ -394,7 +397,7 @@ class ProjectAddUsersConfirmView(ExistingProjectMixin, ProjectUserSelectionSessi
         ]
 
         with transaction.atomic():
-            ProjectUserPermissions.objects.bulk_create(
+            bulk_create_with_history(
                 [
                     ProjectUserPermissions(
                         project=project,
@@ -403,7 +406,9 @@ class ProjectAddUsersConfirmView(ExistingProjectMixin, ProjectUserSelectionSessi
                     )
                     for user_id in create_for_user_ids
                 ],
+                ProjectUserPermissions,
                 ignore_conflicts=True,
+                default_user=request.user,
             )
 
         self.clear_selected_user_ids()
