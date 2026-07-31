@@ -6,11 +6,21 @@ from ai_gateway.models import Key, Team
 
 class AIGatewayTeamAdmin(SimpleHistoryAdmin):
     list_display = ("project", "litellm_team_id", "created")
+    readonly_fields = ("project", "litellm_team_id", "created", "modified")
 
 
 class KeyAdmin(SimpleHistoryAdmin):
     list_display = ("name", "project", "masked_key", "created_by", "created")
     exclude = ("litellm_secret",)
+    readonly_fields = (
+        "project",
+        "litellm_alias",
+        "litellm_token",
+        "masked_key",
+        "created_by",
+        "created",
+        "modified",
+    )
 
 
 HISTORY_TYPE_LABELS = {"+": "Added", "~": "Changed", "-": "Deleted"}

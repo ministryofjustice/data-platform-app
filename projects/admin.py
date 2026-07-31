@@ -7,6 +7,7 @@ from projects.models import BusinessUnit, Project, ProjectUserPermissions
 class BusinessUnitAdmin(admin.ModelAdmin):
     list_display = ("name", "code")
     search_fields = ("name", "code")
+    readonly_fields = ("created", "modified")
 
 
 class ProjectUserPermissionsInline(admin.TabularInline):
@@ -20,16 +21,15 @@ class ProjectUserPermissionsAdmin(SimpleHistoryAdmin):
     list_display = ("project", "user", "role", "created")
     list_filter = ("project", "role")
     search_fields = ("project__name", "user__email")
-    raw_id_fields = ("project", "user")
+    readonly_fields = ("project", "user", "created", "modified")
 
 
 class ProjectAdmin(SimpleHistoryAdmin):
     list_display = ("name", "business_unit", "created_by", "created")
     list_filter = ("business_unit",)
     search_fields = ("name",)
-    readonly_fields = ("uuid", "created", "modified")
+    readonly_fields = ("uuid", "created_by", "created", "modified")
     inlines = (ProjectUserPermissionsInline,)
-    raw_id_fields = ("created_by",)
 
 
 HISTORY_TYPE_LABELS = {"+": "Added", "~": "Changed", "-": "Removed"}
