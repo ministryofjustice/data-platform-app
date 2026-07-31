@@ -292,6 +292,21 @@ class TestProjectAddUsersFlow:
             role="admin",
         ).exists()
 
+    def test_confirm_adds_users_records_membership_history_with_user(self, client, user, project):
+        """Regression: bulk_create_with_history must record history_user for added memberships."""
+        selected_user = baker.make("users.User", email="history.add@example.com")
+        client.force_login(user)
+        session = client.session
+        session["project_user_add_selection"] = {f"project:{project.id}": [selected_user.id]}
+        session.save()
+
+        client.post(reverse("projects:project_users_add_confirm", args=[project.uuid]))
+
+        membership = ProjectUserPermissions.objects.get(project=project, user=selected_user)
+        historical = membership.history.filter(history_type="+")
+        assert historical.exists()
+        assert historical.first().history_user == user
+
 
 class TestProjectsListView:
     """Tests for the login-protected projects ListView."""
@@ -487,3 +502,26 @@ class TestProjectCreateFlow:
         ).exists()
         assert "project_create" not in client.session
         assert "project_user_add_selection" not in client.session
+
+    def test_create_confirm_post_records_membership_history_with_user(self, client, user):
+        """Regression: bulk_create_with_history must record history_user for new memberships."""
+        business_unit = baker.make("projects.BusinessUnit")
+        selected_user = baker.make("users.User", email="history.member@example.com")
+        client.force_login(user)
+
+        session = client.session
+        session["project_create"] = {
+            "name": "History Test Project",
+            "description": "desc",
+            "business_unit_id": business_unit.id,
+        }
+        session["project_user_add_selection"] = {"project_create_user_add": [selected_user.id]}
+        session.save()
+
+        client.post(reverse("projects:project_create_confirm"))
+
+        project = Project.objects.get(name="History Test Project")
+        for membership in ProjectUserPermissions.objects.filter(project=project):
+            historical = membership.history.filter(history_type="+")
+            assert historical.exists(), f"No creation history record for user {membership.user}"
+            assert historical.first().history_user == user
