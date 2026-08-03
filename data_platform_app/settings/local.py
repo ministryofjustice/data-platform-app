@@ -19,7 +19,3 @@ MIDDLEWARE += [  # noqa
 INTERNAL_IPS = [
     "127.0.0.1",
 ]
-
-# Microsoft Entra is the sole auth provider in every environment, so running
-# the app locally requires real AZURE_* credentials in your .env file. The test
-# suite does not need them (it uses force_login); see settings/test.py.

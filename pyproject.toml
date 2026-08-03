@@ -20,6 +20,7 @@ dependencies = [
     "cryptography==49.0.0",
     "sentry-sdk==2.66.1",
     "django-htmx==1.28.0",
+    "notifications-python-client==12.1.0",
 ]
 
 [dependency-groups]

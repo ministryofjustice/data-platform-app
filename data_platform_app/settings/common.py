@@ -31,7 +31,7 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 DEBUG = False
 
 ALLOWED_HOSTS = []
-APP_ENV = os.environ.get("APP_ENV", "development")
+APP_ENV = os.environ.get("APP_ENV", "local")
 
 # Application definition
 
@@ -183,6 +183,15 @@ AI_GATEWAY_URL = os.environ.get("AI_GATEWAY_URL")
 AI_GATEWAY_MASTER_KEY = os.environ.get("AI_GATEWAY_MASTER_KEY")
 DEFAULT_ACCESS_GROUP_NAME = os.environ.get(
     "DEFAULT_ACCESS_GROUP_NAME", "generally-available-models"
+)
+
+# GOV.UK Notify
+NOTIFY_API_KEY = os.environ.get("NOTIFY_API_KEY")
+NOTIFY_PROJECT_MEMBER_ADDED_TEMPLATE_ID = os.environ.get(
+    "NOTIFY_PROJECT_MEMBER_ADDED_TEMPLATE_ID", ""
+)
+NOTIFY_PROJECT_MEMBER_REMOVED_TEMPLATE_ID = os.environ.get(
+    "NOTIFY_PROJECT_MEMBER_REMOVED_TEMPLATE_ID", ""
 )
 
 # Keys used to encrypt sensitive model fields at rest

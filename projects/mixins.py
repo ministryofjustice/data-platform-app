@@ -1,4 +1,8 @@
+import sentry_sdk
+from django.core.exceptions import ImproperlyConfigured
 from django.shortcuts import get_object_or_404
+
+from projects.services import ProjectMembershipNotificationService, ProjectNotificationError
 
 ADD_USER_SESSION_KEY = "project_user_add_selection"
 PROJECT_CREATE_SESSION_KEY = "project_create"
@@ -62,3 +66,44 @@ class ProjectLayoutContextMixin:
         context["success_message"] = self.request.session.pop("success_message", None)
         context["active_project_section"] = self.active_project_section
         return context
+
+
+class ProjectMembershipNotificationMixin:
+    """Best-effort membership notification helpers for project views."""
+
+    @staticmethod
+    def get_notification_service():
+        try:
+            return ProjectMembershipNotificationService.from_settings()
+        except ImproperlyConfigured as error:
+            sentry_sdk.capture_exception(error)
+            return None
+
+    def send_member_added_notifications(self, *, project, members, added_by) -> None:
+        notification_service = self.get_notification_service()
+        if notification_service is None:
+            return
+
+        for member in members:
+            try:
+                notification_service.send_member_added_email(
+                    project=project,
+                    member=member,
+                    added_by=added_by,
+                )
+            except ProjectNotificationError as error:
+                sentry_sdk.capture_exception(error)
+
+    def send_member_removed_notification(self, *, project, member, removed_by) -> None:
+        notification_service = self.get_notification_service()
+        if notification_service is None:
+            return
+
+        try:
+            notification_service.send_member_removed_email(
+                project=project,
+                member=member,
+                removed_by=removed_by,
+            )
+        except ProjectNotificationError as error:
+            sentry_sdk.capture_exception(error)

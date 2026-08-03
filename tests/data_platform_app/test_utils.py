@@ -1,4 +1,6 @@
-from data_platform_app.utils import get_azure_redirect_uri
+import pytest
+
+from data_platform_app.utils import build_base_url, get_azure_redirect_uri
 
 
 class TestGetAzureRedirectUri:
@@ -53,3 +55,18 @@ class TestGetAzureRedirectUri:
         result = get_azure_redirect_uri("custom-env")
 
         assert result == "https://custom-env.data-platform.service.justice.gov.uk/sso/callback/"
+
+
+class TestBuildBaseUrl:
+    @pytest.mark.parametrize(
+        "env,expected_url",
+        [
+            ("local", "http://localhost:8000"),
+            ("production", "https://data-platform.service.justice.gov.uk"),
+            ("preproduction", "https://preproduction.data-platform.service.justice.gov.uk"),
+            ("development", "https://development.data-platform.service.justice.gov.uk"),
+            ("custom-env", "https://custom-env.data-platform.service.justice.gov.uk"),
+        ],
+    )
+    def test_build_url_for_environment(self, env, expected_url):
+        assert build_base_url(env) == expected_url

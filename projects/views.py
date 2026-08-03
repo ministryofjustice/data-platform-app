@@ -23,6 +23,7 @@ from projects.mixins import (
     USER_BUCKET_SESSION_KEY,
     ExistingProjectMixin,
     ProjectLayoutContextMixin,
+    ProjectMembershipNotificationMixin,
     ProjectUserSelectionSessionMixin,
     UUIDObjectMixin,
 )
@@ -199,7 +200,9 @@ class ProjectCreateAddUsersView(ProjectUserSelectionFormView):
         return super().post(request, *args, **kwargs)
 
 
-class ProjectCreateConfirmView(ProjectUserSelectionSessionMixin, View):
+class ProjectCreateConfirmView(
+    ProjectMembershipNotificationMixin, ProjectUserSelectionSessionMixin, View
+):
     template_name = "projects/create_confirm.html"
 
     def get_user_bucket_key(self):
@@ -261,6 +264,8 @@ class ProjectCreateConfirmView(ProjectUserSelectionSessionMixin, View):
             if owner_user_id not in selected_user_ids:
                 selected_user_ids.append(owner_user_id)
 
+            created_members = User.objects.filter(id__in=selected_user_ids).order_by("email")
+
             bulk_create_with_history(
                 [
                     ProjectUserPermissions(
@@ -273,6 +278,12 @@ class ProjectCreateConfirmView(ProjectUserSelectionSessionMixin, View):
                 ProjectUserPermissions,
                 ignore_conflicts=True,
                 default_user=self.request.user,
+            )
+
+            self.send_member_added_notifications(
+                project=project,
+                members=created_members,
+                added_by=self.request.user,
             )
 
         clear_project_create_session(self.request)
@@ -363,7 +374,12 @@ class ProjectAddUsersView(ExistingProjectMixin, ProjectUserSelectionFormView):
         )
 
 
-class ProjectAddUsersConfirmView(ExistingProjectMixin, ProjectUserSelectionSessionMixin, View):
+class ProjectAddUsersConfirmView(
+    ProjectMembershipNotificationMixin,
+    ExistingProjectMixin,
+    ProjectUserSelectionSessionMixin,
+    View,
+):
     template_name = "projects/user_add_confirm.html"
 
     def get_selected_users(self):
@@ -395,6 +411,7 @@ class ProjectAddUsersConfirmView(ExistingProjectMixin, ProjectUserSelectionSessi
         create_for_user_ids = [
             user_id for user_id in selected_user_ids if user_id not in existing_user_ids
         ]
+        created_members = User.objects.filter(id__in=create_for_user_ids).order_by("email")
 
         with transaction.atomic():
             bulk_create_with_history(
@@ -411,6 +428,12 @@ class ProjectAddUsersConfirmView(ExistingProjectMixin, ProjectUserSelectionSessi
                 default_user=request.user,
             )
 
+            self.send_member_added_notifications(
+                project=project,
+                members=created_members,
+                added_by=request.user,
+            )
+
         self.clear_selected_user_ids()
         request.session["success_message"] = {
             "heading": "Project member added",
@@ -419,7 +442,7 @@ class ProjectAddUsersConfirmView(ExistingProjectMixin, ProjectUserSelectionSessi
         return redirect("projects:project_users", uuid=project.uuid)
 
 
-class ProjectRemoveUserView(DeleteView):
+class ProjectRemoveUserView(ProjectMembershipNotificationMixin, DeleteView):
     """
     Will need additional checks for user permissions to ensure
     the user can remove users from the project.
@@ -444,6 +467,11 @@ class ProjectRemoveUserView(DeleteView):
     def form_valid(self, form):
         membership = self.get_object()
         user_name = membership.user.full_name
+        self.send_member_removed_notification(
+            project=membership.project,
+            member=membership.user,
+            removed_by=self.request.user,
+        )
         self.request.session["success_message"] = {
             "heading": f"You have removed {user_name} from this project",
         }
