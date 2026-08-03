@@ -47,7 +47,7 @@
                   <span class="app-ai-gateway-key-table__value">{{ key.litellm_token }}</span>
                 </td>
                 <td class="govuk-table__cell"
-                    data-sort-value="{{ key.created|date:'U' }}">{{ key.created|date:"d F Y" }}</td>
+                    data-sort-value="{{ key.created|date:'U' }}">{{ key.created|date:"d M Y" }}</td>
                 <td class="govuk-table__cell govuk-!-text-align-right"><a href="{% url 'ai_gateway:key_detail' project.uuid key.pk %}"
    class="govuk-link">Manage</a></td>
               </tr>
