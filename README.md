@@ -114,6 +114,21 @@ Admin access is granted manually. To do this locally, sign in via Entra once to
 create your `User`, then promote it with `make manage shell`. In real
 environments you will need to speak to an existing admin.
 
+## GOV.UK Notify integration
+
+GOV UK Notify is used to send emails. Set these environment variables in your `.env`:
+
+| Variable                                          | Description                                           |
+| ------------------------------------------------- | ----------------------------------------------------- |
+| `NOTIFY_API_KEY`                                  | GOV.UK Notify API key for this service.               |
+| `NOTIFY_PROJECT_MEMBER_ADDED_TEMPLATE_ID`         | Template ID for the "member added" email.             |
+| `NOTIFY_PROJECT_MEMBER_REMOVED_TEMPLATE_ID`       | Template ID for the "member removed" email.           |
+
+These secrets can be found in the Data Platform 1Password vault.
+
+If Notify is not configured correctly, project actions still complete, but email delivery failures
+are captured in Sentry for monitoring.
+
 ## Static assets
 
 Static assets are built as part of `make install` (this runs `make build-static`).
