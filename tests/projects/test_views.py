@@ -308,6 +308,7 @@ class TestProjectAddUsersFlow:
     def test_confirm_adds_users_to_project(
         self,
         client,
+        django_capture_on_commit_callbacks,
         user,
         project,
         project_membership_notification_service,
@@ -319,7 +320,10 @@ class TestProjectAddUsersFlow:
         session["project_user_add_selection"] = {f"project:{project.id}": [selected_user.id]}
         session.save()
 
-        response = client.post(reverse("projects:project_users_add_confirm", args=[project.uuid]))
+        with django_capture_on_commit_callbacks(execute=True):
+            response = client.post(
+                reverse("projects:project_users_add_confirm", args=[project.uuid])
+            )
 
         assert response.status_code == 302
         assert response.url == reverse("projects:project_users", args=[project.uuid])
@@ -337,6 +341,7 @@ class TestProjectAddUsersFlow:
     def test_confirm_adds_users_continues_when_notification_fails(
         self,
         client,
+        django_capture_on_commit_callbacks,
         user,
         project,
         project_membership_notification_service,
@@ -351,7 +356,10 @@ class TestProjectAddUsersFlow:
         session["project_user_add_selection"] = {f"project:{project.id}": [selected_user.id]}
         session.save()
 
-        with patch("projects.views.sentry_sdk.capture_exception") as capture_exception:
+        with (
+            patch("projects.mixins.sentry_sdk.capture_exception") as capture_exception,
+            django_capture_on_commit_callbacks(execute=True),
+        ):
             response = client.post(
                 reverse("projects:project_users_add_confirm", args=[project.uuid])
             )
@@ -368,6 +376,7 @@ class TestProjectAddUsersFlow:
     def test_confirm_adds_users_captures_misconfigured_notification_service(
         self,
         client,
+        django_capture_on_commit_callbacks,
         user,
         project,
     ):
@@ -384,6 +393,7 @@ class TestProjectAddUsersFlow:
                 side_effect=ImproperlyConfigured("Missing Notify settings"),
             ),
             patch("projects.mixins.sentry_sdk.capture_exception") as capture_exception,
+            django_capture_on_commit_callbacks(execute=True),
         ):
             response = client.post(
                 reverse("projects:project_users_add_confirm", args=[project.uuid])

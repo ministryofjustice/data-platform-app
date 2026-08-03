@@ -41,3 +41,5 @@ STORAGES["staticfiles"] = {  # type: ignore[index]  # noqa: F405
 }
 
 FIELD_ENCRYPTION_KEYS = [Fernet.generate_key().decode()]
+
+APP_ENV = "test"

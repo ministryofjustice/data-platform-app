@@ -264,7 +264,7 @@ class ProjectCreateConfirmView(
             if owner_user_id not in selected_user_ids:
                 selected_user_ids.append(owner_user_id)
 
-            created_members = User.objects.filter(id__in=selected_user_ids).order_by("email")
+            created_members = list(User.objects.filter(id__in=selected_user_ids).order_by("email"))
 
             bulk_create_with_history(
                 [
@@ -280,10 +280,12 @@ class ProjectCreateConfirmView(
                 default_user=self.request.user,
             )
 
-            self.send_member_added_notifications(
-                project=project,
-                members=created_members,
-                added_by=self.request.user,
+            transaction.on_commit(
+                lambda: self.send_member_added_notifications(
+                    project=project,
+                    members=created_members,
+                    added_by=self.request.user,
+                )
             )
 
         clear_project_create_session(self.request)
@@ -411,7 +413,7 @@ class ProjectAddUsersConfirmView(
         create_for_user_ids = [
             user_id for user_id in selected_user_ids if user_id not in existing_user_ids
         ]
-        created_members = User.objects.filter(id__in=create_for_user_ids).order_by("email")
+        created_members = list(User.objects.filter(id__in=create_for_user_ids).order_by("email"))
 
         with transaction.atomic():
             bulk_create_with_history(
@@ -428,10 +430,12 @@ class ProjectAddUsersConfirmView(
                 default_user=request.user,
             )
 
-            self.send_member_added_notifications(
-                project=project,
-                members=created_members,
-                added_by=request.user,
+            transaction.on_commit(
+                lambda: self.send_member_added_notifications(
+                    project=project,
+                    members=created_members,
+                    added_by=request.user,
+                )
             )
 
         self.clear_selected_user_ids()
@@ -467,6 +471,7 @@ class ProjectRemoveUserView(ProjectMembershipNotificationMixin, DeleteView):
     def form_valid(self, form):
         membership = self.get_object()
         user_name = membership.user.full_name
+        response = super().form_valid(form)
         self.send_member_removed_notification(
             project=membership.project,
             member=membership.user,
@@ -475,5 +480,4 @@ class ProjectRemoveUserView(ProjectMembershipNotificationMixin, DeleteView):
         self.request.session["success_message"] = {
             "heading": f"You have removed {user_name} from this project",
         }
-        response = super().form_valid(form)
         return response

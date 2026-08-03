@@ -116,7 +116,7 @@ class TestProjectMembershipNotificationService:
                 "project_name": "My Project",
                 "project_description": project.description,
                 "added_by_email": "actor@example.com",
-                "project_url": f"http://localhost:8000{project.get_absolute_url()}",
+                "project_url": f"https://test.data-platform.service.justice.gov.uk{project.get_absolute_url()}",
             },
         )
 

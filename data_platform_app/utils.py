@@ -3,6 +3,7 @@ import os
 
 def build_base_url(app_env: str) -> str:
     """Return the base URL for the app environment."""
+    app_env = app_env.strip().casefold()
     if app_env == "local":
         return "http://localhost:8000"
 
