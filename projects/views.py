@@ -466,6 +466,9 @@ class ProjectRemoveUserView(ProjectMembershipNotificationMixin, DeleteView):
         )
 
     def get_success_url(self):
+        if self.object.user == self.request.user:
+            return reverse("projects:projects_list")
+
         return reverse("projects:project_users", kwargs={"uuid": self.kwargs["uuid"]})
 
     def form_valid(self, form):

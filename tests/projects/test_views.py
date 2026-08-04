@@ -151,13 +151,42 @@ class TestProjectRemoveUserView:
 
         assert response.status_code == 404
 
-    def test_remove_user(self, client, user, project, project_membership_notification_service):
+    def test_remove_other_user_redirects_to_project_users(
+        self, client, user, project, project_membership_notification_service
+    ):
+        other_user = baker.make("users.User", first_name="Jane", last_name="Doe")
+        baker.make(
+            "projects.ProjectUserPermissions",
+            project=project,
+            user=other_user,
+            role="member",
+        )
         client.force_login(user)
+
+        response = client.post(
+            reverse("projects:project_user_remove", args=[project.uuid, other_user.id])
+        )
+
+        assert response.status_code == 302
+        assert response.url == reverse("projects:project_users", args=[project.uuid])
+        assert not ProjectUserPermissions.objects.filter(project=project, user=other_user).exists()
+        project_membership_notification_service.send_member_removed_email.assert_called_once_with(
+            project=project,
+            member=other_user,
+            removed_by=user,
+        )
+
+    def test_remove_self_redirects_to_projects_list(
+        self, client, user, project, project_membership_notification_service
+    ):
+        client.force_login(user)
+
         response = client.post(
             reverse("projects:project_user_remove", args=[project.uuid, user.id])
         )
 
         assert response.status_code == 302
+        assert response.url == reverse("projects:projects_list")
         assert not ProjectUserPermissions.objects.filter(project=project, user=user).exists()
         project_membership_notification_service.send_member_removed_email.assert_called_once_with(
             project=project,
@@ -183,7 +212,7 @@ class TestProjectRemoveUserView:
             )
 
         assert response.status_code == 302
-        assert response.url == reverse("projects:project_users", args=[project.uuid])
+        assert response.url == reverse("projects:projects_list")
         assert not ProjectUserPermissions.objects.filter(project=project, user=user).exists()
         capture_exception.assert_called_once()
 
