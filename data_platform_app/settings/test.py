@@ -31,9 +31,15 @@ AI_GATEWAY_URL = "http://ai-gateway.test"
 AI_GATEWAY_MASTER_KEY = "sk-test-master-key"  # gitleaks:allow
 DEFAULT_ACCESS_GROUP_NAME = "generally-available-models"
 
+NOTIFY_API_KEY = ""
+NOTIFY_PROJECT_MEMBER_ADDED_TEMPLATE_ID = ""
+NOTIFY_PROJECT_MEMBER_REMOVED_TEMPLATE_ID = ""
+
 # Use non-manifest static storage in tests so static lookups do not require collectstatic.
 STORAGES["staticfiles"] = {  # type: ignore[index]  # noqa: F405
     "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
 }
 
 FIELD_ENCRYPTION_KEYS = [Fernet.generate_key().decode()]
+
+APP_ENV = "test"

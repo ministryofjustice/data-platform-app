@@ -1,9 +1,13 @@
+from unittest.mock import patch
+
+from django.core.exceptions import ImproperlyConfigured
 from django.urls import reverse
 from model_bakery import baker
 from pytest_django.asserts import assertContains, assertInHTML
 
 from ai_gateway.exceptions import AIGatewayAPIError
 from projects.models import Project, ProjectUserPermissions
+from projects.services import ProjectNotificationError
 
 
 class TestDetailView:
@@ -147,7 +151,7 @@ class TestProjectRemoveUserView:
 
         assert response.status_code == 404
 
-    def test_remove_user(self, client, user, project):
+    def test_remove_user(self, client, user, project, project_membership_notification_service):
         client.force_login(user)
         response = client.post(
             reverse("projects:project_user_remove", args=[project.uuid, user.id])
@@ -155,6 +159,33 @@ class TestProjectRemoveUserView:
 
         assert response.status_code == 302
         assert not ProjectUserPermissions.objects.filter(project=project, user=user).exists()
+        project_membership_notification_service.send_member_removed_email.assert_called_once_with(
+            project=project,
+            member=user,
+            removed_by=user,
+        )
+
+    def test_remove_user_continues_when_notification_fails(
+        self,
+        client,
+        user,
+        project,
+        project_membership_notification_service,
+    ):
+        project_membership_notification_service.send_member_removed_email.side_effect = (
+            ProjectNotificationError("Notify failed")
+        )
+
+        client.force_login(user)
+        with patch("projects.views.sentry_sdk.capture_exception") as capture_exception:
+            response = client.post(
+                reverse("projects:project_user_remove", args=[project.uuid, user.id])
+            )
+
+        assert response.status_code == 302
+        assert response.url == reverse("projects:project_users", args=[project.uuid])
+        assert not ProjectUserPermissions.objects.filter(project=project, user=user).exists()
+        capture_exception.assert_called_once()
 
 
 class TestProjectAddUsersFlow:
@@ -274,7 +305,14 @@ class TestProjectAddUsersFlow:
         assert "projects/user_add_confirm.html" in [t.name for t in response.templates]
         assert selected_user.email in response.content.decode()
 
-    def test_confirm_adds_users_to_project(self, client, user, project):
+    def test_confirm_adds_users_to_project(
+        self,
+        client,
+        django_capture_on_commit_callbacks,
+        user,
+        project,
+        project_membership_notification_service,
+    ):
 
         selected_user = baker.make("users.User", email="member.four@example.com")
         client.force_login(user)
@@ -282,7 +320,10 @@ class TestProjectAddUsersFlow:
         session["project_user_add_selection"] = {f"project:{project.id}": [selected_user.id]}
         session.save()
 
-        response = client.post(reverse("projects:project_users_add_confirm", args=[project.uuid]))
+        with django_capture_on_commit_callbacks(execute=True):
+            response = client.post(
+                reverse("projects:project_users_add_confirm", args=[project.uuid])
+            )
 
         assert response.status_code == 302
         assert response.url == reverse("projects:project_users", args=[project.uuid])
@@ -291,6 +332,81 @@ class TestProjectAddUsersFlow:
             user=selected_user,
             role="admin",
         ).exists()
+        project_membership_notification_service.send_member_added_email.assert_called_once_with(
+            project=project,
+            member=selected_user,
+            added_by=user,
+        )
+
+    def test_confirm_adds_users_continues_when_notification_fails(
+        self,
+        client,
+        django_capture_on_commit_callbacks,
+        user,
+        project,
+        project_membership_notification_service,
+    ):
+
+        selected_user = baker.make("users.User", email="member.notify.fail@example.com")
+        project_membership_notification_service.send_member_added_email.side_effect = (
+            ProjectNotificationError("Notify failed")
+        )
+        client.force_login(user)
+        session = client.session
+        session["project_user_add_selection"] = {f"project:{project.id}": [selected_user.id]}
+        session.save()
+
+        with (
+            patch("projects.mixins.sentry_sdk.capture_exception") as capture_exception,
+            django_capture_on_commit_callbacks(execute=True),
+        ):
+            response = client.post(
+                reverse("projects:project_users_add_confirm", args=[project.uuid])
+            )
+
+        assert response.status_code == 302
+        assert response.url == reverse("projects:project_users", args=[project.uuid])
+        assert ProjectUserPermissions.objects.filter(
+            project=project,
+            user=selected_user,
+            role="admin",
+        ).exists()
+        capture_exception.assert_called_once()
+
+    def test_confirm_adds_users_captures_misconfigured_notification_service(
+        self,
+        client,
+        django_capture_on_commit_callbacks,
+        user,
+        project,
+    ):
+
+        selected_user = baker.make("users.User", email="member.config.fail@example.com")
+        client.force_login(user)
+        session = client.session
+        session["project_user_add_selection"] = {f"project:{project.id}": [selected_user.id]}
+        session.save()
+
+        with (
+            patch(
+                "projects.mixins.ProjectMembershipNotificationService.from_settings",
+                side_effect=ImproperlyConfigured("Missing Notify settings"),
+            ),
+            patch("projects.mixins.sentry_sdk.capture_exception") as capture_exception,
+            django_capture_on_commit_callbacks(execute=True),
+        ):
+            response = client.post(
+                reverse("projects:project_users_add_confirm", args=[project.uuid])
+            )
+
+        assert response.status_code == 302
+        assert response.url == reverse("projects:project_users", args=[project.uuid])
+        assert ProjectUserPermissions.objects.filter(
+            project=project,
+            user=selected_user,
+            role="admin",
+        ).exists()
+        capture_exception.assert_called_once()
 
     def test_confirm_adds_users_records_membership_history_with_user(self, client, user, project):
         """Regression: bulk_create_with_history must record history_user for added memberships."""

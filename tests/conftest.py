@@ -4,6 +4,7 @@ import pytest
 from model_bakery import baker
 
 from ai_gateway.services import KeyService
+from projects.services import ProjectMembershipNotificationService
 
 
 @pytest.fixture
@@ -65,4 +66,15 @@ def key_service():
     service.get_models_for_key.return_value = ["gpt-4"]
 
     with patch("ai_gateway.services.KeyService.from_settings", return_value=service):
+        yield service
+
+
+@pytest.fixture
+def project_membership_notification_service():
+    """Patch project notification service construction with an autospecced instance."""
+    service = create_autospec(ProjectMembershipNotificationService, instance=True)
+
+    with patch(
+        "projects.mixins.ProjectMembershipNotificationService.from_settings", return_value=service
+    ):
         yield service

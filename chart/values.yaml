@@ -112,6 +112,21 @@ app:
         secretKeyRef:
           name: app-secrets
           key: ai-gateway-master-key
+    - name: NOTIFY_API_KEY
+      valueFrom:
+        secretKeyRef:
+          name: app-secrets
+          key: notify-api-key
+    - name: NOTIFY_PROJECT_MEMBER_ADDED_TEMPLATE_ID
+      valueFrom:
+        secretKeyRef:
+          name: app-secrets
+          key: notify-project-member-added-template-id
+    - name: NOTIFY_PROJECT_MEMBER_REMOVED_TEMPLATE_ID
+      valueFrom:
+        secretKeyRef:
+          name: app-secrets
+          key: notify-project-member-removed-template-id
     # override per environment in modernisation-platform-environments
     - name: GOOGLE_ANALYTICS_ID
       value: ""
