@@ -39,10 +39,17 @@ class ProjectScopedMixin:
         return context
 
 
+class UsageView(ProjectScopedMixin, ProjectLayoutContextMixin, TemplateView):
+    template_name = "ai_gateway/usage.html"
+    active_project_section = "ai_gateway"
+    active_ai_gateway_section = "usage"
+
+
 class KeyListView(ProjectScopedMixin, ProjectLayoutContextMixin, ListView):
     template_name = "ai_gateway/key-list.html"
     context_object_name = "keys"
     active_project_section = "ai_gateway"
+    active_ai_gateway_section = "keys"
 
     def get_queryset(self):
         return self.project.ai_gateway_keys.order_by("-created")
