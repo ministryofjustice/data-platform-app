@@ -107,8 +107,8 @@ class KeyCreateView(ProjectScopedMixin, AvailableModelsMixin, FormView):
 
         Selection is stateless: the currently selected model ids are read straight
         from the submitted ``models`` values. Selected models that fall outside the
-        visible slice are rendered as hidden inputs by the template so they survive
-        filtering and paging without a session.
+        current filtered result set are rendered as hidden inputs by the template so
+        they survive filter changes without a session.
         """
         params = self.request.POST if self.request.method == "POST" else self.request.GET
 
@@ -123,19 +123,20 @@ class KeyCreateView(ProjectScopedMixin, AvailableModelsMixin, FormView):
             provider=provider,
             family=family,
         )
-        visible_models = matches if expanded else matches[:VISIBLE_LIMIT]
-        visible_names = {model["model_name"] for model in visible_models}
+        matching_names = {model["model_name"] for model in matches}
+        visible_count = len(matches) if expanded else min(len(matches), VISIBLE_LIMIT)
 
         hidden_selected_models = [
             model["model_name"]
             for model in self.available_models
-            if model["model_name"] in selected_models and model["model_name"] not in visible_names
+            if model["model_name"] in selected_models and model["model_name"] not in matching_names
         ]
 
         return {
             "model_providers": self.model_providers,
             "model_families": self.model_families,
-            "visible_models": visible_models,
+            "matching_models": matches,
+            "collapsed_limit": VISIBLE_LIMIT,
             "hidden_selected_models": hidden_selected_models,
             "selected_models": selected_models,
             "filter_search": search,
@@ -143,8 +144,8 @@ class KeyCreateView(ProjectScopedMixin, AvailableModelsMixin, FormView):
             "filter_family": family,
             "expanded": expanded,
             "match_count": len(matches),
-            "visible_count": len(visible_models),
-            "has_more": len(matches) > len(visible_models),
+            "visible_count": visible_count,
+            "has_more": len(matches) > visible_count,
         }
 
     def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:

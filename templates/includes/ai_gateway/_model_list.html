@@ -24,8 +24,9 @@
       </tr>
     </thead>
     <tbody class="govuk-table__body">
-      {% for model in visible_models %}
-        <tr class="govuk-table__row">
+      {% for model in matching_models %}
+        <tr class="govuk-table__row"
+            {% if not expanded and forloop.counter > collapsed_limit %}hidden{% endif %}>
           <td class="govuk-table__cell">
             <div class="govuk-checkboxes govuk-checkboxes--small">
               <div class="govuk-checkboxes__item">

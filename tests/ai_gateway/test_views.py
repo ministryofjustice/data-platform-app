@@ -12,6 +12,7 @@ from pytest_django.asserts import (
 )
 
 from ai_gateway.exceptions import AIGatewayAPIError
+from ai_gateway.filtering import VISIBLE_LIMIT
 from ai_gateway.models import Key
 
 PLAINTEXT_KEY = "sk-plaintext-key-value-123456"
@@ -204,7 +205,12 @@ class TestKeyCreateViewFiltering:
         )
         assertContains(response, 'value="claude-3"')
 
-    def test_show_more_reveals_all_matches(self, client, user, project, key_service):
+    def test_selection_inside_filter_but_outside_collapsed_limit_uses_checkbox_only(
+        self, client, user, project, key_service
+    ):
+        total_models = VISIBLE_LIMIT + 2
+        selected_model = f"model-{VISIBLE_LIMIT + 1}"
+
         key_service.list_default_models.return_value = [
             {
                 "model_name": f"model-{index}",
@@ -214,7 +220,35 @@ class TestKeyCreateViewFiltering:
                 "input_cost_per_million": 1.0,
                 "output_cost_per_million": 2.0,
             }
-            for index in range(12)
+            for index in range(total_models)
+        ]
+        client.force_login(user)
+
+        response = client.get(
+            reverse("ai_gateway:key_create", args=[project.uuid]),
+            {"models": [selected_model]},
+        )
+
+        assertContains(response, f'value="{selected_model}"', count=1)
+        assertNotContains(
+            response,
+            f'<input type="hidden" name="models" value="{selected_model}">',
+            html=True,
+        )
+
+    def test_show_more_reveals_all_matches(self, client, user, project, key_service):
+        total_models = VISIBLE_LIMIT + 2
+
+        key_service.list_default_models.return_value = [
+            {
+                "model_name": f"model-{index}",
+                "display_name": f"Model {index}",
+                "family": "Test",
+                "provider": "TestProvider",
+                "input_cost_per_million": 1.0,
+                "output_cost_per_million": 2.0,
+            }
+            for index in range(total_models)
         ]
         client.force_login(user)
 
@@ -222,14 +256,17 @@ class TestKeyCreateViewFiltering:
 
         assertContains(collapsed, "Show all")
         assertContains(collapsed, 'value="model-0"')
-        assertNotContains(collapsed, 'value="model-11"')
+        assertContains(collapsed, f'value="model-{VISIBLE_LIMIT}"')
+        assertContains(collapsed, f'value="model-{total_models - 1}"')
+        assertContains(collapsed, f"Showing {VISIBLE_LIMIT} of {total_models} models")
 
         expanded = client.get(
             reverse("ai_gateway:key_create", args=[project.uuid]),
             {"expanded": "1"},
         )
 
-        assertContains(expanded, 'value="model-11"')
+        assertContains(expanded, f'value="model-{total_models - 1}"')
+        assertContains(expanded, f"Showing {total_models} of {total_models} models")
         assertNotContains(expanded, "Show all")
 
 
