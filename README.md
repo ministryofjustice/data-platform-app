@@ -114,6 +114,30 @@ Admin access is granted manually. To do this locally, sign in via Entra once to
 create your `User`, then promote it with `make manage shell`. In real
 environments you will need to speak to an existing admin.
 
+## Feature flags
+
+This application uses environment-backed feature flags, so features can be turned on or off per
+environment without code changes.
+
+Feature flags are read from your `.env` file when Django starts:
+
+| Variable                   | Feature enabled when `true`            |
+| -------------------------- | -------------------------------------- |
+| `FEATURE_AI_GATEWAY_COSTS` | AI Gateway costs views and related UI. |
+
+Default behaviour:
+
+- If a variable is missing, it defaults to `False` (feature disabled).
+- A flag is enabled only when its value is exactly `true` (case-insensitive).
+
+Example `.env` configuration:
+
+```bash
+FEATURE_AI_GATEWAY_COSTS=true
+```
+
+After updating your `.env`, restart the app (`make run`) so the new flag values are loaded.
+
 ## GOV.UK Notify integration
 
 GOV UK Notify is used to send emails. Set these environment variables in your `.env`:

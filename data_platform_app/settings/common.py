@@ -201,5 +201,6 @@ FIELD_ENCRYPTION_KEYS = [
 ]
 
 FEATURE_FLAGS = {
-    "AI_GATEWAY_COSTS": False,
+    "AI_GATEWAY_COSTS": os.environ.get("FEATURE_AI_GATEWAY_COSTS", "False").strip().lower()
+    == "true",
 }
