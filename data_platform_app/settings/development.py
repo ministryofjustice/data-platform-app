@@ -8,3 +8,8 @@ ALLOWED_HOSTS += [  # noqa: F405
     "test.data-platform.service.justice.gov.uk",
     ".elb.amazonaws.com",
 ]
+
+FEATURE_FLAGS = {
+    **FEATURE_FLAGS,  # noqa: F405
+    "AI_GATEWAY_COSTS": True,
+}
