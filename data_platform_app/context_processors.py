@@ -49,3 +49,17 @@ def google_analytics(request):
     return {
         "google_analytics_id": settings.GOOGLE_ANALYTICS_ID,
     }
+
+
+def feature_flags(request):
+    """
+    Return the feature flags for the current request.
+
+    Example usage in a template:
+    {% if FEATURE_FLAGS.EXAMPLE_FEATURE %}
+        <a href="{% url 'example_view' %}">Example</a>
+    {% endif %}
+    """
+    return {
+        "FEATURE_FLAGS": settings.FEATURE_FLAGS,
+    }

@@ -80,6 +80,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "data_platform_app.context_processors.service_navigation",
                 "data_platform_app.context_processors.google_analytics",
+                "data_platform_app.context_processors.feature_flags",
             ],
         },
     },
@@ -198,3 +199,8 @@ NOTIFY_PROJECT_MEMBER_REMOVED_TEMPLATE_ID = os.environ.get(
 FIELD_ENCRYPTION_KEYS = [
     key.strip() for key in os.environ.get("FIELD_ENCRYPTION_KEY", "").split(",") if key.strip()
 ]
+
+FEATURE_FLAGS = {
+    "AI_GATEWAY_COSTS": os.environ.get("FEATURE_AI_GATEWAY_COSTS", "False").strip().lower()
+    == "true",
+}

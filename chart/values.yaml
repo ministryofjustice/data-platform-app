@@ -133,6 +133,8 @@ app:
     # avoid writing __pycache__ in read-only code paths
     - name: PYTHONDONTWRITEBYTECODE
       value: "1"
+    - name: FEATURE_AI_GATEWAY_COSTS
+      value: "False"
   port: 8000
   # Probes hit the app's /healthcheck/ endpoint
   livenessProbe:
