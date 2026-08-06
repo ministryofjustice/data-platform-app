@@ -3,6 +3,7 @@ import pytest
 from data_platform_app.context_processors import (
     _is_on_app_route,
     _service_navigation_items_for_request,
+    feature_flags,
     service_navigation,
 )
 
@@ -164,3 +165,16 @@ class TestServiceNavigationContextProcessor:
         context = service_navigation(request)
 
         assert context["on_app_route"] is expected
+
+
+class TestFeatureFlagsContextProcessor:
+    """Tests for the feature_flags context processor."""
+
+    def test_returns_feature_flags(self, rf, settings):
+        settings.FEATURE_FLAGS = {"EXAMPLE_FEATURE": True}
+        request = rf.get("/")
+
+        context = feature_flags(request)
+
+        assert "FEATURE_FLAGS" in context
+        assert context["FEATURE_FLAGS"]["EXAMPLE_FEATURE"] is True
