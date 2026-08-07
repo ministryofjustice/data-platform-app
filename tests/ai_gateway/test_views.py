@@ -25,11 +25,17 @@ class TestKeyListView:
             f'<a href="{reverse("ai_gateway:key_list", args=[project.uuid])}" '
             'aria-current="location">AI Gateway</a>'
         )
+        current_api_keys_link = (
+            f'<a href="{reverse("ai_gateway:key_list", args=[project.uuid])}" '
+            'aria-current="location">API keys</a>'
+        )
 
         assert response.status_code == 200
         assert "ai_gateway/key-list.html" in [t.name for t in response.templates]
-        assertContains(response, 'aria-current="location"', count=1)
+        # One for the "AI Gateway" section itself, one for the "API keys" sub-item.
+        assertContains(response, 'aria-current="location"', count=2)
         assertInHTML(current_ai_gateway_link, response.content.decode())
+        assertInHTML(current_api_keys_link, response.content.decode())
 
     def test_lists_existing_keys(self, client, user, project, key):
         client.force_login(user)
@@ -524,7 +530,18 @@ class TestUsageView:
 
         assert response.status_code == 200
         assert "ai_gateway/usage.html" in [t.name for t in response.templates]
-        assertContains(response, "AI Gateway Usage")
+        assertContains(response, "Usage")
+        assertContains(
+            response,
+            "See the AI spend for this project, including spend per API key and spend per model.",
+        )
+
+    def test_renders_back_link_to_projects(self, client, user, project):
+        client.force_login(user)
+        response = client.get(reverse("ai_gateway:usage", args=[project.uuid]))
+
+        assertContains(response, "Back to projects")
+        assertContains(response, f'href="{reverse("projects:projects_list")}"')
 
     def test_renders_sidebar_navigation_links(self, client, user, project):
         client.force_login(user)
@@ -532,12 +549,102 @@ class TestUsageView:
 
         usage_url = reverse("ai_gateway:usage", args=[project.uuid])
         keys_url = reverse("ai_gateway:key_list", args=[project.uuid])
+        current_usage_link = f'<a href="{usage_url}" aria-current="location">Usage</a>'
 
         assertContains(response, f'href="{usage_url}"')
         assertContains(response, f'href="{keys_url}"')
+        # Both the "AI Gateway" section and the "Usage" sub-item should be marked current.
+        assertContains(response, 'aria-current="location"', count=2)
+        assertInHTML(current_usage_link, response.content.decode())
+
+    def test_renders_usage_tabs_with_overview_selected(self, client, user, project):
+        client.force_login(user)
+        response = client.get(reverse("ai_gateway:usage", args=[project.uuid]))
+
+        by_key_url = reverse("ai_gateway:usage_by_key", args=[project.uuid])
+        by_model_url = reverse("ai_gateway:usage_by_model", args=[project.uuid])
+        overview_url = reverse("ai_gateway:usage", args=[project.uuid])
+        current_overview_tab = (
+            f'<a class="govuk-tabs__tab" href="{overview_url}" aria-current="page">Overview</a>'
+        )
+
+        assertContains(response, f'href="{by_key_url}"')
+        assertContains(response, f'href="{by_model_url}"')
+        assertInHTML(current_overview_tab, response.content.decode())
+        assertNotContains(response, 'aria-current="page">Spend per API key')
+        assertNotContains(response, 'aria-current="page">Spend per model')
 
     def test_non_member_gets_404(self, client, non_project_user, project):
         client.force_login(non_project_user)
         response = client.get(reverse("ai_gateway:usage", args=[project.uuid]))
+
+        assert response.status_code == 404
+
+
+class TestUsageByAPIKeyView:
+    def test_renders_for_member(self, client, user, project):
+        client.force_login(user)
+        response = client.get(reverse("ai_gateway:usage_by_key", args=[project.uuid]))
+
+        assert response.status_code == 200
+        assert "ai_gateway/usage-by-key.html" in [t.name for t in response.templates]
+        assertContains(response, "Spend per API key")
+
+    def test_renders_usage_tabs_with_api_keys_selected(self, client, user, project):
+        client.force_login(user)
+        response = client.get(reverse("ai_gateway:usage_by_key", args=[project.uuid]))
+
+        current_tab = (
+            '<a class="govuk-tabs__tab" '
+            f'href="{reverse("ai_gateway:usage_by_key", args=[project.uuid])}" '
+            'aria-current="page">Spend per API key</a>'
+        )
+
+        assertInHTML(current_tab, response.content.decode())
+        assertNotContains(response, 'aria-current="page">Overview')
+        assertNotContains(response, 'aria-current="page">Spend per model')
+
+    def test_renders_sidebar_with_usage_current(self, client, user, project):
+        client.force_login(user)
+        response = client.get(reverse("ai_gateway:usage_by_key", args=[project.uuid]))
+
+        usage_url = reverse("ai_gateway:usage", args=[project.uuid])
+        current_usage_link = f'<a href="{usage_url}" aria-current="location">Usage</a>'
+
+        assertInHTML(current_usage_link, response.content.decode())
+
+    def test_non_member_gets_404(self, client, non_project_user, project):
+        client.force_login(non_project_user)
+        response = client.get(reverse("ai_gateway:usage_by_key", args=[project.uuid]))
+
+        assert response.status_code == 404
+
+
+class TestUsageByModelView:
+    def test_renders_for_member(self, client, user, project):
+        client.force_login(user)
+        response = client.get(reverse("ai_gateway:usage_by_model", args=[project.uuid]))
+
+        assert response.status_code == 200
+        assert "ai_gateway/usage-by-model.html" in [t.name for t in response.templates]
+        assertContains(response, "Spend per model")
+
+    def test_renders_usage_tabs_with_models_selected(self, client, user, project):
+        client.force_login(user)
+        response = client.get(reverse("ai_gateway:usage_by_model", args=[project.uuid]))
+
+        current_tab = (
+            '<a class="govuk-tabs__tab" '
+            f'href="{reverse("ai_gateway:usage_by_model", args=[project.uuid])}" '
+            'aria-current="page">Spend per model</a>'
+        )
+
+        assertInHTML(current_tab, response.content.decode())
+        assertNotContains(response, 'aria-current="page">Overview')
+        assertNotContains(response, 'aria-current="page">Spend per API key')
+
+    def test_non_member_gets_404(self, client, non_project_user, project):
+        client.force_login(non_project_user)
+        response = client.get(reverse("ai_gateway:usage_by_model", args=[project.uuid]))
 
         assert response.status_code == 404

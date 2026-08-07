@@ -7,6 +7,8 @@ from ai_gateway.views import (
     KeyListView,
     KeyRegenerateView,
     KeyRevokeView,
+    UsageByAPIKeyView,
+    UsageByModelView,
     UsageView,
 )
 
@@ -14,6 +16,8 @@ app_name = "ai_gateway"
 
 urlpatterns = [
     path("usage/", UsageView.as_view(), name="usage"),
+    path("usage/api-keys/", UsageByAPIKeyView.as_view(), name="usage_by_key"),
+    path("usage/models/", UsageByModelView.as_view(), name="usage_by_model"),
     path("keys/", KeyListView.as_view(), name="key_list"),
     path("keys/create/", KeyCreateView.as_view(), name="key_create"),
     path("keys/create/confirm/", KeyCreateConfirmView.as_view(), name="key_create_confirm"),

@@ -1,6 +1,6 @@
 {% extends "base/project_layout.html" %}
 {% block title %}
-  Usage - AI Gateway - {{ project.name }} - Justice Data Platform | Ministry of Justice
+  Spend per API key - AI Gateway - {{ project.name }} - Justice Data Platform | Ministry of Justice
 {% endblock title %}
 {% block back_link %}
   <a href="{% url 'projects:projects_list' %}" class="govuk-back-link">Back to projects</a>
@@ -9,7 +9,7 @@
   {% include "includes/ai_gateway/_usage_intro.html" %}
   {% include "includes/ai_gateway/_usage_tabs.html" with project=project active_usage_tab=active_usage_tab only %}
   <div class="govuk-tabs__panel">
-    <h2 class="govuk-heading-m">Project spend overview</h2>
-    <p class="govuk-body">Overview content coming soon.</p>
+    <h2 class="govuk-heading-m">Spend per API key</h2>
+    <p class="govuk-body">Spend per API key content coming soon.</p>
   </div>
 {% endblock project_main_content %}

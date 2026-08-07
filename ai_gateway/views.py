@@ -39,10 +39,47 @@ class ProjectScopedMixin:
         return context
 
 
-class UsageView(ProjectScopedMixin, ProjectLayoutContextMixin, TemplateView):
+class UsageTabContextMixin:
+    """Adds the currently selected Usage tab to the template context.
+
+    The Usage section is split across three separate pages (Overview, Spend per API
+    key, Spend per model) that are styled to look like GOV.UK tabs but are plain links,
+    since the govuk-tabs JavaScript expects same-page anchor panels rather than
+    separate URLs. ``active_usage_tab`` drives which tab is marked as current in
+    ``includes/ai_gateway/_usage_tabs.html``.
+    """
+
+    active_usage_tab = None
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["active_usage_tab"] = self.active_usage_tab
+        return context
+
+
+class UsageView(ProjectScopedMixin, ProjectLayoutContextMixin, UsageTabContextMixin, TemplateView):
     template_name = "ai_gateway/usage.html"
     active_project_section = "ai_gateway"
     active_ai_gateway_section = "usage"
+    active_usage_tab = "overview"
+
+
+class UsageByAPIKeyView(
+    ProjectScopedMixin, ProjectLayoutContextMixin, UsageTabContextMixin, TemplateView
+):
+    template_name = "ai_gateway/usage-by-key.html"
+    active_project_section = "ai_gateway"
+    active_ai_gateway_section = "usage"
+    active_usage_tab = "api_keys"
+
+
+class UsageByModelView(
+    ProjectScopedMixin, ProjectLayoutContextMixin, UsageTabContextMixin, TemplateView
+):
+    template_name = "ai_gateway/usage-by-model.html"
+    active_project_section = "ai_gateway"
+    active_ai_gateway_section = "usage"
+    active_usage_tab = "models"
 
 
 class KeyListView(ProjectScopedMixin, ProjectLayoutContextMixin, ListView):
