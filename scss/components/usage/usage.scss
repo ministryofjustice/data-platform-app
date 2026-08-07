@@ -1,0 +1,88 @@
+// Styling for the AI Gateway Usage pages (templates/ai_gateway/usage*.html).
+@use "node_modules/govuk-frontend/dist/govuk" as *;
+
+
+// The Usage tabs are plain links styled like govuk-tabs, not the govuk-tabs JS
+// component - see includes/ai_gateway/_usage_tabs.html for why. govuk-tabs__title is
+// only needed for that component's own no-JS fallback, so it's hidden here since every
+// tab here is already a real, working link.
+.app-usage-tabs {
+  .govuk-tabs__title {
+    display: none;
+  }
+}
+
+.app-usage-overview-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: govuk-spacing(4);
+  margin-bottom: govuk-spacing(4);
+}
+
+.app-usage-summary-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: govuk-spacing(4);
+  margin-bottom: govuk-spacing(4);
+}
+
+.app-usage-summary-card {
+  flex: 1 1 200px;
+  border: 1px solid govuk-colour("black", $variant: "tint-80");
+  padding: govuk-spacing(3);
+
+  &__value {
+    @include govuk-font($size: 27, $weight: bold);
+    margin: 0;
+  }
+
+  &__value-suffix {
+    @include govuk-font($size: 19, $weight: regular);
+    color: govuk-colour("black", $variant: "tint-25");
+  }
+}
+
+.app-budget-warning {
+  border-left: govuk-spacing(2) solid govuk-colour("purple");
+  background-color: govuk-colour("purple", $variant: "tint-95" );
+  padding: govuk-spacing(3) govuk-spacing(4);
+  margin-bottom: govuk-spacing(6);
+}
+
+.app-view-toggle {
+  margin-bottom: govuk-spacing(3);
+}
+
+.app-usage-empty-state {
+  border: 1px solid govuk-colour("black", $variant: "tint-80");
+  padding: govuk-spacing(4);
+}
+
+.app-spend-chart {
+  width: 100%;
+  max-width: 700px;
+  height: auto;
+  margin-bottom: govuk-spacing(4);
+
+  &__gridline {
+    stroke: govuk-colour("black", $variant: "tint-80");
+    stroke-width: 1;
+  }
+
+  &__axis-label {
+    @include govuk-font($size: 16);
+    fill: govuk-colour("black", $variant: "tint-25");
+    text-anchor: start;
+  }
+
+  &__line {
+    stroke: govuk-colour("blue");
+    stroke-width: 2;
+  }
+
+  &__point {
+    fill: govuk-colour("blue");
+  }
+}

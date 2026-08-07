@@ -15,7 +15,7 @@ from django.views.generic.detail import SingleObjectMixin
 from ai_gateway.exceptions import AIGatewayError
 from ai_gateway.filtering import VISIBLE_LIMIT, filter_models
 from ai_gateway.forms import KeyCreateForm
-from ai_gateway.services import KeyService
+from ai_gateway.services import KeyService, parse_usage_month, usage_month_choices
 from projects.mixins import ProjectLayoutContextMixin
 from projects.models import Project
 
@@ -39,8 +39,8 @@ class ProjectScopedMixin:
         return context
 
 
-class UsageTabContextMixin:
-    """Adds the currently selected Usage tab to the template context.
+class UsageTabContextMixin(ProjectScopedMixin, ProjectLayoutContextMixin):
+    """Shared month-selection, error handling and active-tab context for the usage pages.
 
     The Usage section is split across three separate pages (Overview, Spend per API
     key, Spend per model) that are styled to look like GOV.UK tabs but are plain links,
@@ -49,37 +49,59 @@ class UsageTabContextMixin:
     ``includes/ai_gateway/_usage_tabs.html``.
     """
 
-    active_usage_tab = None
+    active_project_section = "ai_gateway"
+    active_ai_gateway_section = "usage"
+    active_usage_tab: str = ""
+
+    @cached_property
+    def selected_month(self):
+        return parse_usage_month(self.request.GET.get("month"))
+
+    def get_usage_data(self, service: KeyService) -> dict[str, Any]:
+        raise NotImplementedError
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["active_usage_tab"] = self.active_usage_tab
+        context["month_choices"] = usage_month_choices()
+        context["selected_month"] = self.selected_month
+
+        try:
+            with KeyService.from_settings() as service:
+                context.update(self.get_usage_data(service))
+        except AIGatewayError as error:
+            sentry_sdk.capture_exception(error)
+            context["usage_error"] = True
+            context["has_usage"] = False
+
         return context
 
 
-class UsageView(ProjectScopedMixin, ProjectLayoutContextMixin, UsageTabContextMixin, TemplateView):
+class UsageView(UsageTabContextMixin, TemplateView):
     template_name = "ai_gateway/usage.html"
-    active_project_section = "ai_gateway"
-    active_ai_gateway_section = "usage"
     active_usage_tab = "overview"
 
+    def get_usage_data(self, service: KeyService) -> dict[str, Any]:
+        data = service.get_usage_overview(self.project, self.selected_month)
+        if data.get("has_usage") and self.request.GET.get("daily") == "all":
+            data["daily_spend_preview"] = data["daily_spend"]
+        return data
 
-class UsageByAPIKeyView(
-    ProjectScopedMixin, ProjectLayoutContextMixin, UsageTabContextMixin, TemplateView
-):
+
+class UsageByAPIKeyView(UsageTabContextMixin, TemplateView):
     template_name = "ai_gateway/usage-by-key.html"
-    active_project_section = "ai_gateway"
-    active_ai_gateway_section = "usage"
     active_usage_tab = "api_keys"
 
+    def get_usage_data(self, service: KeyService) -> dict[str, Any]:
+        return service.get_usage_by_key(self.project, self.selected_month)
 
-class UsageByModelView(
-    ProjectScopedMixin, ProjectLayoutContextMixin, UsageTabContextMixin, TemplateView
-):
+
+class UsageByModelView(UsageTabContextMixin, TemplateView):
     template_name = "ai_gateway/usage-by-model.html"
-    active_project_section = "ai_gateway"
-    active_ai_gateway_section = "usage"
     active_usage_tab = "models"
+
+    def get_usage_data(self, service: KeyService) -> dict[str, Any]:
+        return service.get_usage_by_model(self.project, self.selected_month)
 
 
 class KeyListView(ProjectScopedMixin, ProjectLayoutContextMixin, ListView):

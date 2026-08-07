@@ -1,0 +1,56 @@
+{% load usage_extras %}
+{% comment %}
+  A labelled table of spend rows, with an optional chart shown via a "Show chart"
+  disclosure (the same progressive-disclosure pattern as "Show filter" on the key
+  creation page, so no extra JavaScript is needed to switch views).
+
+  Expects:
+    heading        - section heading text (e.g. "Daily spend")
+    heading_level  - "h3" or "h4", matching the surrounding heading structure
+    column_label   - label for the first table column (e.g. "Date", "API key")
+    rows           - list of {label, spend, url (optional)}
+    chart          - chart geometry from ai_gateway.charts.bar_chart, or None to hide the chart
+    chart_label    - accessible label describing what the chart shows
+    show_all       - optional {shown, total, url} to render a "Showing X of Y" note and link
+    empty_message  - message shown when rows is empty
+{% endcomment %}
+<div class="app-usage-spend-section">
+  {% if heading %}
+    <{{ heading_level }} class="govuk-heading-s govuk-!-margin-bottom-2">{{ heading }}</{{ heading_level }}>
+  {% endif %}
+  {% if rows %}
+    <table class="govuk-table">
+      <thead class="govuk-table__head">
+        <tr class="govuk-table__row">
+          <th scope="col" class="govuk-table__header">{{ column_label }}</th>
+          <th scope="col" class="govuk-table__header govuk-table__header--numeric">Spend</th>
+        </tr>
+      </thead>
+      <tbody class="govuk-table__body">
+        {% for row in rows %}
+          <tr class="govuk-table__row">
+            <td class="govuk-table__cell">
+              {% if row.url %}
+                <a class="govuk-link" href="{{ row.url }}">{{ row.label }}</a>
+              {% else %}
+                {{ row.label }}
+              {% endif %}
+            </td>
+            <td class="govuk-table__cell govuk-table__cell--numeric">{{ row.spend|usd }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% if show_all %}
+      <p class="govuk-body-s">
+        Showing {{ show_all.shown }} of {{ show_all.total }} days.
+        <a class="govuk-link" href="{{ show_all.url }}">Show all</a>
+      </p>
+    {% endif %}
+    {% if chart %}
+      {% include "includes/ai_gateway/_usage_chart.html" with chart=chart chart_label=chart_label only %}
+    {% endif %}
+  {% else %}
+    <p class="govuk-body">{{ empty_message|default:"No spend recorded for this period." }}</p>
+  {% endif %}
+</div>

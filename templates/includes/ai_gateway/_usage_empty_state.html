@@ -1,0 +1,16 @@
+{% comment %}
+  Empty state shown when a project has never created an AI Gateway key - and so has no
+  gateway team and can't have any recorded spend yet. Shared across all three Usage tabs.
+
+  Expects:
+    project - the current project
+{% endcomment %}
+<div class="app-usage-empty-state">
+  <h2 class="govuk-heading-m">No usage recorded</h2>
+  <p class="govuk-body">This project has no recorded AI Gateway spend.</p>
+  <p class="govuk-body govuk-!-margin-bottom-0">
+    To get started,
+    <a class="govuk-link"
+       href="{% url 'ai_gateway:key_create' project.uuid %}">create an API key</a>.
+  </p>
+</div>

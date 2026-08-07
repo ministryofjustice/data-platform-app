@@ -186,3 +186,26 @@ class AIGatewayClient:
     def key_info(self, key: str) -> dict[str, Any]:
         """Return metadata about the virtual key ``key``."""
         return self._request("GET", "/key/info", params={"key": key})
+
+    def team_info(self, team_id: str) -> dict[str, Any]:
+        """Return metadata about the team identified by ``team_id``, including its budget."""
+        return self._request("GET", "/team/info", params={"team_id": team_id})
+
+    def team_daily_activity(self, team_id: str, start_date: str, end_date: str) -> dict[str, Any]:
+        """Return per-day spend for ``team_id`` between ``start_date`` and ``end_date``.
+
+        Dates are ``YYYY-MM-DD`` strings, inclusive. The response contains a
+        ``results`` list with one entry per day, each carrying total ``metrics``
+        (including ``spend``) and a ``breakdown`` of spend by ``api_keys`` and
+        ``models`` for that day.
+        """
+        return self._request(
+            "GET",
+            "/team/daily/activity",
+            params={
+                "team_id": team_id,
+                "start_date": start_date,
+                "end_date": end_date,
+                "page_size": 31,
+            },
+        )

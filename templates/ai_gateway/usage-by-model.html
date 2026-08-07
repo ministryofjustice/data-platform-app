@@ -9,7 +9,21 @@
   {% include "includes/ai_gateway/_usage_intro.html" %}
   {% include "includes/ai_gateway/_usage_tabs.html" with project=project active_usage_tab=active_usage_tab only %}
   <div class="govuk-tabs__panel">
-    <h2 class="govuk-heading-m">Spend per model</h2>
-    <p class="govuk-body">Spend per model content coming soon.</p>
+    {% if usage_error %}
+      {% include "includes/error_message.html" with heading="Could not load usage data" message="Please try again later. If the problem persists, contact support." only %}
+    {% elif not has_usage %}
+      {% include "includes/ai_gateway/_usage_empty_state.html" %}
+    {% else %}
+      <div class="govuk-grid-row govuk-!-margin-bottom-4">
+        <div class="govuk-grid-column-two-thirds">
+          <h3 class="govuk-heading-m govuk-!-margin-bottom-1">Spend per model</h3>
+          <p class="govuk-body-s govuk-!-margin-bottom-0">Spend for {{ selected_month|date:"F Y" }}</p>
+        </div>
+        <div class="govuk-grid-column-one-third govuk-!-text-align-right">
+          {% include "includes/ai_gateway/_usage_month_select.html" %}
+        </div>
+      </div>
+      {% include "includes/ai_gateway/_usage_spend_section.html" with heading_level="h4" column_label="Model" rows=rows chart=chart chart_label=chart_label empty_message="No model spend recorded for this month." only %}
+    {% endif %}
   </div>
 {% endblock project_main_content %}
