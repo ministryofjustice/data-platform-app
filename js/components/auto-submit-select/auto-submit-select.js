@@ -8,7 +8,9 @@
  **/
 const AutoSubmitSelect = {
   init: function () {
-    const forms = document.querySelectorAll('[data-module="app-auto-submit-select"]');
+    const forms = document.querySelectorAll(
+      '[data-module="app-auto-submit-select"]',
+    );
 
     forms.forEach((form) => {
       const controls = form.querySelectorAll("select, input[type='radio']");
