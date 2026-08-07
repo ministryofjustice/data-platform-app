@@ -3,10 +3,9 @@
 
   This is styled with the same classes as the govuk-tabs component, but built from plain
   links rather than the govuk-tabs JavaScript widget: that widget expects each tab to point
-  at an in-page panel (via a #fragment) and calls preventDefault() on every click, which
-  would break navigation here since each tab is a separate page. Because no data-module
-  attribute is set, govuk-frontend's initAll() leaves this alone and the links behave
-  normally, with and without JavaScript.
+  at an in-page panel and calls preventDefault() on every click, which would break navigation
+  here since each tab is a separate page. Because no data-module attribute is set,
+  govuk-frontend's initAll() leaves this alone and the links behave normally, with and without JavaScript.
 
   Expects:
     project - the current project

@@ -1,7 +1,6 @@
 """Dependency-free helpers for turning spend rows into simple SVG bar charts.
 
-Charts are rendered server-side as plain SVG (no JavaScript charting library),
-matching this project's existing "no new front-end dependency" approach. Each
+Charts are rendered server-side as plain SVG (no JavaScript charting library). Each
 chart is offered as a progressive-disclosure alternative to its table, using
 the same ``<details>`` pattern as the "Show filter" control on the key
 creation page.

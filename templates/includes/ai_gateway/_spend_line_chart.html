@@ -1,8 +1,7 @@
 {% comment %}
   Renders a chart.LineChart (see ai_gateway/charts.py) as an inline SVG. This is always
   decorative (aria-hidden): the table it accompanies is the accessible source of truth
-  and is visually hidden, not removed, when the chart view is selected - see the
-  app-view-toggle usage in usage.html and its sibling templates.
+  and is visually hidden, not removed, when the chart view is selected.
 
   Expects:
     chart - a LineChart instance

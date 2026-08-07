@@ -1,10 +1,7 @@
 // Styling for the AI Gateway Usage pages (templates/ai_gateway/usage*.html).
 @use "node_modules/govuk-frontend/dist/govuk" as *;
 
-// The Usage tabs are plain links styled like govuk-tabs, not the govuk-tabs JS
-// component - see includes/ai_gateway/_usage_tabs.html for why. govuk-tabs__title is
-// only needed for that component's own no-JS fallback, so it's hidden here since every
-// tab here is already a real, working link.
+// The Usage tabs are plain links styled like govuk-tabs, not the govuk-tabs JS component.
 .app-usage-tabs {
   .govuk-tabs__title {
     display: none;
