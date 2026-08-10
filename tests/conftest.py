@@ -45,7 +45,7 @@ def key_service():
     service = create_autospec(KeyService, instance=True)
     service.__enter__.return_value = service
     service.__exit__.return_value = False
-    service.list_default_models.return_value = [
+    service.list_available_models.return_value = [
         {
             "model_name": "gpt-4",
             "display_name": "GPT-4",

@@ -257,6 +257,28 @@ class TestDeleteKey:
         assert captured["body"] == {"keys": ["sk-old"]}
 
 
+class TestTeamInfo:
+    def test_returns_team_info_for_team_id(self):
+        def handler(request):
+            assert request.method == "GET"
+            assert request.url.path == "/team/info"
+            assert request.url.params.get("team_id") == "team-123"
+            return httpx.Response(
+                200,
+                json={
+                    "team_id": "team-123",
+                    "team_info": {"access_group_models": ["restricted-model"]},
+                },
+            )
+
+        client = build_client(handler)
+
+        assert client.team_info("team-123") == {
+            "team_id": "team-123",
+            "team_info": {"access_group_models": ["restricted-model"]},
+        }
+
+
 class TestErrorHandling:
     def test_non_success_raises_api_error(self):
         client = build_client(lambda request: httpx.Response(401, text="Unauthorized"))

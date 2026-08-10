@@ -51,10 +51,12 @@ class KeyListView(ProjectScopedMixin, ProjectLayoutContextMixin, ListView):
 class AvailableModelsMixin:
     """Shared access to the models offered by the AI gateway."""
 
+    project: Project
+
     @cached_property
     def available_models(self) -> list[dict[str, Any]]:
         with KeyService.from_settings() as service:
-            return service.list_default_models()
+            return service.list_available_models(self.project)
 
     @cached_property
     def model_providers(self) -> list[str]:

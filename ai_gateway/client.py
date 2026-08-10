@@ -186,3 +186,7 @@ class AIGatewayClient:
     def key_info(self, key: str) -> dict[str, Any]:
         """Return metadata about the virtual key ``key``."""
         return self._request("GET", "/key/info", params={"key": key})
+
+    def team_info(self, team_id: str) -> dict[str, Any]:
+        """Return metadata about the team identified by ``team_id``."""
+        return self._request("GET", "/team/info", params={"team_id": team_id})

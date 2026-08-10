@@ -47,34 +47,56 @@ class KeyService:
         """Close the underlying gateway client."""
         self._client.close()
 
-    def list_default_models(self) -> list[dict[str, Any]]:
-        """Return the models marked as generally available."""
+    def list_available_models(self, project: Project) -> list[dict[str, Any]]:
+        """Return the models ``project`` may select when creating a key.
+
+        Includes models marked as generally available plus any models granted to
+        the project's gateway team through its access groups. When the team does
+        not exist yet (the first key), only generally available models are shown.
+        """
+        access_group_models = self._team_access_group_models(project)
         models = []
         for model in self._client.list_models_v1_info():
             litellm_params = model.get("litellm_params", {})
+            generally_available = litellm_params.get(self.GENERALLY_AVAILABLE_KEY) is True
 
-            if litellm_params.get(self.GENERALLY_AVAILABLE_KEY) is not True:
+            if not generally_available and model.get("model_name") not in access_group_models:
                 continue
 
-            model = model.copy()
-            model_info = model.get("model_info", {})
-
-            input_cost = model_info.get("input_cost_per_token")
-            output_cost = model_info.get("output_cost_per_token")
-
-            model["input_cost_per_million"] = (
-                input_cost * 1_000_000 if input_cost is not None else None
-            )
-            model["output_cost_per_million"] = (
-                output_cost * 1_000_000 if output_cost is not None else None
-            )
-            model["display_name"] = litellm_params.get("ai_model_name") or model.get("model_name")
-            model["provider"] = litellm_params.get("ai_model_provider")
-            model["family"] = litellm_params.get("ai_model_family")
-
-            models.append(model)
+            models.append(self._enrich_model(model))
 
         return models
+
+    def _team_access_group_models(self, project: Project) -> set[str]:
+        """Return model names granted to ``project``'s team via its access groups."""
+        try:
+            team = project.ai_gateway_team
+        except Team.DoesNotExist:
+            return set()
+
+        data = self._client.team_info(team.litellm_team_id)
+        return set(data.get("team_info", {}).get("access_group_models", []))
+
+    def _enrich_model(self, model: dict[str, Any]) -> dict[str, Any]:
+        """Return a copy of ``model`` with display and pricing fields added."""
+        model = model.copy()
+        litellm_params = model.get("litellm_params", {})
+        model_info = model.get("model_info", {})
+
+        input_cost = model_info.get("input_cost_per_token")
+        output_cost = model_info.get("output_cost_per_token")
+
+        model["input_cost_per_million"] = (
+            input_cost * 1_000_000 if input_cost is not None else None
+        )
+        model["output_cost_per_million"] = (
+            output_cost * 1_000_000 if output_cost is not None else None
+        )
+        model["display_name"] = litellm_params.get("ai_model_name") or model.get("model_name")
+        model["provider"] = litellm_params.get("ai_model_provider")
+        model["family"] = litellm_params.get("ai_model_family")
+
+        return model
 
     def create_key(self, project: Project, name: str, models: list[str], created_by: User) -> str:
         """Generate a gateway key for ``project`` and persist its metadata.
