@@ -93,6 +93,49 @@ curl \
     "model_info": {}
   }'
 
+echo "Seeding AI Gateway Restricted Models"
+# These models are not generally available; they are only selectable by teams
+# granted the "restricted-models" access group.
+curl \
+  --silent \
+  --fail-with-body \
+  --show-error \
+  --request POST \
+  --url "http://localhost:4000/model/new" \
+  --header "Content-Type: application/json" \
+  --header "Authorization: Bearer sk-123456789" \
+  --data '{
+    "model_name": "bedrock-claude-opus-5",
+    "litellm_params": {
+      "model": "bedrock/eu.anthropic.claude-opus-5",
+      "ai_model_provider": "Amazon Bedrock",
+      "ai_model_family": "Anthropic Claude",
+      "ai_model_name": "Anthropic Claude Opus 5 (EU)",
+      "ai_model_generally_available": false
+    },
+    "model_info": {}
+  }'
+
+curl \
+  --silent \
+  --fail-with-body \
+  --show-error \
+  --request POST \
+  --url "http://localhost:4000/model/new" \
+  --header "Content-Type: application/json" \
+  --header "Authorization: Bearer sk-123456789" \
+  --data '{
+    "model_name": "azure-gpt-5-2-preview",
+    "litellm_params": {
+      "model": "azure/gpt-5.2-preview",
+      "ai_model_provider": "Microsoft Foundry",
+      "ai_model_family": "OpenAI GPT",
+      "ai_model_name": "OpenAI GPT 5.2 Preview",
+      "ai_model_generally_available": false
+    },
+    "model_info": {}
+  }'
+
 echo "Seeding AI Gateway Unified Access Group"
 curl \
   --silent \
@@ -105,4 +148,20 @@ curl \
   --data '{
     "access_group_name": "generally-available-models",
     "access_model_names": ["bedrock-claude-sonnet-5", "gemini-2-5-pro", "azure-gpt-5-2"]
+  }'
+
+echo "Seeding AI Gateway Restricted Access Group"
+# Attach this access group to a project's team on the gateway to test selecting
+# non-generally-available models when creating a key.
+curl \
+  --silent \
+  --fail-with-body \
+  --show-error \
+  --request POST \
+  --url "http://localhost:4000/v1/unified_access_group" \
+  --header "Content-Type: application/json" \
+  --header "Authorization: Bearer sk-123456789" \
+  --data '{
+    "access_group_name": "restricted-models",
+    "access_model_names": ["bedrock-claude-opus-5", "azure-gpt-5-2-preview"]
   }'
