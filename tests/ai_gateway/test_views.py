@@ -205,7 +205,7 @@ class TestKeyCreateViewFiltering:
         assertContains(response, 'value="claude-3"')
 
     def test_show_more_reveals_all_matches(self, client, user, project, key_service):
-        key_service.list_default_models.return_value = [
+        key_service.list_available_models.return_value = [
             {
                 "model_name": f"model-{index}",
                 "display_name": f"Model {index}",
