@@ -23,6 +23,21 @@ class AIGatewayTeamAdminForm(forms.ModelForm):
         fields = []
 
 
+class AIGatewayTeamInline(admin.StackedInline):
+    """Read-only link from a project to its AI Gateway team, if one exists."""
+
+    model = Team
+    extra = 0
+    can_delete = False
+    show_change_link = True
+    fields = ("litellm_team_id",)
+    readonly_fields = ("litellm_team_id",)
+    verbose_name = "AI Gateway team"
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
 class AIGatewayTeamAdmin(SimpleHistoryAdmin):
     form = AIGatewayTeamAdminForm
     list_display = ("project", "litellm_team_id", "created")
