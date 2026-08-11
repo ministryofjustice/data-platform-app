@@ -1,6 +1,8 @@
 import logging
+from collections.abc import Iterable
 
 from django import forms
+from django.conf import settings
 from django.contrib import admin, messages
 from simple_history.admin import SimpleHistoryAdmin
 
@@ -8,6 +10,20 @@ from ai_gateway.models import Key, Team
 from ai_gateway.services import AccessGroupService, KeyService
 
 logger = logging.getLogger(__name__)
+
+
+class AccessGroupCheckboxSelectMultiple(forms.CheckboxSelectMultiple):
+    """Checkbox list that renders selected option values as disabled."""
+
+    def __init__(self, *args, disabled_values: Iterable[str] | None = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.disabled_values = set(disabled_values or ())
+
+    def create_option(self, name, value, *args, **kwargs):
+        option = super().create_option(name, value, *args, **kwargs)
+        if str(value) in self.disabled_values:
+            option["attrs"]["disabled"] = True
+        return option
 
 
 class AIGatewayTeamAdminForm(forms.ModelForm):
@@ -60,11 +76,15 @@ class AIGatewayTeamAdmin(SimpleHistoryAdmin):
             return base_form_class
 
         with AccessGroupService.from_settings() as service:
-            choices = [
-                (group["access_group_id"], group["access_group_name"])
-                for group in service.list_access_groups()
-            ]
+            groups = service.list_access_groups()
             initial = service.get_team_access_group_ids(obj)
+
+        choices = []
+        default_access_group_id = None
+        for group in groups:
+            choices.append((group["access_group_id"], group["access_group_name"]))
+            if group["access_group_name"] == settings.DEFAULT_ACCESS_GROUP_NAME:
+                default_access_group_id = group["access_group_id"]
 
         logger.info(
             "AI Gateway access groups for team %s viewed by %s: %s",
@@ -74,10 +94,22 @@ class AIGatewayTeamAdmin(SimpleHistoryAdmin):
         )
 
         class AIGatewayTeamForm(base_form_class):
+            default_group_id = default_access_group_id
+
             def __init__(self, *args, **form_kwargs):
                 super().__init__(*args, **form_kwargs)
-                self.fields["access_groups"].choices = choices
                 self.initial["access_groups"] = initial
+                self.fields["access_groups"].widget = AccessGroupCheckboxSelectMultiple(
+                    disabled_values={default_access_group_id} if default_access_group_id else set()
+                )
+                self.fields["access_groups"].choices = choices
+
+            def clean_access_groups(self):
+                # The default group is disabled in the form, so it is never submitted.
+                selected = self.cleaned_data["access_groups"]
+                if self.default_group_id and self.default_group_id not in selected:
+                    selected.append(self.default_group_id)
+                return selected
 
         return AIGatewayTeamForm
 
@@ -85,19 +117,23 @@ class AIGatewayTeamAdmin(SimpleHistoryAdmin):
         super().save_model(request, obj, form, change)
         if not change:
             return
-        selected = form.cleaned_data.get("access_groups", [])
-        previous = form.initial.get("access_groups", [])
+
+        new_groups = form.cleaned_data.get("access_groups", [])
+        initial_groups = form.initial.get("access_groups", [])
+        if set(new_groups) == set(initial_groups):
+            return
+
         with AccessGroupService.from_settings() as service:
-            service.set_team_access_groups(obj, selected)
+            service.set_team_access_groups(obj, new_groups)
 
         logger.info(
             "AI Gateway access groups for team %s updated by %s: %s",
             obj.litellm_team_id,
             request.user,
-            selected,
+            new_groups,
         )
 
-        if set(previous) - set(selected):
+        if set(initial_groups) - set(new_groups):
             self._reconcile_team_keys(request, obj)
 
     def _reconcile_team_keys(self, request, team):

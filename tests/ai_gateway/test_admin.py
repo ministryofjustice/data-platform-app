@@ -64,6 +64,12 @@ class TestAIGatewayTeamAdminChangeView:
             ("ag-2", "restricted-models"),
         ]
         assert form.initial["access_groups"] == ["ag-1"]
+        options = {
+            str(widget.data["value"]): widget.data["attrs"]
+            for widget in form["access_groups"].subwidgets
+        }
+        assert options["ag-1"].get("disabled") is True
+        assert "disabled" not in options["ag-2"]
 
     def test_rendering_fetches_from_gateway_once(
         self, client, superuser, team, access_group_service
@@ -100,7 +106,7 @@ class TestAIGatewayTeamAdminChangeView:
         response = client.post(url, {"access_groups": ["ag-2"], "_save": ""})
 
         assert response.status_code == 302
-        access_group_service.set_team_access_groups.assert_called_once_with(team, ["ag-2"])
+        access_group_service.set_team_access_groups.assert_called_once_with(team, ["ag-2", "ag-1"])
 
     def test_saving_logs_new_access_groups(
         self, client, superuser, team, access_group_service, caplog
@@ -113,7 +119,7 @@ class TestAIGatewayTeamAdminChangeView:
 
         assert any(
             "access groups for team team-abc-123 updated" in record.getMessage()
-            and "['ag-2']" in record.getMessage()
+            and "'ag-2'" in record.getMessage()
             for record in caplog.records
         )
 
@@ -140,11 +146,12 @@ class TestAIGatewayTeamAdminChangeView:
     def test_removing_access_group_prunes_team_keys(
         self, client, superuser, team, access_group_service, patched_key_service
     ):
+        access_group_service.get_team_access_group_ids.return_value = ["ag-1", "ag-2"]
         patched_key_service.prune_team_keys_to_allowed_models.return_value = (["alias-1"], [])
         client.force_login(superuser)
         url = reverse("admin:ai_gateway_team_change", args=[team.pk])
 
-        response = client.post(url, {"access_groups": ["ag-2"], "_save": ""}, follow=True)
+        response = client.post(url, {"_save": ""}, follow=True)
 
         assert response.status_code == 200
         patched_key_service.prune_team_keys_to_allowed_models.assert_called_once_with(team)
@@ -159,13 +166,26 @@ class TestAIGatewayTeamAdminChangeView:
         client.force_login(superuser)
         url = reverse("admin:ai_gateway_team_change", args=[team.pk])
 
-        client.post(url, {"access_groups": ["ag-1", "ag-2"], "_save": ""})
+        client.post(url, {"access_groups": ["ag-2"], "_save": ""})
 
+        patched_key_service.prune_team_keys_to_allowed_models.assert_not_called()
+
+    def test_unchanged_access_groups_skips_gateway_update(
+        self, client, superuser, team, access_group_service, patched_key_service
+    ):
+        access_group_service.get_team_access_group_ids.return_value = ["ag-1", "ag-2"]
+        client.force_login(superuser)
+        url = reverse("admin:ai_gateway_team_change", args=[team.pk])
+
+        client.post(url, {"access_groups": ["ag-2"], "_save": ""})
+
+        access_group_service.set_team_access_groups.assert_not_called()
         patched_key_service.prune_team_keys_to_allowed_models.assert_not_called()
 
     def test_key_pruning_error_propagates(
         self, client, superuser, team, access_group_service, patched_key_service
     ):
+        access_group_service.get_team_access_group_ids.return_value = ["ag-1", "ag-2"]
         patched_key_service.prune_team_keys_to_allowed_models.side_effect = AIGatewayAPIError(
             503, "gateway down"
         )
@@ -173,16 +193,17 @@ class TestAIGatewayTeamAdminChangeView:
         url = reverse("admin:ai_gateway_team_change", args=[team.pk])
 
         with pytest.raises(AIGatewayAPIError):
-            client.post(url, {"access_groups": ["ag-2"], "_save": ""})
+            client.post(url, {"_save": ""})
 
     def test_failed_keys_are_reported(
         self, client, superuser, team, access_group_service, patched_key_service
     ):
+        access_group_service.get_team_access_group_ids.return_value = ["ag-1", "ag-2"]
         patched_key_service.prune_team_keys_to_allowed_models.return_value = ([], ["alias-1"])
         client.force_login(superuser)
         url = reverse("admin:ai_gateway_team_change", args=[team.pk])
 
-        response = client.post(url, {"access_groups": ["ag-2"], "_save": ""}, follow=True)
+        response = client.post(url, {"_save": ""}, follow=True)
 
         assert response.status_code == 200
         messages = [str(message) for message in response.context["messages"]]
