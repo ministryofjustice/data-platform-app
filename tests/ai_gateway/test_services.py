@@ -7,7 +7,7 @@ from django.core.cache import cache
 from ai_gateway.client import AIGatewayClient
 from ai_gateway.exceptions import AIGatewayAPIError
 from ai_gateway.models import Key, Team
-from ai_gateway.services import KeyService
+from ai_gateway.services import AccessGroupService, KeyService
 
 PLAINTEXT_KEY = "sk-plaintext-key-value-123456"
 
@@ -362,3 +362,34 @@ class TestKeyServiceDeleteTeam:
 
         with pytest.raises(AIGatewayAPIError), KeyService(gateway_client) as service:
             service.delete_team("team-abc-123")
+
+
+class TestAccessGroupService:
+    def test_list_access_groups_delegates_to_client(self, gateway_client):
+        gateway_client.list_access_groups.return_value = [{"access_group_id": "ag-1"}]
+
+        with AccessGroupService(gateway_client) as service:
+            groups = service.list_access_groups()
+
+        assert groups == [{"access_group_id": "ag-1"}]
+        gateway_client.list_access_groups.assert_called_once_with()
+
+    def test_get_team_access_group_ids_delegates_to_client(self, gateway_client):
+        gateway_client.get_team_access_group_ids.return_value = ["ag-1", "ag-2"]
+        team = Team(litellm_team_id="team-abc-123")
+
+        with AccessGroupService(gateway_client) as service:
+            ids = service.get_team_access_group_ids(team)
+
+        assert ids == ["ag-1", "ag-2"]
+        gateway_client.get_team_access_group_ids.assert_called_once_with("team-abc-123")
+
+    def test_set_team_access_groups_delegates_to_client(self, gateway_client):
+        team = Team(litellm_team_id="team-abc-123")
+
+        with AccessGroupService(gateway_client) as service:
+            service.set_team_access_groups(team, ["ag-1", "ag-2"])
+
+        gateway_client.update_team_access_groups.assert_called_once_with(
+            "team-abc-123", ["ag-1", "ag-2"]
+        )

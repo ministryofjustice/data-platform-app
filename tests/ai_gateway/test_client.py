@@ -279,6 +279,61 @@ class TestTeamInfo:
         }
 
 
+class TestListAccessGroups:
+    def test_returns_all_access_groups(self):
+        client = build_client(access_group_list_handler)
+
+        groups = client.list_access_groups()
+
+        assert [group["access_group_name"] for group in groups] == [
+            "other-models",
+            "generally-available-models",
+        ]
+
+
+class TestGetTeamAccessGroupIds:
+    def test_returns_access_group_ids_from_team_info(self):
+        def handler(request):
+            assert request.method == "GET"
+            assert request.url.path == "/team/info"
+            assert request.url.params.get("team_id") == "team-123"
+            return httpx.Response(
+                200,
+                json={"team_info": {"access_group_ids": ["ag-1", "ag-2"]}},
+            )
+
+        client = build_client(handler)
+
+        assert client.get_team_access_group_ids("team-123") == ["ag-1", "ag-2"]
+
+    def test_returns_empty_when_team_has_no_access_groups(self):
+        def handler(request):
+            return httpx.Response(200, json={"team_info": {}})
+
+        client = build_client(handler)
+
+        assert client.get_team_access_group_ids("team-123") == []
+
+
+class TestUpdateTeamAccessGroups:
+    def test_posts_team_id_and_access_group_ids(self):
+        captured = {}
+
+        def handler(request):
+            assert request.method == "POST"
+            assert request.url.path == "/team/update"
+            captured["body"] = json.loads(request.read())
+            return httpx.Response(200, json={})
+
+        client = build_client(handler)
+        client.update_team_access_groups("team-123", ["ag-1", "ag-2"])
+
+        assert captured["body"] == {
+            "team_id": "team-123",
+            "access_group_ids": ["ag-1", "ag-2"],
+        }
+
+
 class TestErrorHandling:
     def test_non_success_raises_api_error(self):
         client = build_client(lambda request: httpx.Response(401, text="Unauthorized"))

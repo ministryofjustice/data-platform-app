@@ -209,3 +209,44 @@ class KeyService:
         if len(key) <= 4:
             return "..."
         return f"...{key[-4:]}"
+
+
+class AccessGroupService:
+    """Manages the access groups assigned to a project's gateway team.
+
+    Holds an ``AIGatewayClient`` so related operations share one client and a
+    single lifecycle. Use as a context manager to close the client on exit::
+
+        with AccessGroupService.from_settings() as service:
+            service.set_team_access_groups(team, access_group_ids)
+    """
+
+    def __init__(self, client: AIGatewayClient) -> None:
+        self._client = client
+
+    @classmethod
+    def from_settings(cls) -> AccessGroupService:
+        """Build a service backed by a client configured from Django settings."""
+        return cls(AIGatewayClient.from_settings())
+
+    def __enter__(self) -> AccessGroupService:
+        return self
+
+    def __exit__(self, *exc_info: object) -> None:
+        self.close()
+
+    def close(self) -> None:
+        """Close the underlying gateway client."""
+        self._client.close()
+
+    def list_access_groups(self) -> list[dict[str, Any]]:
+        """Return all access groups configured on the gateway."""
+        return self._client.list_access_groups()
+
+    def get_team_access_group_ids(self, team: Team) -> list[str]:
+        """Return the ids of the access groups currently assigned to ``team``."""
+        return self._client.get_team_access_group_ids(team.litellm_team_id)
+
+    def set_team_access_groups(self, team: Team, access_group_ids: list[str]) -> None:
+        """Replace the access groups assigned to ``team``."""
+        self._client.update_team_access_groups(team.litellm_team_id, access_group_ids)
