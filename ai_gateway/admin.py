@@ -4,9 +4,8 @@ from django import forms
 from django.contrib import admin, messages
 from simple_history.admin import SimpleHistoryAdmin
 
-from ai_gateway.exceptions import AIGatewayError
 from ai_gateway.models import Key, Team
-from ai_gateway.services import AccessGroupService
+from ai_gateway.services import AccessGroupService, KeyService
 
 logger = logging.getLogger(__name__)
 
@@ -39,31 +38,25 @@ class AIGatewayTeamAdmin(SimpleHistoryAdmin):
         ``get_form`` must return a form class, but the access-group choices and
         the team's current selection are only known at request time. A per-request
         subclass is returned so those runtime values are baked into every instance
-        the admin builds. Gateway failures are surfaced as messages and degrade to
-        an empty field rather than raising.
+        the admin builds.
         """
         base_form_class = super().get_form(request, obj, **kwargs)
         if obj is None:
             return base_form_class
 
-        choices: list[tuple[str, str]] = []
-        initial: list[str] = []
-        try:
-            with AccessGroupService.from_settings() as service:
-                choices = [
-                    (group["access_group_id"], group["access_group_name"])
-                    for group in service.list_access_groups()
-                ]
-                initial = service.get_team_access_group_ids(obj)
-        except AIGatewayError as error:
-            messages.error(request, f"Could not load access groups from the AI Gateway: {error}")
-        else:
-            logger.info(
-                "AI Gateway access groups for team %s viewed by %s: %s",
-                obj.litellm_team_id,
-                request.user,
-                initial,
-            )
+        with AccessGroupService.from_settings() as service:
+            choices = [
+                (group["access_group_id"], group["access_group_name"])
+                for group in service.list_access_groups()
+            ]
+            initial = service.get_team_access_group_ids(obj)
+
+        logger.info(
+            "AI Gateway access groups for team %s viewed by %s: %s",
+            obj.litellm_team_id,
+            request.user,
+            initial,
+        )
 
         class AIGatewayTeamForm(base_form_class):
             def __init__(self, *args, **form_kwargs):
@@ -78,17 +71,34 @@ class AIGatewayTeamAdmin(SimpleHistoryAdmin):
         if not change:
             return
         selected = form.cleaned_data.get("access_groups", [])
-        try:
-            with AccessGroupService.from_settings() as service:
-                service.set_team_access_groups(obj, selected)
-        except AIGatewayError as error:
-            messages.error(request, f"Could not update access groups on the AI Gateway: {error}")
-        else:
-            logger.info(
-                "AI Gateway access groups for team %s updated by %s: %s",
-                obj.litellm_team_id,
-                request.user,
-                selected,
+        previous = form.initial.get("access_groups", [])
+        with AccessGroupService.from_settings() as service:
+            service.set_team_access_groups(obj, selected)
+
+        logger.info(
+            "AI Gateway access groups for team %s updated by %s: %s",
+            obj.litellm_team_id,
+            request.user,
+            selected,
+        )
+
+        if set(previous) - set(selected):
+            self._reconcile_team_keys(request, obj)
+
+    def _reconcile_team_keys(self, request, team):
+        """Prune models newly restricted from the team's keys, reporting outcomes."""
+        with KeyService.from_settings() as service:
+            updated, failed = service.prune_team_keys_to_allowed_models(team)
+
+        if updated:
+            messages.info(
+                request,
+                f"Removed newly restricted models from {len(updated)} key(s).",
+            )
+        if failed:
+            messages.error(
+                request,
+                f"Could not update {len(failed)} key(s): {', '.join(failed)}.",
             )
 
 

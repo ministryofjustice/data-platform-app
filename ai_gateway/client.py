@@ -19,6 +19,7 @@ class AIGatewayClient:
     DEFAULT_TEAM_TPM_LIMIT = 500_000
     DEFAULT_TEAM_RPM_LIMIT = 100
     DEFAULT_TEAM_ORGANIZATION_NAME = "Ministry of Justice"
+    KEY_LIST_PAGE_SIZE = 100
 
     def __init__(
         self,
@@ -190,6 +191,36 @@ class AIGatewayClient:
     def key_info(self, key: str) -> dict[str, Any]:
         """Return metadata about the virtual key ``key``."""
         return self._request("GET", "/key/info", params={"key": key})
+
+    def list_team_keys(self, team_id: str) -> list[dict[str, Any]]:
+        """Return the full key objects belonging to team ``team_id``.
+
+        Pages through ``/key/list`` requesting full objects so each entry
+        carries its ``models`` list, used to reconcile keys after an
+        access-group change.
+        """
+        keys: list[dict[str, Any]] = []
+        page = 1
+        total_pages = 1
+        while page <= total_pages:
+            data = self._request(
+                "GET",
+                "/key/list",
+                params={
+                    "team_id": team_id,
+                    "return_full_object": True,
+                    "size": self.KEY_LIST_PAGE_SIZE,
+                    "page": page,
+                },
+            )
+            keys.extend(data.get("keys", []))
+            total_pages = data.get("total_pages", 1)
+            page += 1
+        return keys
+
+    def update_key_models(self, key: str, models: list[str]) -> None:
+        """Replace the models the virtual key ``key`` is allowed to call."""
+        self._request("POST", "/key/update", json={"key": key, "models": models})
 
     def team_info(self, team_id: str) -> dict[str, Any]:
         """Return metadata about the team identified by ``team_id``."""
