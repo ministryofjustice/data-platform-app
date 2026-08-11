@@ -73,13 +73,17 @@ class AIGatewayClient:
         data = self._request("GET", "/v1/models")
         return [model["id"] for model in data.get("data", [])]
 
+    def list_access_groups(self) -> list[dict[str, Any]]:
+        """Return all access groups configured on the gateway."""
+        return cast("list[dict[str, Any]]", self._request("GET", "/v1/access_group"))
+
     def _get_access_group(self, name: str) -> dict[str, Any]:
         """Return the access group whose name matches ``name``.
 
         Resolves the group by its stable name rather than an environment-specific
         id, and raises if no group or more than one group matches.
         """
-        groups = cast("list[dict[str, Any]]", self._request("GET", "/v1/access_group"))
+        groups = self.list_access_groups()
         matches = [group for group in groups if group.get("access_group_name") == name]
         if not matches:
             raise AIGatewayAPIError(404, f"No access group named {name!r}")
@@ -190,3 +194,16 @@ class AIGatewayClient:
     def team_info(self, team_id: str) -> dict[str, Any]:
         """Return metadata about the team identified by ``team_id``."""
         return self._request("GET", "/team/info", params={"team_id": team_id})
+
+    def get_team_access_group_ids(self, team_id: str) -> list[str]:
+        """Return the ids of the access groups assigned to team ``team_id``."""
+        data = self.team_info(team_id)
+        return data.get("team_info", {}).get("access_group_ids", [])
+
+    def update_team_access_groups(self, team_id: str, access_group_ids: list[str]) -> None:
+        """Replace the access groups assigned to team ``team_id``."""
+        self._request(
+            "POST",
+            "/team/update",
+            json={"team_id": team_id, "access_group_ids": access_group_ids},
+        )
