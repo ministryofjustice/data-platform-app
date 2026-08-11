@@ -79,7 +79,7 @@ class KeyService:
             return set()
 
         data = self._client.team_info(team.litellm_team_id)
-        return set(data.get("team_info", {}).get("access_group_models", []))
+        return set(data.get("team_info", {}).get("access_group_models") or [])
 
     def allowed_model_names(self, project: Project) -> set[str]:
         """Return every model name ``project`` may currently use.

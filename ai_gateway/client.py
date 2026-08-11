@@ -229,7 +229,7 @@ class AIGatewayClient:
     def get_team_access_group_ids(self, team_id: str) -> list[str]:
         """Return the ids of the access groups assigned to team ``team_id``."""
         data = self.team_info(team_id)
-        return data.get("team_info", {}).get("access_group_ids", [])
+        return data.get("team_info", {}).get("access_group_ids") or []
 
     def update_team_access_groups(self, team_id: str, access_group_ids: list[str]) -> None:
         """Replace the access groups assigned to team ``team_id``."""
