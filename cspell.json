@@ -19,6 +19,7 @@
     "berriai",
     "businessunit",
     "bzrignore",
+    "caplog",
     "CICA",
     "collectstatic",
     "containerfile",
