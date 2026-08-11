@@ -5,7 +5,7 @@ from django.urls import reverse
 from model_bakery import baker
 
 from ai_gateway.exceptions import AIGatewayAPIError
-from ai_gateway.services import AccessGroupService
+from ai_gateway.services import AccessGroupService, KeyService
 
 
 @pytest.fixture
@@ -33,6 +33,18 @@ def access_group_service():
     service.get_team_access_group_ids.return_value = ["ag-1"]
 
     with patch("ai_gateway.services.AccessGroupService.from_settings", return_value=service):
+        yield service
+
+
+@pytest.fixture(autouse=True)
+def patched_key_service():
+    """Patch KeyService.from_settings with an autospecced context-manager instance."""
+    service = create_autospec(KeyService, instance=True)
+    service.__enter__.return_value = service
+    service.__exit__.return_value = False
+    service.prune_team_keys_to_allowed_models.return_value = ([], [])
+
+    with patch("ai_gateway.services.KeyService.from_settings", return_value=service):
         yield service
 
 
@@ -105,27 +117,68 @@ class TestAIGatewayTeamAdminChangeView:
             for record in caplog.records
         )
 
-    def test_load_error_is_reported_not_raised(
-        self, client, superuser, team, access_group_service
-    ):
+    def test_load_error_propagates(self, client, superuser, team, access_group_service):
         access_group_service.list_access_groups.side_effect = AIGatewayAPIError(
             503, "gateway down"
         )
         client.force_login(superuser)
         url = reverse("admin:ai_gateway_team_change", args=[team.pk])
 
-        response = client.get(url)
+        with pytest.raises(AIGatewayAPIError):
+            client.get(url)
 
-        assert response.status_code == 200
-        messages = [str(message) for message in response.context["messages"]]
-        assert any("Could not load access groups" in message for message in messages)
-
-    def test_save_error_is_reported_not_raised(
-        self, client, superuser, team, access_group_service
-    ):
+    def test_save_error_propagates(self, client, superuser, team, access_group_service):
         access_group_service.set_team_access_groups.side_effect = AIGatewayAPIError(
             503, "gateway down"
         )
+        client.force_login(superuser)
+        url = reverse("admin:ai_gateway_team_change", args=[team.pk])
+
+        with pytest.raises(AIGatewayAPIError):
+            client.post(url, {"access_groups": ["ag-2"], "_save": ""})
+
+    def test_removing_access_group_prunes_team_keys(
+        self, client, superuser, team, access_group_service, patched_key_service
+    ):
+        patched_key_service.prune_team_keys_to_allowed_models.return_value = (["alias-1"], [])
+        client.force_login(superuser)
+        url = reverse("admin:ai_gateway_team_change", args=[team.pk])
+
+        response = client.post(url, {"access_groups": ["ag-2"], "_save": ""}, follow=True)
+
+        assert response.status_code == 200
+        patched_key_service.prune_team_keys_to_allowed_models.assert_called_once_with(team)
+        messages = [str(message) for message in response.context["messages"]]
+        assert any(
+            "Removed newly restricted models from 1 key(s)." in message for message in messages
+        )
+
+    def test_adding_access_group_does_not_prune_keys(
+        self, client, superuser, team, access_group_service, patched_key_service
+    ):
+        client.force_login(superuser)
+        url = reverse("admin:ai_gateway_team_change", args=[team.pk])
+
+        client.post(url, {"access_groups": ["ag-1", "ag-2"], "_save": ""})
+
+        patched_key_service.prune_team_keys_to_allowed_models.assert_not_called()
+
+    def test_key_pruning_error_propagates(
+        self, client, superuser, team, access_group_service, patched_key_service
+    ):
+        patched_key_service.prune_team_keys_to_allowed_models.side_effect = AIGatewayAPIError(
+            503, "gateway down"
+        )
+        client.force_login(superuser)
+        url = reverse("admin:ai_gateway_team_change", args=[team.pk])
+
+        with pytest.raises(AIGatewayAPIError):
+            client.post(url, {"access_groups": ["ag-2"], "_save": ""})
+
+    def test_failed_keys_are_reported(
+        self, client, superuser, team, access_group_service, patched_key_service
+    ):
+        patched_key_service.prune_team_keys_to_allowed_models.return_value = ([], ["alias-1"])
         client.force_login(superuser)
         url = reverse("admin:ai_gateway_team_change", args=[team.pk])
 
@@ -133,4 +186,4 @@ class TestAIGatewayTeamAdminChangeView:
 
         assert response.status_code == 200
         messages = [str(message) for message in response.context["messages"]]
-        assert any("Could not update access groups" in message for message in messages)
+        assert any("Could not update 1 key(s): alias-1." in message for message in messages)

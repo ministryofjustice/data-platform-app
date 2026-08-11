@@ -5,13 +5,16 @@ from __future__ import annotations
 import secrets
 from typing import Any
 
+import sentry_sdk
 from django.conf import settings
 from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
+from django.utils import timezone
 from django.utils.text import slugify
 
 from ai_gateway.client import AIGatewayClient
+from ai_gateway.exceptions import AIGatewayError
 from ai_gateway.models import Key, Team
 from projects.models import Project
 from users.models import User
@@ -28,6 +31,7 @@ class KeyService:
     """
 
     GENERALLY_AVAILABLE_KEY = "ai_model_generally_available"
+    NO_DEFAULT_MODELS = "no-default-models"
 
     def __init__(self, client: AIGatewayClient) -> None:
         self._client = client
@@ -76,6 +80,23 @@ class KeyService:
 
         data = self._client.team_info(team.litellm_team_id)
         return set(data.get("team_info", {}).get("access_group_models", []))
+
+    def allowed_model_names(self, project: Project) -> set[str]:
+        """Return every model name ``project`` may currently use.
+
+        The union of generally available models and any models granted to the
+        project's gateway team through its access groups.
+        """
+        return self._generally_available_model_names() | self._team_access_group_models(project)
+
+    def _generally_available_model_names(self) -> set[str]:
+        """Return the names of all generally available models on the gateway."""
+        return {
+            model["model_name"]
+            for model in self._client.list_models_v1_info()
+            if model.get("litellm_params", {}).get(self.GENERALLY_AVAILABLE_KEY) is True
+            and model.get("model_name")
+        }
 
     def _enrich_model(self, model: dict[str, Any]) -> dict[str, Any]:
         """Return a copy of ``model`` with display and pricing fields added."""
@@ -170,6 +191,51 @@ class KeyService:
         """Delete the virtual key from the gateway and remove its metadata."""
         self._client.delete_key(key.litellm_secret)
         key.delete()
+
+    def prune_team_keys_to_allowed_models(self, team: Team) -> tuple[list[str], list[str]]:
+        """Prune each of ``team``'s keys to the models it may currently use.
+
+        Reconciles every key against the team's allowed models, removing any
+        model no longer permitted. A key left with no permitted models is given
+        a sentinel so it cannot fall back to calling every model. Best-effort: a
+        per-key gateway failure is recorded and reconciliation continues.
+
+        Returns the ``(updated, failed)`` key aliases.
+        """
+        allowed = self.allowed_model_names(team.project)
+        updated = []
+        failed = []
+        for gateway_key in self._client.list_team_keys(team.litellm_team_id):
+            current = gateway_key.get("models", [])
+            pruned = [model for model in current if model in allowed]
+            if pruned == current:
+                continue
+
+            alias = gateway_key.get("key_alias", "")
+            try:
+                token = gateway_key.get("token", "")
+                self._client.update_key_models(token, pruned or [self.NO_DEFAULT_MODELS])
+            except AIGatewayError as error:
+                sentry_sdk.capture_exception(error)
+                failed.append(alias)
+                continue
+
+            updated.append(alias)
+
+        self._bust_key_models_cache(updated, team)
+        return updated, failed
+
+    def _bust_key_models_cache(self, aliases: list[str], team: Team) -> None:
+        """Invalidate the cached models for the DB keys with ``aliases``.
+
+        ``get_models_for_key`` caches by ``Key.modified``; bumping it shifts the
+        cache key so a gateway-side model change is not masked by a stale entry.
+        """
+        if aliases:
+            Key.objects.filter(
+                litellm_alias__in=aliases,
+                project__ai_gateway_team__litellm_team_id=team.litellm_team_id,
+            ).update(modified=timezone.now())
 
     @staticmethod
     def _key_models_cache_key(key: Key) -> str:

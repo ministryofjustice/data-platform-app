@@ -1,5 +1,5 @@
 from datetime import timedelta
-from unittest.mock import create_autospec
+from unittest.mock import create_autospec, patch
 
 import pytest
 from django.core.cache import cache
@@ -362,6 +362,124 @@ class TestKeyServiceDeleteTeam:
 
         with pytest.raises(AIGatewayAPIError), KeyService(gateway_client) as service:
             service.delete_team("team-abc-123")
+
+
+class TestKeyServiceAllowedModelNames:
+    def test_unions_generally_available_and_access_group_models(self, project, gateway_client):
+        Team.objects.create(project=project, litellm_team_id="team-xyz")
+        gateway_client.list_models_v1_info.return_value = [
+            {"model_name": "gpt-4", "litellm_params": {KeyService.GENERALLY_AVAILABLE_KEY: True}},
+            {
+                "model_name": "internal",
+                "litellm_params": {KeyService.GENERALLY_AVAILABLE_KEY: False},
+            },
+        ]
+        gateway_client.team_info.return_value = {
+            "team_info": {"access_group_models": ["restricted-model"]}
+        }
+
+        with KeyService(gateway_client) as service:
+            assert service.allowed_model_names(project) == {"gpt-4", "restricted-model"}
+
+
+class TestKeyServicePruneTeamKeys:
+    @pytest.fixture
+    def team(self, project):
+        """A gateway team whose only allowed model is the generally available gpt-4."""
+        return Team.objects.create(project=project, litellm_team_id="team-xyz")
+
+    @pytest.fixture
+    def gpt4_only_client(self, gateway_client):
+        """A client where gpt-4 is the sole allowed model for the team."""
+        gateway_client.list_models_v1_info.return_value = [
+            {"model_name": "gpt-4", "litellm_params": {KeyService.GENERALLY_AVAILABLE_KEY: True}},
+        ]
+        gateway_client.team_info.return_value = {"team_info": {"access_group_models": []}}
+        return gateway_client
+
+    def test_prunes_models_no_longer_allowed(self, team, gpt4_only_client):
+        gpt4_only_client.list_team_keys.return_value = [
+            {"token": "hash-1", "key_alias": "alias-1", "models": ["gpt-4", "restricted-model"]},
+        ]
+
+        with KeyService(gpt4_only_client) as service:
+            updated, failed = service.prune_team_keys_to_allowed_models(team)
+
+        gpt4_only_client.update_key_models.assert_called_once_with("hash-1", ["gpt-4"])
+        assert updated == ["alias-1"]
+        assert failed == []
+
+    def test_leaves_allowed_only_keys_untouched(self, team, gpt4_only_client):
+        gpt4_only_client.list_team_keys.return_value = [
+            {"token": "hash-1", "key_alias": "alias-1", "models": ["gpt-4"]},
+        ]
+
+        with KeyService(gpt4_only_client) as service:
+            updated, _failed = service.prune_team_keys_to_allowed_models(team)
+
+        gpt4_only_client.update_key_models.assert_not_called()
+        assert updated == []
+
+    def test_sends_sentinel_when_all_models_pruned(self, team, gpt4_only_client):
+        gpt4_only_client.list_team_keys.return_value = [
+            {"token": "hash-1", "key_alias": "alias-1", "models": ["restricted-model"]},
+        ]
+
+        with KeyService(gpt4_only_client) as service:
+            updated, _failed = service.prune_team_keys_to_allowed_models(team)
+
+        gpt4_only_client.update_key_models.assert_called_once_with("hash-1", ["no-default-models"])
+        assert updated == ["alias-1"]
+
+    def test_best_effort_records_failures_and_continues(self, team, gpt4_only_client):
+        gpt4_only_client.list_team_keys.return_value = [
+            {"token": "hash-1", "key_alias": "alias-1", "models": ["restricted-model"]},
+            {"token": "hash-2", "key_alias": "alias-2", "models": ["restricted-model"]},
+        ]
+        gpt4_only_client.update_key_models.side_effect = [AIGatewayAPIError(500, "boom"), None]
+
+        with KeyService(gpt4_only_client) as service:
+            updated, failed = service.prune_team_keys_to_allowed_models(team)
+
+        assert failed == ["alias-1"]
+        assert updated == ["alias-2"]
+        assert gpt4_only_client.update_key_models.call_count == 2
+
+    def test_failed_key_update_is_reported_to_sentry(self, team, gpt4_only_client):
+        gpt4_only_client.list_team_keys.return_value = [
+            {"token": "hash-1", "key_alias": "alias-1", "models": ["restricted-model"]},
+        ]
+        error = AIGatewayAPIError(500, "boom")
+        gpt4_only_client.update_key_models.side_effect = error
+
+        with (
+            patch("ai_gateway.services.sentry_sdk.capture_exception") as capture_exception,
+            KeyService(gpt4_only_client) as service,
+        ):
+            service.prune_team_keys_to_allowed_models(team)
+
+        capture_exception.assert_called_once_with(error)
+
+    def test_busts_model_cache_for_updated_key(self, project, user, team, gpt4_only_client):
+        db_key = Key.objects.create(
+            project=project,
+            name="primary-key",
+            litellm_alias="alias-1",
+            litellm_secret="sk-1",
+            litellm_token="hash-1",
+            masked_key="...1",
+            created_by=user,
+        )
+        original_modified = db_key.modified
+        gpt4_only_client.list_team_keys.return_value = [
+            {"token": "hash-1", "key_alias": "alias-1", "models": ["gpt-4", "restricted-model"]},
+        ]
+
+        with KeyService(gpt4_only_client) as service:
+            service.prune_team_keys_to_allowed_models(team)
+
+        db_key.refresh_from_db()
+        assert db_key.modified > original_modified
 
 
 class TestAccessGroupService:

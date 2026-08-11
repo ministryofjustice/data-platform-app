@@ -257,6 +257,78 @@ class TestDeleteKey:
         assert captured["body"] == {"keys": ["sk-old"]}
 
 
+class TestListTeamKeys:
+    def test_returns_full_key_objects_for_team(self):
+        def handler(request):
+            assert request.method == "GET"
+            assert request.url.path == "/key/list"
+            assert request.url.params.get("team_id") == "team-123"
+            assert request.url.params.get("return_full_object") == "true"
+            assert request.url.params.get("size") == "100"
+            assert request.url.params.get("page") == "1"
+            return httpx.Response(
+                200,
+                json={
+                    "keys": [
+                        {"token": "hash-1", "key_alias": "alias-1", "models": ["gpt-4"]},
+                    ],
+                    "total_pages": 1,
+                },
+            )
+
+        client = build_client(handler)
+
+        assert client.list_team_keys("team-123") == [
+            {"token": "hash-1", "key_alias": "alias-1", "models": ["gpt-4"]},
+        ]
+
+    def test_pages_through_all_results(self):
+        pages = {
+            "1": {
+                "keys": [{"token": "hash-1", "key_alias": "alias-1", "models": ["gpt-4"]}],
+                "total_pages": 2,
+            },
+            "2": {
+                "keys": [{"token": "hash-2", "key_alias": "alias-2", "models": ["claude-3"]}],
+                "total_pages": 2,
+            },
+        }
+
+        def handler(request):
+            assert request.url.path == "/key/list"
+            page = request.url.params.get("page")
+            return httpx.Response(200, json=pages[page])
+
+        client = build_client(handler)
+
+        keys = client.list_team_keys("team-123")
+
+        assert [key["token"] for key in keys] == ["hash-1", "hash-2"]
+
+    def test_empty_when_team_has_no_keys(self):
+        client = build_client(
+            lambda request: httpx.Response(200, json={"keys": [], "total_pages": 1})
+        )
+
+        assert client.list_team_keys("team-123") == []
+
+
+class TestUpdateKeyModels:
+    def test_posts_key_and_models(self):
+        captured = {}
+
+        def handler(request):
+            assert request.method == "POST"
+            assert request.url.path == "/key/update"
+            captured["body"] = json.loads(request.read())
+            return httpx.Response(200, json={})
+
+        client = build_client(handler)
+        client.update_key_models("hash-1", ["gpt-4"])
+
+        assert captured["body"] == {"key": "hash-1", "models": ["gpt-4"]}
+
+
 class TestTeamInfo:
     def test_returns_team_info_for_team_id(self):
         def handler(request):
