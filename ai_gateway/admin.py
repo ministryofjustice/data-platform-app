@@ -7,7 +7,7 @@ from django.contrib import admin, messages
 from simple_history.admin import SimpleHistoryAdmin
 
 from ai_gateway.models import Key, Team
-from ai_gateway.services import AccessGroupService, KeyService
+from ai_gateway.services import KeyService
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +75,7 @@ class AIGatewayTeamAdmin(SimpleHistoryAdmin):
         if obj is None:
             return base_form_class
 
-        with AccessGroupService.from_settings() as service:
+        with KeyService.from_settings() as service:
             groups = service.list_access_groups()
             initial = service.get_team_access_group_ids(obj)
 
@@ -123,7 +123,7 @@ class AIGatewayTeamAdmin(SimpleHistoryAdmin):
         if set(new_groups) == set(initial_groups):
             return
 
-        with AccessGroupService.from_settings() as service:
+        with KeyService.from_settings() as service:
             service.set_team_access_groups(obj, new_groups)
 
         logger.info(
