@@ -63,6 +63,12 @@ class AIGatewayTeamAdmin(SimpleHistoryAdmin):
         ("Access groups", {"fields": ("access_groups",)}),
     )
 
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
     def get_form(self, request, obj=None, **kwargs):
         """Return a form pre-populated with the team's access groups from the gateway.
 
