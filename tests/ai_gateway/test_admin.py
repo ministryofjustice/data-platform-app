@@ -31,7 +31,7 @@ def key_service():
         {"access_group_id": "ag-2", "access_group_name": "restricted-models"},
     ]
     service.get_team_access_group_ids.return_value = ["ag-1"]
-    service.prune_team_keys_to_allowed_models.return_value = ([], [])
+    service.set_team_model_access.return_value = ([], [])
 
     with patch("ai_gateway.services.KeyService.from_settings", return_value=service):
         yield service
@@ -91,7 +91,7 @@ class TestAIGatewayTeamAdminChangeView:
         response = client.post(url, {"access_groups": ["ag-2"], "_save": ""})
 
         assert response.status_code == 302
-        key_service.set_team_access_groups.assert_called_once_with(team, ["ag-2", "ag-1"])
+        key_service.set_team_model_access.assert_called_once_with(team, ["ag-2", "ag-1"])
 
     def test_saving_logs_new_access_groups(self, client, superuser, team, key_service, caplog):
         client.force_login(superuser)
@@ -115,35 +115,29 @@ class TestAIGatewayTeamAdminChangeView:
             client.get(url)
 
     def test_save_error_propagates(self, client, superuser, team, key_service):
-        key_service.set_team_access_groups.side_effect = AIGatewayAPIError(503, "gateway down")
+        key_service.set_team_model_access.side_effect = AIGatewayAPIError(503, "gateway down")
         client.force_login(superuser)
         url = reverse("admin:ai_gateway_team_change", args=[team.pk])
 
         with pytest.raises(AIGatewayAPIError):
             client.post(url, {"access_groups": ["ag-2"], "_save": ""})
 
-    def test_removing_access_group_prunes_team_keys(self, client, superuser, team, key_service):
+    def test_removing_access_group_reports_reconciled_keys(
+        self, client, superuser, team, key_service
+    ):
         key_service.get_team_access_group_ids.return_value = ["ag-1", "ag-2"]
-        key_service.prune_team_keys_to_allowed_models.return_value = (["alias-1"], [])
+        key_service.set_team_model_access.return_value = (["alias-1"], [])
         client.force_login(superuser)
         url = reverse("admin:ai_gateway_team_change", args=[team.pk])
 
         response = client.post(url, {"_save": ""}, follow=True)
 
         assert response.status_code == 200
-        key_service.prune_team_keys_to_allowed_models.assert_called_once_with(team)
+        key_service.set_team_model_access.assert_called_once_with(team, ["ag-1"])
         messages = [str(message) for message in response.context["messages"]]
         assert any(
             "Removed newly restricted models from 1 key(s)." in message for message in messages
         )
-
-    def test_adding_access_group_does_not_prune_keys(self, client, superuser, team, key_service):
-        client.force_login(superuser)
-        url = reverse("admin:ai_gateway_team_change", args=[team.pk])
-
-        client.post(url, {"access_groups": ["ag-2"], "_save": ""})
-
-        key_service.prune_team_keys_to_allowed_models.assert_not_called()
 
     def test_unchanged_access_groups_skips_gateway_update(
         self, client, superuser, team, key_service
@@ -154,14 +148,11 @@ class TestAIGatewayTeamAdminChangeView:
 
         client.post(url, {"access_groups": ["ag-2"], "_save": ""})
 
-        key_service.set_team_access_groups.assert_not_called()
-        key_service.prune_team_keys_to_allowed_models.assert_not_called()
+        key_service.set_team_model_access.assert_not_called()
 
-    def test_key_pruning_error_propagates(self, client, superuser, team, key_service):
+    def test_reconciliation_error_propagates(self, client, superuser, team, key_service):
         key_service.get_team_access_group_ids.return_value = ["ag-1", "ag-2"]
-        key_service.prune_team_keys_to_allowed_models.side_effect = AIGatewayAPIError(
-            503, "gateway down"
-        )
+        key_service.set_team_model_access.side_effect = AIGatewayAPIError(503, "gateway down")
         client.force_login(superuser)
         url = reverse("admin:ai_gateway_team_change", args=[team.pk])
 
@@ -170,7 +161,7 @@ class TestAIGatewayTeamAdminChangeView:
 
     def test_failed_keys_are_reported(self, client, superuser, team, key_service):
         key_service.get_team_access_group_ids.return_value = ["ag-1", "ag-2"]
-        key_service.prune_team_keys_to_allowed_models.return_value = ([], ["alias-1"])
+        key_service.set_team_model_access.return_value = ([], ["alias-1"])
         client.force_login(superuser)
         url = reverse("admin:ai_gateway_team_change", args=[team.pk])
 
