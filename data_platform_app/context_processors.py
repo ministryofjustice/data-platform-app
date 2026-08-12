@@ -63,3 +63,10 @@ def feature_flags(request):
     return {
         "FEATURE_FLAGS": settings.FEATURE_FLAGS,
     }
+
+
+def application_metadata(request):
+    return {
+        "application_version": settings.APPLICATION_VERSION,
+        "commit_sha": settings.COMMIT_SHA,
+    }
