@@ -32,6 +32,8 @@ DEBUG = False
 
 ALLOWED_HOSTS = []
 APP_ENV = os.environ.get("APP_ENV", "local")
+APPLICATION_VERSION = os.environ.get("VERSION", "unknown")
+COMMIT_SHA = os.environ.get("COMMIT_SHA", "unknown")
 
 # Application definition
 
@@ -81,6 +83,7 @@ TEMPLATES = [
                 "data_platform_app.context_processors.service_navigation",
                 "data_platform_app.context_processors.google_analytics",
                 "data_platform_app.context_processors.feature_flags",
+                "data_platform_app.context_processors.application_metadata",
             ],
         },
     },

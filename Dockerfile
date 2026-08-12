@@ -59,6 +59,9 @@ EOF
 
 FROM docker.io/library/ubuntu:26.04@sha256:678c6550cc43645e08669028bc177f50be4e7c5b8cca677067b1914d4afc7a03 AS final
 
+ARG VERSION="unknown"
+ARG COMMIT_SHA="unknown"
+
 LABEL org.opencontainers.image.vendor="Ministry of Justice" \
       org.opencontainers.image.authors="Data Platform Services (justicedataplatform@justice.gov.uk)" \
       org.opencontainers.image.title="Data Platform App" \
@@ -71,6 +74,8 @@ ENV CONTAINER_USER="dataplatform" \
     CONTAINER_UID="10001" \
     CONTAINER_GROUP="dataplatform" \
     CONTAINER_GID="10001" \
+    VERSION="${VERSION}" \
+    COMMIT_SHA="${COMMIT_SHA}" \
     DEBIAN_FRONTEND="noninteractive" \
     APP_ROOT="/app" \
     PATH="/app/bin:${PATH}"

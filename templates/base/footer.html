@@ -46,6 +46,15 @@
                href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/"
                rel="license">Open Government Licence v3.0</a>, except where otherwise stated
           </span>
+          <p class="govuk-body-s govuk-!-margin-top-4 govuk-!-margin-bottom-0">
+            Data Platform Application version {{ application_version }}
+            {% if commit_sha != "unknown" %}
+              (<a class="govuk-footer__link"
+   href="https://github.com/ministryofjustice/data-platform-app/commit/{{ commit_sha }}">{{ commit_sha }}</a>)
+            {% else %}
+              ({{ commit_sha }})
+            {% endif %}
+          </p>
         </div>
         <div class="govuk-footer__meta-item">
           <a class="govuk-footer__link govuk-footer__copyright-logo"

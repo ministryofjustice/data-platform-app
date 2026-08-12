@@ -42,6 +42,19 @@ class TestHomeView:
 
         assertNotContains(response, "About Justice Data Platform")
 
+    def test_footer_displays_application_metadata(self, client, settings):
+        settings.APPLICATION_VERSION = "v4.1.0"
+        settings.COMMIT_SHA = "abc123def456"
+
+        response = client.get(reverse("home"))
+
+        assertContains(response, "Data Platform Application version v4.1.0")
+        assertContains(
+            response,
+            'href="https://github.com/ministryofjustice/data-platform-app/commit/'
+            'abc123def456">abc123def456</a>',
+        )
+
 
 class TestRoadmapView:
     """Tests for the RoadmapView at '/roadmap/'."""
