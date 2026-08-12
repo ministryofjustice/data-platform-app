@@ -216,6 +216,23 @@ decrypting, while only the first is used to encrypt.
 
 After updating `.env`, restart the Django app (`make run`) so the new settings are loaded.
 
+### Manage access groups in Django admin
+
+Admins can now manage a team's AI Gateway access groups directly in Django admin:
+
+1. Sign in as a Django admin user.
+2. Under AI Gateway - Teams, select the team you want to update.
+3. Edit the **Access groups** checkboxes and save.
+
+Notes:
+
+- The default access group (from `DEFAULT_ACCESS_GROUP_NAME`) is always kept on the team.
+- It is shown as checked and disabled in the form, so it cannot be removed accidentally.
+- Saving changes updates the team's access groups on the gateway and then reconciles existing keys.
+- During reconciliation, models that are no longer allowed are removed from each key.
+- If a key would end up with no allowed models, the app applies a safety sentinel (`no-default-models`) so the key does not fall back to broad model access.
+- The admin page reports how many keys were updated and which key updates failed.
+
 You can also connect to it programmatically using cURL, for example
 
 ```bash
