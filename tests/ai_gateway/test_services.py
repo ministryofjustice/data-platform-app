@@ -338,7 +338,7 @@ class TestKeyServiceAllowedModelNames:
         }
 
         with KeyService(gateway_client) as service:
-            assert service.allowed_model_names(project) == {"gpt-4", "restricted-model"}
+            assert service._allowed_model_names(project) == {"gpt-4", "restricted-model"}
 
         gateway_client.list_models_for_access_group.assert_not_called()
 
@@ -347,7 +347,7 @@ class TestKeyServiceAllowedModelNames:
         gateway_client.list_models_for_access_group.return_value = ["gpt-4"]
 
         with KeyService(gateway_client) as service:
-            assert service.allowed_model_names(project) == {"gpt-4"}
+            assert service._allowed_model_names(project) == {"gpt-4"}
 
         gateway_client.list_models_for_access_group.assert_called_once_with(
             "generally-available-models"

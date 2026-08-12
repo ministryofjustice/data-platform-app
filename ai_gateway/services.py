@@ -57,14 +57,14 @@ class KeyService:
         groups. Before the team exists (the first key), the default access
         group's models are shown.
         """
-        allowed = self.allowed_model_names(project)
+        allowed = self._allowed_model_names(project)
         return [
             self._enrich_model(model)
             for model in self._client.list_models_v1_info()
             if model.get("model_name") in allowed
         ]
 
-    def allowed_model_names(self, project: Project) -> set[str]:
+    def _allowed_model_names(self, project: Project) -> set[str]:
         """Return every model name ``project`` may currently use.
 
         Read from the project's gateway team access groups. Before the team
@@ -183,7 +183,7 @@ class KeyService:
 
         Returns the ``(updated, failed)`` key aliases.
         """
-        allowed = self.allowed_model_names(team.project)
+        allowed = self._allowed_model_names(team.project)
         updated = []
         failed = []
         for gateway_key in self._client.list_team_keys(team.litellm_team_id):

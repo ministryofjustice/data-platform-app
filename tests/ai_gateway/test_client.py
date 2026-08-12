@@ -23,23 +23,6 @@ def build_client(handler):
     )
 
 
-class TestListModels:
-    def test_returns_model_ids(self):
-        def handler(request):
-            assert request.method == "GET"
-            assert request.url.path == "/v1/models"
-            return httpx.Response(200, json={"data": [{"id": "gpt-4"}, {"id": "claude-3"}]})
-
-        client = build_client(handler)
-
-        assert client.list_models() == ["gpt-4", "claude-3"]
-
-    def test_empty_when_no_models(self):
-        client = build_client(lambda request: httpx.Response(200, json={"data": []}))
-
-        assert client.list_models() == []
-
-
 class TestCreateTeam:
     def test_sends_team_alias_and_returns_team_id(self):
         def handler(request):
@@ -411,7 +394,7 @@ class TestErrorHandling:
         client = build_client(lambda request: httpx.Response(401, text="Unauthorized"))
 
         with pytest.raises(AIGatewayAPIError) as exc_info:
-            client.list_models()
+            client.list_models_v1_info()
 
         assert exc_info.value.status_code == 401
         assert exc_info.value.message == "Unauthorized"
@@ -423,7 +406,7 @@ class TestErrorHandling:
         client = build_client(handler)
 
         with pytest.raises(AIGatewayTransportError) as exc_info:
-            client.list_models()
+            client.list_models_v1_info()
 
         assert "gateway unavailable" in exc_info.value.message
 
@@ -437,7 +420,7 @@ class TestAuthentication:
             return httpx.Response(200, json={"data": []})
 
         client = build_client(handler)
-        client.list_models()
+        client.list_models_v1_info()
 
         assert captured["auth"] == "Bearer sk-test-master-key"
 
