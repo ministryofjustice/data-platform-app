@@ -69,11 +69,6 @@ class AIGatewayClient:
             raise AIGatewayAPIError(response.status_code, response.text)
         return response.json()
 
-    def list_models(self) -> list[str]:
-        """Return the ids of the models available on the gateway."""
-        data = self._request("GET", "/v1/models")
-        return [model["id"] for model in data.get("data", [])]
-
     def list_access_groups(self) -> list[dict[str, Any]]:
         """Return all access groups configured on the gateway."""
         return cast("list[dict[str, Any]]", self._request("GET", "/v1/access_group"))
