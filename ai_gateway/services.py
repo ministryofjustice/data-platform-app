@@ -30,7 +30,6 @@ class KeyService:
             service.create_key(project, name, models, created_by)
     """
 
-    GENERALLY_AVAILABLE_KEY = "ai_model_generally_available"
     NO_DEFAULT_MODELS = "no-default-models"
 
     def __init__(self, client: AIGatewayClient) -> None:
@@ -54,49 +53,31 @@ class KeyService:
     def list_available_models(self, project: Project) -> list[dict[str, Any]]:
         """Return the models ``project`` may select when creating a key.
 
-        Includes models marked as generally available plus any models granted to
-        the project's gateway team through its access groups. When the team does
-        not exist yet (the first key), only generally available models are shown.
+        The models granted to the project's gateway team through its access
+        groups. Before the team exists (the first key), the default access
+        group's models are shown.
         """
-        access_group_models = self._team_access_group_models(project)
-        models = []
-        for model in self._client.list_models_v1_info():
-            litellm_params = model.get("litellm_params", {})
-            generally_available = litellm_params.get(self.GENERALLY_AVAILABLE_KEY) is True
-
-            if not generally_available and model.get("model_name") not in access_group_models:
-                continue
-
-            models.append(self._enrich_model(model))
-
-        return models
-
-    def _team_access_group_models(self, project: Project) -> set[str]:
-        """Return model names granted to ``project``'s team via its access groups."""
-        try:
-            team = project.ai_gateway_team
-        except Team.DoesNotExist:
-            return set()
-
-        data = self._client.team_info(team.litellm_team_id)
-        return set(data.get("team_info", {}).get("access_group_models") or [])
+        allowed = self.allowed_model_names(project)
+        return [
+            self._enrich_model(model)
+            for model in self._client.list_models_v1_info()
+            if model.get("model_name") in allowed
+        ]
 
     def allowed_model_names(self, project: Project) -> set[str]:
         """Return every model name ``project`` may currently use.
 
-        The union of generally available models and any models granted to the
-        project's gateway team through its access groups.
+        Read from the project's gateway team access groups. Before the team
+        exists (the first key), fall back to the default access group's models.
         """
-        return self._generally_available_model_names() | self._team_access_group_models(project)
+        try:
+            team = project.ai_gateway_team
+        except Team.DoesNotExist:
+            default_group = self._default_access_group_name()
+            return set(self._client.list_models_for_access_group(default_group))
 
-    def _generally_available_model_names(self) -> set[str]:
-        """Return the names of all generally available models on the gateway."""
-        return {
-            model["model_name"]
-            for model in self._client.list_models_v1_info()
-            if model.get("litellm_params", {}).get(self.GENERALLY_AVAILABLE_KEY) is True
-            and model.get("model_name")
-        }
+        data = self._client.team_info(team.litellm_team_id)
+        return set(data.get("team_info", {}).get("access_group_models") or [])
 
     def _enrich_model(self, model: dict[str, Any]) -> dict[str, Any]:
         """Return a copy of ``model`` with display and pricing fields added."""

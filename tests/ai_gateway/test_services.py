@@ -52,11 +52,12 @@ class TestBuildAlias:
 
 
 class TestKeyServiceListModels:
-    def test_returns_generally_available_models_with_costs(self, project, gateway_client):
+    def test_returns_default_group_models_with_costs(self, project, gateway_client):
+        gateway_client.list_models_for_access_group.return_value = ["gpt-4"]
         gateway_client.list_models_v1_info.return_value = [
             {
                 "model_name": "gpt-4",
-                "litellm_params": {KeyService.GENERALLY_AVAILABLE_KEY: True},
+                "litellm_params": {},
                 "model_info": {
                     "input_cost_per_token": 0.00003,
                     "output_cost_per_token": 0.00006,
@@ -64,7 +65,7 @@ class TestKeyServiceListModels:
             },
             {
                 "model_name": "internal-only",
-                "litellm_params": {KeyService.GENERALLY_AVAILABLE_KEY: False},
+                "litellm_params": {},
                 "model_info": {},
             },
         ]
@@ -77,11 +78,11 @@ class TestKeyServiceListModels:
         assert models[0]["output_cost_per_million"] == pytest.approx(60.0)
 
     def test_enriches_models_with_display_fields(self, project, gateway_client):
+        gateway_client.list_models_for_access_group.return_value = ["gpt-4", "bare-model"]
         gateway_client.list_models_v1_info.return_value = [
             {
                 "model_name": "gpt-4",
                 "litellm_params": {
-                    KeyService.GENERALLY_AVAILABLE_KEY: True,
                     "ai_model_name": "GPT-4",
                     "ai_model_family": "GPT",
                     "ai_model_provider": "OpenAI",
@@ -90,7 +91,7 @@ class TestKeyServiceListModels:
             },
             {
                 "model_name": "bare-model",
-                "litellm_params": {KeyService.GENERALLY_AVAILABLE_KEY: True},
+                "litellm_params": {},
                 "model_info": {},
             },
         ]
@@ -104,10 +105,11 @@ class TestKeyServiceListModels:
         assert models[1]["display_name"] == "bare-model"
 
     def test_costs_are_none_when_pricing_is_missing(self, project, gateway_client):
+        gateway_client.list_models_for_access_group.return_value = ["gpt-4"]
         gateway_client.list_models_v1_info.return_value = [
             {
                 "model_name": "gpt-4",
-                "litellm_params": {KeyService.GENERALLY_AVAILABLE_KEY: True},
+                "litellm_params": {},
                 "model_info": {},
             },
         ]
@@ -118,39 +120,25 @@ class TestKeyServiceListModels:
         assert models[0]["input_cost_per_million"] is None
         assert models[0]["output_cost_per_million"] is None
 
-    def test_excludes_non_generally_available_models_without_a_team(self, project, gateway_client):
-        gateway_client.list_models_v1_info.return_value = [
-            {
-                "model_name": "internal-only",
-                "litellm_params": {KeyService.GENERALLY_AVAILABLE_KEY: False},
-                "model_info": {},
-            },
-        ]
-
-        with KeyService(gateway_client) as service:
-            assert service.list_available_models(project) == []
-
-        gateway_client.team_info.assert_not_called()
-
     def test_includes_access_group_models_for_a_team(self, project, gateway_client):
         Team.objects.create(project=project, litellm_team_id="team-xyz")
         gateway_client.team_info.return_value = {
-            "team_info": {"access_group_models": ["restricted-model"]}
+            "team_info": {"access_group_models": ["gpt-4", "restricted-model"]}
         }
         gateway_client.list_models_v1_info.return_value = [
             {
                 "model_name": "gpt-4",
-                "litellm_params": {KeyService.GENERALLY_AVAILABLE_KEY: True},
+                "litellm_params": {},
                 "model_info": {},
             },
             {
                 "model_name": "restricted-model",
-                "litellm_params": {KeyService.GENERALLY_AVAILABLE_KEY: False},
+                "litellm_params": {},
                 "model_info": {},
             },
             {
                 "model_name": "other-internal",
-                "litellm_params": {KeyService.GENERALLY_AVAILABLE_KEY: False},
+                "litellm_params": {},
                 "model_info": {},
             },
         ]
@@ -160,29 +148,7 @@ class TestKeyServiceListModels:
 
         assert [model["model_name"] for model in models] == ["gpt-4", "restricted-model"]
         gateway_client.team_info.assert_called_once_with("team-xyz")
-
-    def test_team_without_access_groups_sees_only_generally_available(
-        self, project, gateway_client
-    ):
-        Team.objects.create(project=project, litellm_team_id="team-xyz")
-        gateway_client.team_info.return_value = {"team_info": {"access_group_models": []}}
-        gateway_client.list_models_v1_info.return_value = [
-            {
-                "model_name": "gpt-4",
-                "litellm_params": {KeyService.GENERALLY_AVAILABLE_KEY: True},
-                "model_info": {},
-            },
-            {
-                "model_name": "internal-only",
-                "litellm_params": {KeyService.GENERALLY_AVAILABLE_KEY: False},
-                "model_info": {},
-            },
-        ]
-
-        with KeyService(gateway_client) as service:
-            models = service.list_available_models(project)
-
-        assert [model["model_name"] for model in models] == ["gpt-4"]
+        gateway_client.list_models_for_access_group.assert_not_called()
 
 
 class TestKeyServiceCreateKey:
@@ -365,21 +331,28 @@ class TestKeyServiceDeleteTeam:
 
 
 class TestKeyServiceAllowedModelNames:
-    def test_unions_generally_available_and_access_group_models(self, project, gateway_client):
+    def test_reads_access_group_models_for_a_team(self, project, gateway_client):
         Team.objects.create(project=project, litellm_team_id="team-xyz")
-        gateway_client.list_models_v1_info.return_value = [
-            {"model_name": "gpt-4", "litellm_params": {KeyService.GENERALLY_AVAILABLE_KEY: True}},
-            {
-                "model_name": "internal",
-                "litellm_params": {KeyService.GENERALLY_AVAILABLE_KEY: False},
-            },
-        ]
         gateway_client.team_info.return_value = {
-            "team_info": {"access_group_models": ["restricted-model"]}
+            "team_info": {"access_group_models": ["gpt-4", "restricted-model"]}
         }
 
         with KeyService(gateway_client) as service:
             assert service.allowed_model_names(project) == {"gpt-4", "restricted-model"}
+
+        gateway_client.list_models_for_access_group.assert_not_called()
+
+    def test_reads_default_group_models_without_a_team(self, project, gateway_client, settings):
+        settings.DEFAULT_ACCESS_GROUP_NAME = "generally-available-models"
+        gateway_client.list_models_for_access_group.return_value = ["gpt-4"]
+
+        with KeyService(gateway_client) as service:
+            assert service.allowed_model_names(project) == {"gpt-4"}
+
+        gateway_client.list_models_for_access_group.assert_called_once_with(
+            "generally-available-models"
+        )
+        gateway_client.team_info.assert_not_called()
 
 
 class TestKeyServicePruneTeamKeys:
@@ -391,10 +364,7 @@ class TestKeyServicePruneTeamKeys:
     @pytest.fixture
     def gpt4_only_client(self, gateway_client):
         """A client where gpt-4 is the sole allowed model for the team."""
-        gateway_client.list_models_v1_info.return_value = [
-            {"model_name": "gpt-4", "litellm_params": {KeyService.GENERALLY_AVAILABLE_KEY: True}},
-        ]
-        gateway_client.team_info.return_value = {"team_info": {"access_group_models": []}}
+        gateway_client.team_info.return_value = {"team_info": {"access_group_models": ["gpt-4"]}}
         return gateway_client
 
     def test_prunes_models_no_longer_allowed(self, team, gpt4_only_client):
