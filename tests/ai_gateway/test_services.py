@@ -355,10 +355,10 @@ class TestKeyServiceAllowedModelNames:
         gateway_client.team_info.assert_not_called()
 
 
-class TestKeyServicePruneTeamKeys:
+class TestKeyServiceReconcileTeamKeys:
     @pytest.fixture
     def team(self, project):
-        """A gateway team whose only allowed model is the generally available gpt-4."""
+        """A gateway team whose only allowed model is gpt-4."""
         return Team.objects.create(project=project, litellm_team_id="team-xyz")
 
     @pytest.fixture
@@ -373,7 +373,7 @@ class TestKeyServicePruneTeamKeys:
         ]
 
         with KeyService(gpt4_only_client) as service:
-            updated, failed = service.prune_team_keys_to_allowed_models(team)
+            updated, failed = service.reconcile_team_keys_to_allowed_models(team)
 
         gpt4_only_client.update_key_models.assert_called_once_with("hash-1", ["gpt-4"])
         assert updated == ["alias-1"]
@@ -385,7 +385,7 @@ class TestKeyServicePruneTeamKeys:
         ]
 
         with KeyService(gpt4_only_client) as service:
-            updated, _failed = service.prune_team_keys_to_allowed_models(team)
+            updated, _failed = service.reconcile_team_keys_to_allowed_models(team)
 
         gpt4_only_client.update_key_models.assert_not_called()
         assert updated == []
@@ -396,7 +396,7 @@ class TestKeyServicePruneTeamKeys:
         ]
 
         with KeyService(gpt4_only_client) as service:
-            updated, _failed = service.prune_team_keys_to_allowed_models(team)
+            updated, _failed = service.reconcile_team_keys_to_allowed_models(team)
 
         gpt4_only_client.update_key_models.assert_called_once_with("hash-1", ["no-default-models"])
         assert updated == ["alias-1"]
@@ -409,7 +409,7 @@ class TestKeyServicePruneTeamKeys:
         gpt4_only_client.update_key_models.side_effect = [AIGatewayAPIError(500, "boom"), None]
 
         with KeyService(gpt4_only_client) as service:
-            updated, failed = service.prune_team_keys_to_allowed_models(team)
+            updated, failed = service.reconcile_team_keys_to_allowed_models(team)
 
         assert failed == ["alias-1"]
         assert updated == ["alias-2"]
@@ -426,7 +426,7 @@ class TestKeyServicePruneTeamKeys:
             patch("ai_gateway.services.sentry_sdk.capture_exception") as capture_exception,
             KeyService(gpt4_only_client) as service,
         ):
-            service.prune_team_keys_to_allowed_models(team)
+            service.reconcile_team_keys_to_allowed_models(team)
 
         capture_exception.assert_called_once_with(error)
 
@@ -446,7 +446,7 @@ class TestKeyServicePruneTeamKeys:
         ]
 
         with KeyService(gpt4_only_client) as service:
-            service.prune_team_keys_to_allowed_models(team)
+            service.reconcile_team_keys_to_allowed_models(team)
 
         db_key.refresh_from_db()
         assert db_key.modified > original_modified
@@ -472,12 +472,21 @@ class TestKeyServiceAccessGroups:
         assert ids == ["ag-1", "ag-2"]
         gateway_client.get_team_access_group_ids.assert_called_once_with("team-abc-123")
 
-    def test_set_team_access_groups_delegates_to_client(self, gateway_client):
-        team = Team(litellm_team_id="team-abc-123")
+    def test_set_team_model_access_updates_groups_and_reconciles_keys(
+        self, project, gateway_client
+    ):
+        team = Team.objects.create(project=project, litellm_team_id="team-abc-123")
+        gateway_client.team_info.return_value = {"team_info": {"access_group_models": ["gpt-4"]}}
+        gateway_client.list_team_keys.return_value = [
+            {"token": "hash-1", "key_alias": "alias-1", "models": ["gpt-4", "restricted-model"]},
+        ]
 
         with KeyService(gateway_client) as service:
-            service.set_team_access_groups(team, ["ag-1", "ag-2"])
+            updated, failed = service.set_team_model_access(team, ["ag-1", "ag-2"])
 
         gateway_client.update_team_access_groups.assert_called_once_with(
             "team-abc-123", ["ag-1", "ag-2"]
         )
+        gateway_client.update_key_models.assert_called_once_with("hash-1", ["gpt-4"])
+        assert updated == ["alias-1"]
+        assert failed == []

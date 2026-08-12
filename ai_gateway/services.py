@@ -173,8 +173,8 @@ class KeyService:
         self._client.delete_key(key.litellm_secret)
         key.delete()
 
-    def prune_team_keys_to_allowed_models(self, team: Team) -> tuple[list[str], list[str]]:
-        """Prune each of ``team``'s keys to the models it may currently use.
+    def reconcile_team_keys_to_allowed_models(self, team: Team) -> tuple[list[str], list[str]]:
+        """Reconcile each of ``team``'s keys to the models it may currently use.
 
         Reconciles every key against the team's allowed models, removing any
         model no longer permitted. A key left with no permitted models is given
@@ -214,9 +214,18 @@ class KeyService:
         """Return the ids of the access groups currently assigned to ``team``."""
         return self._client.get_team_access_group_ids(team.litellm_team_id)
 
-    def set_team_access_groups(self, team: Team, access_group_ids: list[str]) -> None:
-        """Replace the access groups assigned to ``team``."""
+    def set_team_model_access(
+        self, team: Team, access_group_ids: list[str]
+    ) -> tuple[list[str], list[str]]:
+        """Replace the access groups assigned to ``team`` and reconcile its keys.
+
+        Changing a team's access groups can shrink the models it may use, so
+        every key is reconciled with the new allowed set to keep keys from calling
+        models the team no longer has. Returns the ``(updated, failed)`` key
+        aliases from that reconciliation.
+        """
         self._client.update_team_access_groups(team.litellm_team_id, access_group_ids)
+        return self.reconcile_team_keys_to_allowed_models(team)
 
     def _bust_key_models_cache(self, aliases: list[str], team: Team) -> None:
         """Invalidate the cached models for the DB keys with ``aliases``.

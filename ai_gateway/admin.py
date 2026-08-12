@@ -124,7 +124,7 @@ class AIGatewayTeamAdmin(SimpleHistoryAdmin):
             return
 
         with KeyService.from_settings() as service:
-            service.set_team_access_groups(obj, new_groups)
+            updated, failed = service.set_team_model_access(obj, new_groups)
 
         logger.info(
             "AI Gateway access groups for team %s updated by %s: %s",
@@ -132,14 +132,6 @@ class AIGatewayTeamAdmin(SimpleHistoryAdmin):
             request.user,
             new_groups,
         )
-
-        if set(initial_groups) - set(new_groups):
-            self._reconcile_team_keys(request, obj)
-
-    def _reconcile_team_keys(self, request, team):
-        """Prune models newly restricted from the team's keys, reporting outcomes."""
-        with KeyService.from_settings() as service:
-            updated, failed = service.prune_team_keys_to_allowed_models(team)
 
         if updated:
             messages.info(
