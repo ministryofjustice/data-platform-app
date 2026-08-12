@@ -205,7 +205,7 @@ class TestKeyCreateViewFiltering:
         assertContains(response, 'value="claude-3"')
 
     def test_show_more_reveals_all_matches(self, client, user, project, key_service):
-        key_service.list_default_models.return_value = [
+        key_service.list_available_models.return_value = [
             {
                 "model_name": f"model-{index}",
                 "display_name": f"Model {index}",
@@ -343,6 +343,18 @@ class TestKeyDetailView:
             response,
             f'href="{reverse("ai_gateway:key_revoke", args=[project.uuid, key.pk])}"',
         )
+
+    def test_renders_none_when_key_uses_no_default_models(
+        self, client, user, project, key, key_service
+    ):
+        key_service.get_models_for_key.return_value = ["no-default-models"]
+        client.force_login(user)
+
+        response = client.get(reverse("ai_gateway:key_detail", args=[project.uuid, key.pk]))
+
+        assert response.status_code == 200
+        assertContains(response, "None")
+        assertNotContains(response, "no-default-models")
 
     def test_renders_fallback_message_when_gateway_call_fails(
         self, client, user, project, key, key_service
