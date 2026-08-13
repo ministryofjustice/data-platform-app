@@ -42,10 +42,10 @@
     <div class="govuk-button-group">
       <button type="submit"
               class="govuk-button moj-button"
-              hx-get="{% url model_filter_url_name project.uuid %}"
+              hx-get="{{ model_filter_url }}"
               formmethod="get">Apply filters</button>
-      <a href="{% url model_filter_url_name project.uuid %}"
-         hx-get="{% url model_filter_url_name project.uuid %}"
+      <a href="{{ model_filter_url }}"
+         hx-get="{{ model_filter_url }}"
          hx-vals='{"search": "", "provider": "", "family": ""}'
          hx-on::after-request=" if (event.detail.successful) { document.getElementById('model-search').value = ''; document.getElementById('model-provider').value = ''; document.getElementById('model-family').value = ''; }"
          class="govuk-link">Clear filters</a>

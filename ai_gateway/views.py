@@ -14,7 +14,8 @@ from django.views.generic.detail import SingleObjectMixin
 
 from ai_gateway.exceptions import AIGatewayError
 from ai_gateway.filtering import VISIBLE_LIMIT, filter_models
-from ai_gateway.forms import KeyCreateForm
+from ai_gateway.forms import KeyCreateForm, KeyModelChangeForm
+from ai_gateway.models import Key
 from ai_gateway.services import KeyService
 from projects.mixins import ProjectLayoutContextMixin
 from projects.models import Project
@@ -90,6 +91,18 @@ class ModelSelectionContextMixin(AvailableModelsMixin):
 
     model_filter_url_name = "ai_gateway:key_create"
 
+    def _model_filter_url(self, kwargs: dict[str, Any] | None = None) -> str:
+        """Return the model-filter endpoint URL for the current view context."""
+        return reverse(self.model_filter_url_name, kwargs=kwargs or dict(self.kwargs))
+
+    def _selected_model_ids(self, params) -> set[str]:
+        return set(params.getlist("models"))
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update(self._model_list_context())
+        return context
+
     def _model_list_context(self) -> dict[str, Any]:
         """Build the filtered, paged model-selection context from the request.
 
@@ -104,7 +117,7 @@ class ModelSelectionContextMixin(AvailableModelsMixin):
         provider = params.get("provider", "")
         family = params.get("family", "")
         expanded = params.get("expanded") == "1"
-        selected_models = set(params.getlist("models")) & self.available_models_by_name.keys()
+        selected_models = self._selected_model_ids(params) & self.available_models_by_name.keys()
         matches = filter_models(
             self.available_models,
             search=search,
@@ -122,6 +135,7 @@ class ModelSelectionContextMixin(AvailableModelsMixin):
 
         return {
             "model_filter_url_name": self.model_filter_url_name,
+            "model_filter_url": self._model_filter_url(),
             "model_providers": self.model_providers,
             "model_families": self.model_families,
             "visible_models": visible_models,
@@ -161,11 +175,6 @@ class KeyCreateView(ProjectScopedMixin, ModelSelectionContextMixin, FormView):
             context = {"project": self.project, **self._model_list_context()}
             return render(request, "includes/ai_gateway/_model_list.html", context)
         return super().get(request, *args, **kwargs)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context.update(self._model_list_context())
-        return context
 
     def form_valid(self, form: KeyCreateForm) -> HttpResponse:
         query = urlencode(
@@ -247,7 +256,74 @@ class KeyCreateConfirmView(ProjectScopedMixin, AvailableModelsMixin, View):
         return response
 
 
-class KeyDetailView(ProjectScopedMixin, DetailView):
+class KeyScopedMixin(ProjectScopedMixin):
+    """Resolves a key scoped to the current project."""
+
+    @cached_property
+    def key(self) -> Key:
+        return get_object_or_404(self.project.ai_gateway_keys.all(), pk=self.kwargs["pk"])
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["key"] = self.key
+        return context
+
+
+class KeyModelChangeView(KeyScopedMixin, ModelSelectionContextMixin, FormView):
+    """Lets users amend model selection for an existing key before review."""
+
+    template_name = "ai_gateway/key-model-change.html"
+    form_class = KeyModelChangeForm
+    model_filter_url_name = "ai_gateway:key_model_change"
+
+    @cached_property
+    def current_key_model_ids(self) -> set[str]:
+        with KeyService.from_settings() as service:
+            models = service.get_models_for_key(self.key)
+
+        return {
+            model for model in models if model != KeyService.NO_DEFAULT_MODELS
+        } & self.available_models_by_name.keys()
+
+    def _selected_model_ids(self, params) -> set[str]:
+        selected_models = set(params.getlist("models"))
+        if selected_models:
+            return selected_models
+        return self.current_key_model_ids
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["available_models"] = self.available_models
+        if self.request.method == "GET" and self.request.GET.get("show_errors") == "1":
+            kwargs["data"] = self.request.GET
+        return kwargs
+
+    def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+        if request.htmx:
+            context = {
+                "project": self.project,
+                "key": self.key,
+                **self._model_list_context(),
+            }
+            return render(request, "includes/ai_gateway/_model_list.html", context)
+        return super().get(request, *args, **kwargs)
+
+    def form_valid(self, form: KeyModelChangeForm) -> HttpResponse:
+        query = urlencode({"models": form.cleaned_data["models"]}, doseq=True)
+        url = reverse(
+            "ai_gateway:key_model_change_review",
+            kwargs={"uuid": self.project.uuid, "pk": self.key.pk},
+        )
+        return redirect(f"{url}?{query}")
+
+
+class KeyModelChangeReviewView(KeyScopedMixin, TemplateView):
+    """Stage 2 placeholder page for the review step in the model-change flow."""
+
+    template_name = "ai_gateway/key-model-change-review.html"
+
+
+class KeyDetailView(KeyScopedMixin, DetailView):
     template_name = "ai_gateway/key-detail.html"
     context_object_name = "key"
 

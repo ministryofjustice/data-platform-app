@@ -46,6 +46,12 @@
                 Error retrieving models from the AI Gateway. Please contact support if the issue persists.
               {% endfor %}
             </dd>
+            <dd class="govuk-summary-list__actions">
+              <a class="govuk-link"
+                 href="{% url 'ai_gateway:key_model_change' project.uuid key.pk %}">
+                Change<span class="govuk-visually-hidden">AI models</span>
+              </a>
+            </dd>
           </div>
         </dl>
       </div>

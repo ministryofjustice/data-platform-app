@@ -1,0 +1,16 @@
+{% extends "base/base.html" %}
+{% block title %}
+  Review model changes - {{ key.name }} - {{ project.name }} - Justice Data Platform | Ministry of Justice
+{% endblock title %}
+{% block back_link %}
+  <a href="{% url 'ai_gateway:key_model_change' project.uuid key.pk %}"
+     class="govuk-back-link">Back</a>
+{% endblock back_link %}
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h1 class="govuk-heading-xl">Review model changes</h1>
+      <p class="govuk-body">Review details will be added in the next stage.</p>
+    </div>
+  </div>
+{% endblock content %}
