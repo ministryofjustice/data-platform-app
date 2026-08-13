@@ -85,24 +85,10 @@ class AvailableModelsMixin:
         ]
 
 
-class KeyCreateView(ProjectScopedMixin, AvailableModelsMixin, FormView):
-    """Collects a key name and model selection, then hands off to the confirmation step."""
+class ModelSelectionContextMixin(AvailableModelsMixin):
+    """Builds shared context for model-selection tables with filtering and paging."""
 
-    template_name = "ai_gateway/key-create.html"
-    form_class = KeyCreateForm
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs["project"] = self.project
-        kwargs["available_models"] = self.available_models
-        if self.request.method == "GET" and self.request.GET.get("show_errors") == "1":
-            kwargs["data"] = self.request.GET
-        return kwargs
-
-    def get_initial(self):
-        initial = super().get_initial()
-        initial["name"] = self.request.GET.get("name", "")
-        return initial
+    model_filter_url_name = "ai_gateway:key_create"
 
     def _model_list_context(self) -> dict[str, Any]:
         """Build the filtered, paged model-selection context from the request.
@@ -135,6 +121,7 @@ class KeyCreateView(ProjectScopedMixin, AvailableModelsMixin, FormView):
         ]
 
         return {
+            "model_filter_url_name": self.model_filter_url_name,
             "model_providers": self.model_providers,
             "model_families": self.model_families,
             "visible_models": visible_models,
@@ -148,6 +135,26 @@ class KeyCreateView(ProjectScopedMixin, AvailableModelsMixin, FormView):
             "visible_count": len(visible_models),
             "has_more": len(matches) > len(visible_models),
         }
+
+
+class KeyCreateView(ProjectScopedMixin, ModelSelectionContextMixin, FormView):
+    """Collects a key name and model selection, then hands off to the confirmation step."""
+
+    template_name = "ai_gateway/key-create.html"
+    form_class = KeyCreateForm
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["project"] = self.project
+        kwargs["available_models"] = self.available_models
+        if self.request.method == "GET" and self.request.GET.get("show_errors") == "1":
+            kwargs["data"] = self.request.GET
+        return kwargs
+
+    def get_initial(self):
+        initial = super().get_initial()
+        initial["name"] = self.request.GET.get("name", "")
+        return initial
 
     def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         if request.htmx:

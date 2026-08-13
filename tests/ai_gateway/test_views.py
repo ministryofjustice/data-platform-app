@@ -155,6 +155,7 @@ class TestKeyCreateViewFiltering:
         client.force_login(user)
 
         response = client.get(reverse("ai_gateway:key_create", args=[project.uuid]))
+        key_create_url = reverse("ai_gateway:key_create", args=[project.uuid])
 
         assertContains(response, 'name="provider"')
         assertContains(response, 'name="family"')
@@ -162,6 +163,7 @@ class TestKeyCreateViewFiltering:
         assertContains(response, "Anthropic")
         assertContains(response, "GPT")
         assertContains(response, "Claude")
+        assertContains(response, f'hx-get="{key_create_url}"', count=2)
 
     def test_filters_models_by_provider(self, client, user, project, key_service):
         client.force_login(user)
