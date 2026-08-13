@@ -42,6 +42,18 @@
           </dl>
         </div>
       </div>
+      <form method="post"
+            action="{% url 'ai_gateway:key_model_change_review' project.uuid key.pk %}">
+        {% csrf_token %}
+        {% for model_id in selected_model_ids %}
+          <input type="hidden" name="models" value="{{ model_id }}">
+        {% endfor %}
+        <div class="govuk-button-group">
+          <button type="submit" class="govuk-button">Save changes</button>
+          <a class="govuk-link"
+             href="{% url 'ai_gateway:key_detail' project.uuid key.pk %}">Cancel</a>
+        </div>
+      </form>
     </div>
   </div>
 {% endblock content %}

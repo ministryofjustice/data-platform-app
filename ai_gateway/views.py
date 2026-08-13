@@ -318,76 +318,109 @@ class KeyModelChangeView(KeyScopedMixin, ModelSelectionContextMixin, FormView):
         return redirect(f"{url}?{query}")
 
 
-class KeyModelChangeReviewView(KeyScopedMixin, AvailableModelsMixin, TemplateView):
+class KeyModelChangeConfirmView(KeyScopedMixin, AvailableModelsMixin, FormView):
     """Shows a review table of model changes before applying them."""
 
     template_name = "ai_gateway/key-model-change-review.html"
+    form_class = KeyModelChangeForm
 
-    def _change_url(self) -> str:
+    def _ordered_model_ids(self, model_ids: set[str]) -> list[str]:
+        return [
+            model["model_name"]
+            for model in self.available_models
+            if model["model_name"] in model_ids
+        ]
+
+    def _ordered_model_names(self, model_ids: set[str]) -> list[str]:
+        return self._model_display_names(self._ordered_model_ids(model_ids))
+
+    def _change_url(self):
         return reverse(
             "ai_gateway:key_model_change",
             kwargs={"uuid": self.project.uuid, "pk": self.key.pk},
         )
 
-    def _selected_model_ids_from_querystring(self) -> set[str]:
-        return {
-            model_id
-            for model_id in self.request.GET.getlist("models")
-            if model_id in self.available_models_by_name
-        }
-
-    def _ordered_model_names(self, model_ids: set[str]) -> list[str]:
-        ordered_model_ids = [
-            model["model_name"]
-            for model in self.available_models
-            if model["model_name"] in model_ids
-        ]
-        return self._model_display_names(ordered_model_ids)
-
     @cached_property
-    def current_key_model_ids(self) -> set[str]:
+    def current_models(self) -> set[str]:
         with KeyService.from_settings() as service:
             models = service.get_models_for_key(self.key)
 
-        available_model_names = self.available_models_by_name.keys()
-        return {
-            model for model in models if model != KeyService.NO_DEFAULT_MODELS
-        } & available_model_names
+        return {model for model in models if model != KeyService.NO_DEFAULT_MODELS}
+
+    def form_valid(self, form: KeyModelChangeForm) -> HttpResponse:
+        selected_model_ids = form.cleaned_data["models"]
+
+        try:
+            with KeyService.from_settings() as service:
+                service.update_models_for_key(key=self.key, models=selected_model_ids)
+        except AIGatewayError as error:
+            sentry_sdk.capture_exception(error)
+            self.request.session["error_message"] = {
+                "heading": "Could not update models. Please try again later.",
+            }
+            return redirect("ai_gateway:key_detail", uuid=self.project.uuid, pk=self.key.pk)
+
+        self.request.session["success_message"] = {
+            "heading": "Models changed",
+            "message": "You've updated the models for this key",
+        }
+        return redirect("ai_gateway:key_detail", uuid=self.project.uuid, pk=self.key.pk)
+
+    def form_invalid(self, form):
+        params = {"models": form.data.getlist("models"), "show_errors": 1}
+        querystring = urlencode(params, doseq=True)
+        url = self._change_url()
+        return redirect(f"{url}?{querystring}")
 
     def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
-        if not self._selected_model_ids_from_querystring():
-            return redirect(self._change_url())
+        self.form = self.get_form()
+        if not self.form.is_valid():
+            return self.form_invalid(form=self.form)
         return super().get(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        selected_model_ids = set(self.form.cleaned_data["models"])
+        current_models = self.current_models
 
-        selected_model_ids = self._selected_model_ids_from_querystring()
-
-        added_model_ids = selected_model_ids - self.current_key_model_ids
-        removed_model_ids = self.current_key_model_ids - selected_model_ids
-        retained_model_ids = self.current_key_model_ids & selected_model_ids
+        added_model_ids = selected_model_ids - current_models
+        removed_model_ids = current_models - selected_model_ids
+        retained_model_ids = current_models & selected_model_ids
+        model_change_rows = [
+            {
+                "label": "Added",
+                "models": self._ordered_model_names(added_model_ids),
+            },
+            {
+                "label": "Removed",
+                "models": self._ordered_model_names(removed_model_ids),
+            },
+            {
+                "label": "Retained",
+                "models": self._ordered_model_names(retained_model_ids),
+            },
+        ]
 
         context.update(
             {
                 "change_url": self._change_url(),
-                "model_change_rows": [
-                    {
-                        "label": "Added",
-                        "models": self._ordered_model_names(added_model_ids),
-                    },
-                    {
-                        "label": "Removed",
-                        "models": self._ordered_model_names(removed_model_ids),
-                    },
-                    {
-                        "label": "Retained",
-                        "models": self._ordered_model_names(retained_model_ids),
-                    },
-                ],
+                "selected_model_ids": self._ordered_model_ids(selected_model_ids),
+                "model_change_rows": model_change_rows,
             }
         )
         return context
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+
+        if self.request.method == "GET":
+            kwargs["data"] = self.request.GET
+
+        kwargs.update(
+            available_models=self.available_models,
+            current_models=self.current_models,
+        )
+        return kwargs
 
 
 class KeyDetailView(KeyScopedMixin, DetailView):
@@ -399,6 +432,7 @@ class KeyDetailView(KeyScopedMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context["success_message"] = self.request.session.pop("success_message", None)
         context["error_message"] = self.request.session.pop("error_message", None)
         with KeyService.from_settings() as service:
             try:

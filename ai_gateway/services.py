@@ -168,6 +168,15 @@ class KeyService:
         cache.set(cache_key, models, timeout=self._key_models_cache_timeout())
         return models
 
+    def update_models_for_key(self, key: Key, models: list[str]) -> None:
+        """Replace the models the gateway key ``key`` can call.
+
+        Uses the key token for gateway updates, then bumps ``modified`` so
+        subsequent ``get_models_for_key`` calls miss stale cache entries.
+        """
+        self._client.update_key_models(key.litellm_token, models)
+        Key.objects.filter(pk=key.pk).update(modified=timezone.now())
+
     def delete_key(self, key: Key) -> None:
         """Delete the virtual key from the gateway and remove its metadata."""
         self._client.delete_key(key.litellm_secret)

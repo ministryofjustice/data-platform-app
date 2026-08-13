@@ -242,6 +242,9 @@ class TestKeyModelChangeView:
     def _review_url(self, project, key):
         return reverse("ai_gateway:key_model_change_review", args=[project.uuid, key.pk])
 
+    def _detail_url(self, project, key):
+        return reverse("ai_gateway:key_detail", args=[project.uuid, key.pk])
+
     def test_get_renders_form_with_current_key_models_selected(
         self, client, user, project, key, key_service
     ):
@@ -371,7 +374,70 @@ class TestKeyModelChangeView:
         response = client.get(self._review_url(project, key))
 
         assert response.status_code == 302
-        assert response.url == self._change_url(project, key)
+        assert response.url.startswith(f"{self._change_url(project, key)}?")
+        assert "show_errors=1" in response.url
+
+    def test_review_post_updates_models_and_redirects_to_detail(
+        self, client, user, project, key, key_service
+    ):
+        client.force_login(user)
+
+        response = client.post(
+            self._review_url(project, key),
+            data={"models": ["claude-3"]},
+        )
+
+        assert response.status_code == 302
+        assert response.url == self._detail_url(project, key)
+        key_service.update_models_for_key.assert_called_once_with(key, ["claude-3"])
+        assert client.session["success_message"] == {
+            "heading": "Models changed",
+            "message": "You've updated the models for this key",
+        }
+
+    def test_review_post_without_selected_models_redirects_to_change(
+        self, client, user, project, key, key_service
+    ):
+        client.force_login(user)
+
+        response = client.post(self._review_url(project, key), data={})
+
+        assert response.status_code == 302
+        assert response.url.startswith(f"{self._change_url(project, key)}?")
+        assert "show_errors=1" in response.url
+        key_service.update_models_for_key.assert_not_called()
+
+    def test_review_post_without_model_changes_redirects_to_change_with_errors(
+        self, client, user, project, key, key_service
+    ):
+        client.force_login(user)
+
+        response = client.post(self._review_url(project, key), data={"models": ["gpt-4"]})
+
+        assert response.status_code == 302
+        assert response.url.startswith(f"{self._change_url(project, key)}?")
+        assert "models=gpt-4" in response.url
+        assert "show_errors=1" in response.url
+        key_service.update_models_for_key.assert_not_called()
+
+    def test_review_post_gateway_error_redirects_to_detail_with_error_message(
+        self, client, user, project, key, key_service
+    ):
+        key_service.update_models_for_key.side_effect = AIGatewayAPIError(500, "gateway error")
+        client.force_login(user)
+
+        with patch("ai_gateway.views.sentry_sdk.capture_exception") as capture_exception:
+            response = client.post(
+                self._review_url(project, key),
+                data={"models": ["claude-3"]},
+            )
+
+        assert response.status_code == 302
+        assert response.url == self._detail_url(project, key)
+        assert client.session["error_message"] == {
+            "heading": "Could not update models. Please try again later.",
+        }
+        capture_exception.assert_called_once()
 
     def test_non_member_gets_404_on_change_and_review(
         self, client, non_project_user, project, key, key_service

@@ -5,7 +5,7 @@ from ai_gateway.views import (
     KeyCreateView,
     KeyDetailView,
     KeyListView,
-    KeyModelChangeReviewView,
+    KeyModelChangeConfirmView,
     KeyModelChangeView,
     KeyRegenerateView,
     KeyRevokeView,
@@ -21,7 +21,7 @@ urlpatterns = [
     path("keys/<int:pk>/models/change/", KeyModelChangeView.as_view(), name="key_model_change"),
     path(
         "keys/<int:pk>/models/change/review/",
-        KeyModelChangeReviewView.as_view(),
+        KeyModelChangeConfirmView.as_view(),
         name="key_model_change_review",
     ),
     path("keys/<int:pk>/regenerate/", KeyRegenerateView.as_view(), name="key_regenerate"),

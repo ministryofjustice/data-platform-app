@@ -8,6 +8,11 @@
 {% endblock back_link %}
 {% block content %}
   <div class="govuk-grid-row">
+    {% if success_message %}
+      <div class="govuk-grid-column-full">
+        {% include "includes/success_message.html" with heading=success_message.heading message=success_message.message only %}
+      </div>
+    {% endif %}
     {% if error_message %}
       <div class="govuk-grid-column-full">
         {% include "includes/error_message.html" with heading=error_message.heading message=error_message.message only %}
