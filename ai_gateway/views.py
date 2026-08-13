@@ -294,6 +294,7 @@ class KeyModelChangeView(KeyScopedMixin, ModelSelectionContextMixin, FormView):
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs["available_models"] = self.available_models
+        kwargs["current_models"] = self.current_key_model_ids
         if self.request.method == "GET" and self.request.GET.get("show_errors") == "1":
             kwargs["data"] = self.request.GET
         return kwargs
@@ -317,10 +318,76 @@ class KeyModelChangeView(KeyScopedMixin, ModelSelectionContextMixin, FormView):
         return redirect(f"{url}?{query}")
 
 
-class KeyModelChangeReviewView(KeyScopedMixin, TemplateView):
-    """Stage 2 placeholder page for the review step in the model-change flow."""
+class KeyModelChangeReviewView(KeyScopedMixin, AvailableModelsMixin, TemplateView):
+    """Shows a review table of model changes before applying them."""
 
     template_name = "ai_gateway/key-model-change-review.html"
+
+    def _change_url(self) -> str:
+        return reverse(
+            "ai_gateway:key_model_change",
+            kwargs={"uuid": self.project.uuid, "pk": self.key.pk},
+        )
+
+    def _selected_model_ids_from_querystring(self) -> set[str]:
+        return {
+            model_id
+            for model_id in self.request.GET.getlist("models")
+            if model_id in self.available_models_by_name
+        }
+
+    def _ordered_model_names(self, model_ids: set[str]) -> list[str]:
+        ordered_model_ids = [
+            model["model_name"]
+            for model in self.available_models
+            if model["model_name"] in model_ids
+        ]
+        return self._model_display_names(ordered_model_ids)
+
+    @cached_property
+    def current_key_model_ids(self) -> set[str]:
+        with KeyService.from_settings() as service:
+            models = service.get_models_for_key(self.key)
+
+        available_model_names = self.available_models_by_name.keys()
+        return {
+            model for model in models if model != KeyService.NO_DEFAULT_MODELS
+        } & available_model_names
+
+    def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+        if not self._selected_model_ids_from_querystring():
+            return redirect(self._change_url())
+        return super().get(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        selected_model_ids = self._selected_model_ids_from_querystring()
+
+        added_model_ids = selected_model_ids - self.current_key_model_ids
+        removed_model_ids = self.current_key_model_ids - selected_model_ids
+        retained_model_ids = self.current_key_model_ids & selected_model_ids
+
+        context.update(
+            {
+                "change_url": self._change_url(),
+                "model_change_rows": [
+                    {
+                        "label": "Added",
+                        "models": self._ordered_model_names(added_model_ids),
+                    },
+                    {
+                        "label": "Removed",
+                        "models": self._ordered_model_names(removed_model_ids),
+                    },
+                    {
+                        "label": "Retained",
+                        "models": self._ordered_model_names(retained_model_ids),
+                    },
+                ],
+            }
+        )
+        return context
 
 
 class KeyDetailView(KeyScopedMixin, DetailView):

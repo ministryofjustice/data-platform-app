@@ -327,6 +327,52 @@ class TestKeyModelChangeView:
         assertTemplateUsed(response, "ai_gateway/key-model-change.html")
         assertContains(response, "Select at least one AI model to continue")
 
+    def test_post_requires_at_least_one_model_change(
+        self, client, user, project, key, key_service
+    ):
+        client.force_login(user)
+
+        response = client.post(
+            self._change_url(project, key),
+            data={"models": ["gpt-4"]},
+        )
+
+        assert response.status_code == 200
+        assertTemplateUsed(response, "ai_gateway/key-model-change.html")
+        assertContains(response, "Make changes to continue")
+
+    def test_review_page_shows_added_removed_and_retained_models(
+        self, client, user, project, key, key_service
+    ):
+        client.force_login(user)
+
+        response = client.get(self._review_url(project, key), {"models": ["claude-3"]})
+
+        assert response.status_code == 200
+        assertTemplateUsed(response, "ai_gateway/key-model-change-review.html")
+        assertContains(response, 'class="govuk-summary-card"')
+        assertContains(response, "Models")
+        assertContains(
+            response,
+            f'href="{self._change_url(project, key)}"',
+        )
+        assertContains(response, "Added")
+        assertContains(response, "Removed")
+        assertContains(response, "Retained")
+        assertContains(response, "Claude 3")
+        assertContains(response, "GPT-4")
+        assertContains(response, "None")
+
+    def test_review_page_without_selected_models_redirects_to_change(
+        self, client, user, project, key, key_service
+    ):
+        client.force_login(user)
+
+        response = client.get(self._review_url(project, key))
+
+        assert response.status_code == 302
+        assert response.url == self._change_url(project, key)
+
     def test_non_member_gets_404_on_change_and_review(
         self, client, non_project_user, project, key, key_service
     ):

@@ -50,8 +50,25 @@ class KeyModelChangeForm(forms.Form):
         error_messages={"required": "Select at least one AI model to continue"},
     )
 
-    def __init__(self, *args, available_models: list[dict[str, Any]], **kwargs):
+    def __init__(
+        self,
+        *args,
+        available_models: list[dict[str, Any]],
+        current_models: set[str] | None = None,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
+        self.current_models = current_models or set()
         self.fields["models"].choices = [
             (model["model_name"], model["display_name"]) for model in available_models
         ]
+
+    def clean_models(self) -> list[str]:
+        selected_models = self.cleaned_data["models"]
+        if not selected_models:
+            return selected_models
+
+        if set(selected_models) == self.current_models:
+            raise forms.ValidationError("Make changes to continue")
+
+        return selected_models

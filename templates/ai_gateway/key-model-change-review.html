@@ -10,7 +10,38 @@
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-two-thirds">
       <h1 class="govuk-heading-xl">Review model changes</h1>
-      <p class="govuk-body">Review details will be added in the next stage.</p>
+      <div class="govuk-summary-card">
+        <div class="govuk-summary-card__title-wrapper">
+          <h2 class="govuk-summary-card__title">Models</h2>
+          <ul class="govuk-summary-card__actions">
+            <li class="govuk-summary-card__action">
+              <a class="govuk-link" href="{{ change_url }}">
+                Change<span class="govuk-visually-hidden">models</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+        <div class="govuk-summary-card__content">
+          <dl class="govuk-summary-list">
+            {% for row in model_change_rows %}
+              <div class="govuk-summary-list__row govuk-summary-list__row--no-actions">
+                <dt class="govuk-summary-list__key">{{ row.label }}</dt>
+                <dd class="govuk-summary-list__value">
+                  {% if row.models %}
+                    <ul class="govuk-list govuk-list--bullet govuk-!-margin-bottom-0">
+                      {% for model_name in row.models %}
+                        <li>{{ model_name }}</li>
+                      {% endfor %}
+                    </ul>
+                  {% else %}
+                    None
+                  {% endif %}
+                </dd>
+              </div>
+            {% endfor %}
+          </dl>
+        </div>
+      </div>
     </div>
   </div>
 {% endblock content %}
