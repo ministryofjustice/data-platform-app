@@ -276,6 +276,13 @@ class KeyModelChangeView(KeyScopedMixin, ModelSelectionContextMixin, FormView):
     form_class = KeyModelChangeForm
     model_filter_url_name = "ai_gateway:key_model_change"
 
+    def _htmx_model_list_context(self) -> dict[str, Any]:
+        return {
+            "project": self.project,
+            "key": self.key,
+            **self._model_list_context(),
+        }
+
     @cached_property
     def current_key_model_ids(self) -> set[str]:
         with KeyService.from_settings() as service:
@@ -301,12 +308,11 @@ class KeyModelChangeView(KeyScopedMixin, ModelSelectionContextMixin, FormView):
 
     def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         if request.htmx:
-            context = {
-                "project": self.project,
-                "key": self.key,
-                **self._model_list_context(),
-            }
-            return render(request, "includes/ai_gateway/_model_list.html", context)
+            return render(
+                request,
+                "includes/ai_gateway/_model_list.html",
+                self._htmx_model_list_context(),
+            )
         return super().get(request, *args, **kwargs)
 
     def form_valid(self, form: KeyModelChangeForm) -> HttpResponse:
@@ -334,7 +340,7 @@ class KeyModelChangeConfirmView(KeyScopedMixin, AvailableModelsMixin, FormView):
     def _ordered_model_names(self, model_ids: set[str]) -> list[str]:
         return self._model_display_names(self._ordered_model_ids(model_ids))
 
-    def _change_url(self):
+    def _change_url(self) -> str:
         return reverse(
             "ai_gateway:key_model_change",
             kwargs={"uuid": self.project.uuid, "pk": self.key.pk},
@@ -373,14 +379,17 @@ class KeyModelChangeConfirmView(KeyScopedMixin, AvailableModelsMixin, FormView):
         return redirect(f"{url}?{querystring}")
 
     def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
-        self.form = self.get_form()
-        if not self.form.is_valid():
-            return self.form_invalid(form=self.form)
-        return super().get(request, *args, **kwargs)
+        form = self.get_form()
+        if not form.is_valid():
+            return self.form_invalid(form=form)
+
+        context = self.get_context_data(form=form)
+        return self.render_to_response(context)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        selected_model_ids = set(self.form.cleaned_data["models"])
+        form = kwargs["form"]
+        selected_model_ids = set(form.cleaned_data["models"])
         current_models = self.current_models
 
         added_model_ids = selected_model_ids - current_models
