@@ -172,8 +172,7 @@ class AIGatewayClient:
 
     def regenerate_key(self, key: str) -> str:
         """Rotate ``key`` and return the new key string."""
-        data = self._request("POST", f"/key/{key}/regenerate")
-        return data["key"]
+        return self._request("POST", f"/key/{key}/regenerate")
 
     def delete_key(self, key: str) -> None:
         """Delete the virtual key ``key``."""
