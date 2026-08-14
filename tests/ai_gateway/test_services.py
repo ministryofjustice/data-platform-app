@@ -248,6 +248,18 @@ class TestKeyServiceGetModelsForKey:
         assert gateway_client.key_info.call_count == 2
 
 
+class TestKeyServiceUpdateModelsForKey:
+    def test_updates_models_using_token_and_bumps_modified(self, gateway_client, key):
+        original_modified = key.modified
+
+        with KeyService(gateway_client) as service:
+            service.update_models_for_key(key, ["claude-3"])
+
+        gateway_client.update_key_models.assert_called_once_with(key.litellm_token, ["claude-3"])
+        key.refresh_from_db(fields=["modified"])
+        assert key.modified > original_modified
+
+
 class TestKeyServiceRegenerateKey:
     def test_regenerates_and_persists_secret_and_mask(self, project, user, gateway_client):
         key = Key.objects.create(
