@@ -37,6 +37,14 @@ class Key(TimeStampedModel):
         on_delete=models.SET_NULL,
         null=True,
     )
+    models = models.JSONField(
+        default=list,
+        help_text=(
+            "Model identifiers last successfully applied by this application. "
+            "Only changes made through this application are captured; "
+            "the AI Gateway remains the source of truth."
+        ),
+    )
     history = HistoricalRecords(
         table_name="ai_gateway_key_history",
         excluded_fields=["litellm_secret"],
