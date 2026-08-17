@@ -17,6 +17,10 @@
         {% csrf_token %}
         {% url 'ai_gateway:key_detail' project.uuid key.pk as cancel_url %}
         {% include "includes/ai_gateway/_model_selection.html" with cancel_url=cancel_url %}
+        <div class="govuk-button-group">
+          <button type="submit" class="govuk-button">Review changes</button>
+          <a href="{{ cancel_url }}" class="govuk-link">Cancel</a>
+        </div>
       </form>
     </div>
   </div>
