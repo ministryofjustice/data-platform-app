@@ -389,7 +389,11 @@ class TestKeyModelChangeView:
 
         assert response.status_code == 302
         assert response.url == self._detail_url(project, key)
-        key_service.update_models_for_key.assert_called_once_with(key, ["claude-3"])
+        key_service.update_models_for_key.assert_called_once_with(
+            key=key,
+            models=["claude-3"],
+            changed_by=user,
+        )
         assert client.session["success_message"] == {
             "heading": "Models changed",
             "message": "You've updated the models for this key",

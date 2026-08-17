@@ -10,7 +10,6 @@ from django.conf import settings
 from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
-from django.utils import timezone
 from django.utils.text import slugify
 
 from ai_gateway.client import AIGatewayClient
@@ -123,6 +122,7 @@ class KeyService:
             litellm_secret=plaintext_key,
             litellm_token=data.get("token", ""),
             masked_key=self._mask_key(plaintext_key),
+            models=models,
             created_by=created_by,
         )
         return plaintext_key
@@ -168,21 +168,35 @@ class KeyService:
         cache.set(cache_key, models, timeout=self._key_models_cache_timeout())
         return models
 
-    def update_models_for_key(self, key: Key, models: list[str]) -> None:
+    def update_models_for_key(
+        self,
+        key: Key,
+        models: list[str],
+        changed_by: User | None = None,
+    ) -> None:
         """Replace the models the gateway key ``key`` can call.
 
-        Uses the key token for gateway updates, then bumps ``modified`` so
-        subsequent ``get_models_for_key`` calls miss stale cache entries.
+        Saves the last successfully applied model state so Simple History
+        records the change and actor.
         """
         self._client.update_key_models(key.litellm_token, models)
-        Key.objects.filter(pk=key.pk).update(modified=timezone.now())
+        self._record_applied_models(
+            key,
+            models,
+            changed_by=changed_by,
+            reason="Models changed",
+        )
 
     def delete_key(self, key: Key) -> None:
         """Delete the virtual key from the gateway and remove its metadata."""
         self._client.delete_key(key.litellm_secret)
         key.delete()
 
-    def reconcile_team_keys_to_allowed_models(self, team: Team) -> tuple[list[str], list[str]]:
+    def reconcile_team_keys_to_allowed_models(
+        self,
+        team: Team,
+        changed_by: User | None = None,
+    ) -> tuple[list[str], list[str]]:
         """Reconcile each of ``team``'s keys to the models it may currently use.
 
         Reconciles every key against the team's allowed models, removing any
@@ -193,6 +207,10 @@ class KeyService:
         Returns the ``(updated, failed)`` key aliases.
         """
         allowed = self._allowed_model_names(team.project)
+        keys_by_alias = {
+            key.litellm_alias: key
+            for key in Key.objects.filter(project=team.project).select_related("project")
+        }
         updated = []
         failed = []
         for gateway_key in self._client.list_team_keys(team.litellm_team_id):
@@ -202,17 +220,24 @@ class KeyService:
                 continue
 
             alias = gateway_key.get("key_alias", "")
+            new_models = pruned or [self.NO_DEFAULT_MODELS]
             try:
                 token = gateway_key.get("token", "")
-                self._client.update_key_models(token, pruned or [self.NO_DEFAULT_MODELS])
+                self._client.update_key_models(token, new_models)
             except AIGatewayError as error:
                 sentry_sdk.capture_exception(error)
                 failed.append(alias)
                 continue
 
+            if key := keys_by_alias.get(alias):
+                self._record_applied_models(
+                    key,
+                    new_models,
+                    changed_by=changed_by,
+                    reason="Models reconciled after access group change",
+                )
             updated.append(alias)
 
-        self._bust_key_models_cache(updated, team)
         return updated, failed
 
     def list_access_groups(self) -> list[dict[str, Any]]:
@@ -224,7 +249,10 @@ class KeyService:
         return self._client.get_team_access_group_ids(team.litellm_team_id)
 
     def set_team_model_access(
-        self, team: Team, access_group_ids: list[str]
+        self,
+        team: Team,
+        access_group_ids: list[str],
+        changed_by: User | None = None,
     ) -> tuple[list[str], list[str]]:
         """Replace the access groups assigned to ``team`` and reconcile its keys.
 
@@ -234,19 +262,20 @@ class KeyService:
         aliases from that reconciliation.
         """
         self._client.update_team_access_groups(team.litellm_team_id, access_group_ids)
-        return self.reconcile_team_keys_to_allowed_models(team)
+        return self.reconcile_team_keys_to_allowed_models(team, changed_by=changed_by)
 
-    def _bust_key_models_cache(self, aliases: list[str], team: Team) -> None:
-        """Invalidate the cached models for the DB keys with ``aliases``.
-
-        ``get_models_for_key`` caches by ``Key.modified``; bumping it shifts the
-        cache key so a gateway-side model change is not masked by a stale entry.
-        """
-        if aliases:
-            Key.objects.filter(
-                litellm_alias__in=aliases,
-                project__ai_gateway_team__litellm_team_id=team.litellm_team_id,
-            ).update(modified=timezone.now())
+    @staticmethod
+    def _record_applied_models(
+        key: Key,
+        models: list[str],
+        *,
+        changed_by: User | None,
+        reason: str,
+    ) -> None:
+        key.models = models
+        key._history_user = changed_by
+        key._change_reason = reason
+        key.save(update_fields=["models", "modified"])
 
     @staticmethod
     def _key_models_cache_key(key: Key) -> str:

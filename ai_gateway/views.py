@@ -348,18 +348,26 @@ class KeyModelChangeConfirmView(KeyScopedMixin, AvailableModelsMixin, FormView):
         )
 
     @cached_property
-    def current_models(self) -> set[str]:
+    def current_gateway_models(self) -> list[str]:
         with KeyService.from_settings() as service:
-            models = service.get_models_for_key(self.key)
+            return service.get_models_for_key(self.key)
 
-        return {model for model in models if model != KeyService.NO_DEFAULT_MODELS}
+    @cached_property
+    def current_models(self) -> set[str]:
+        return {
+            model for model in self.current_gateway_models if model != KeyService.NO_DEFAULT_MODELS
+        }
 
     def form_valid(self, form: KeyModelChangeForm) -> HttpResponse:
         selected_model_ids = form.cleaned_data["models"]
 
         try:
             with KeyService.from_settings() as service:
-                service.update_models_for_key(key=self.key, models=selected_model_ids)
+                service.update_models_for_key(
+                    key=self.key,
+                    models=selected_model_ids,
+                    changed_by=self.request.user,
+                )
         except AIGatewayError as error:
             sentry_sdk.capture_exception(error)
             self.request.session["error_message"] = {
