@@ -180,6 +180,7 @@ class TestKeyServiceCreateKey:
         assert key.litellm_token == "tok-1"
         assert key.masked_key != PLAINTEXT_KEY
         assert PLAINTEXT_KEY not in key.masked_key
+        assert key.models == ["gpt-4"]
         assert key.created_by == user
         gateway_client.close.assert_called_once()
 
@@ -249,15 +250,46 @@ class TestKeyServiceGetModelsForKey:
 
 
 class TestKeyServiceUpdateModelsForKey:
-    def test_updates_models_using_token_and_bumps_modified(self, gateway_client, key):
+    def test_updates_models_and_records_history(self, gateway_client, key, user):
+        key.models = ["gpt-4"]
+        key.save(update_fields=["models", "modified"])
         original_modified = key.modified
 
         with KeyService(gateway_client) as service:
-            service.update_models_for_key(key, ["claude-3"])
+            service.update_models_for_key(
+                key,
+                ["claude-3"],
+                changed_by=user,
+            )
 
         gateway_client.update_key_models.assert_called_once_with(key.litellm_token, ["claude-3"])
-        key.refresh_from_db(fields=["modified"])
+        key.refresh_from_db(fields=["models", "modified"])
         assert key.modified > original_modified
+        assert key.models == ["claude-3"]
+
+        latest_history = key.history.latest()
+        previous_history = latest_history.prev_record
+        assert latest_history.models == ["claude-3"]
+        assert latest_history.history_user == user
+        assert latest_history.history_change_reason == "Models changed"
+        assert previous_history.models == ["gpt-4"]
+
+    def test_gateway_error_records_no_history(self, gateway_client, key, user):
+        key.models = ["gpt-4"]
+        key.save(update_fields=["models", "modified"])
+        history_count = key.history.count()
+        gateway_client.update_key_models.side_effect = AIGatewayAPIError(500, "boom")
+
+        with pytest.raises(AIGatewayAPIError), KeyService(gateway_client) as service:
+            service.update_models_for_key(
+                key,
+                ["claude-3"],
+                changed_by=user,
+            )
+
+        key.refresh_from_db()
+        assert key.models == ["gpt-4"]
+        assert key.history.count() == history_count
 
 
 class TestKeyServiceRegenerateKey:
@@ -450,6 +482,7 @@ class TestKeyServiceReconcileTeamKeys:
             litellm_secret="sk-1",
             litellm_token="hash-1",
             masked_key="...1",
+            models=["gpt-4", "restricted-model"],
             created_by=user,
         )
         original_modified = db_key.modified
@@ -458,10 +491,18 @@ class TestKeyServiceReconcileTeamKeys:
         ]
 
         with KeyService(gpt4_only_client) as service:
-            service.reconcile_team_keys_to_allowed_models(team)
+            service.reconcile_team_keys_to_allowed_models(team, changed_by=user)
 
         db_key.refresh_from_db()
         assert db_key.modified > original_modified
+        assert db_key.models == ["gpt-4"]
+
+        latest_history = db_key.history.latest()
+        assert latest_history.models == ["gpt-4"]
+        assert latest_history.history_user == user
+        assert latest_history.history_change_reason == (
+            "Models reconciled after access group change"
+        )
 
 
 class TestKeyServiceAccessGroups:

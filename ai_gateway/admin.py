@@ -130,7 +130,11 @@ class AIGatewayTeamAdmin(SimpleHistoryAdmin):
             return
 
         with KeyService.from_settings() as service:
-            updated, failed = service.set_team_model_access(obj, new_groups)
+            updated, failed = service.set_team_model_access(
+                obj,
+                new_groups,
+                changed_by=request.user,
+            )
 
         logger.info(
             "AI Gateway access groups for team %s updated by %s: %s",
@@ -159,6 +163,7 @@ class KeyAdmin(SimpleHistoryAdmin):
         "litellm_alias",
         "litellm_token",
         "masked_key",
+        "models",
         "created_by",
         "created",
         "modified",
@@ -175,6 +180,7 @@ class KeyAuditAdmin(admin.ModelAdmin):
         "name",
         "project",
         "masked_key",
+        "models",
         "created_by",
         "history_type_display",
         "history_date",
