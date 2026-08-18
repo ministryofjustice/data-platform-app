@@ -216,12 +216,15 @@ class TestRegenerateKey:
     def test_returns_new_key_and_token(self):
         def handler(request):
             assert request.method == "POST"
-            assert request.url.path == "/key/sk-old/regenerate"
-            return httpx.Response(200, json={"key": "sk-new", "token": "hash-2"})
+            assert request.url.path == "/key/old-token-id/regenerate"
+            return httpx.Response(200, json={"key": "sk-new", "token_id": "new-token-id"})
 
         client = build_client(handler)
 
-        assert client.regenerate_key("sk-old") == {"key": "sk-new", "token": "hash-2"}
+        assert client.regenerate_key("old-token-id") == {
+            "key": "sk-new",
+            "token_id": "new-token-id",
+        }
 
 
 class TestDeleteKey:
