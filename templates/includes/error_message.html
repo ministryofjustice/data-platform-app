@@ -16,7 +16,7 @@
   <div class="moj-alert__content">
     <h2 class="moj-alert__heading">{{ heading }}</h2>
     {% if message %}
-      <p>{{ message }}</p>
+      {{ message|safe }}
     {% endif %}
   </div>
   <div class="moj-alert__action">

@@ -1,5 +1,9 @@
 <p class="govuk-body">
-  Showing {{ visible_count }} of {{ match_count }} model{{ match_count|pluralize }}
+  {% if pinned_count %}
+    Showing selected models and {{ visible_count }} of {{ match_count }} model{{ match_count|pluralize }} matching your filters.
+  {% else %}
+    Showing {{ visible_count }} of {{ match_count }} model{{ match_count|pluralize }}
+  {% endif %}
   {% if has_more %}
     <span class="govuk-!-margin-left-4"><a class="govuk-link"
    href="{{ model_filter_url }}?expanded=1"

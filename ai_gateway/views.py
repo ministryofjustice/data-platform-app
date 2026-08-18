@@ -147,48 +147,86 @@ class ModelSelectionContextMixin(AvailableModelsMixin):
     """Builds shared context for model-selection tables with filtering and paging."""
 
     model_filter_url_name = "ai_gateway:key_create"
+    pin_filtered_selections = False
 
     def _model_filter_url(self, kwargs: dict[str, Any] | None = None) -> str:
         """Return the model-filter endpoint URL for the current view context."""
         return reverse(self.model_filter_url_name, kwargs=kwargs or dict(self.kwargs))
 
-    def _selected_model_ids(self, params) -> set[str]:
-        return set(params.getlist("models"))
+    def _selected_model_ids(self, params) -> list[str]:
+        return params.getlist("models")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.update(self._model_list_context())
         return context
 
+    def _valid_selected_model_ids(self, params) -> list[str]:
+        return [
+            model_id
+            for model_id in self._selected_model_ids(params)
+            if model_id in self.available_models_by_name
+        ]
+
+    def _pinned_models(
+        self,
+        selected_models_ids: list[str],
+        matches: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        if not self.pin_filtered_selections:
+            return []
+
+        matching_model_ids = {model["model_name"] for model in matches}
+
+        return [
+            self.available_models_by_name[model_id]
+            for model_id in selected_models_ids
+            if model_id not in matching_model_ids
+        ]
+
+    def _hidden_selected_models(
+        self,
+        selected_model_ids: list[str],
+        visible_models: list[dict[str, Any]],
+    ) -> list[str]:
+
+        if not selected_model_ids:
+            return []
+
+        visible_model_ids = {model["model_name"] for model in visible_models}
+        return [
+            model["model_name"]
+            for model in self.available_models
+            if model["model_name"] in selected_model_ids
+            and model["model_name"] not in visible_model_ids
+        ]
+
     def _model_list_context(self) -> dict[str, Any]:
         """Build the filtered, paged model-selection context from the request.
 
         Selection is stateless: the currently selected model ids are read straight
         from the submitted ``models`` values. Selected models that fall outside the
-        visible slice are rendered as hidden inputs by the template so they survive
-        filtering and paging without a session.
+        visible slice are rendered as hidden inputs, unless the view opts into
+        pinning filtered-out selections. Both approaches preserve filtering and
+        paging without a session.
         """
         params = self.request.POST if self.request.method == "POST" else self.request.GET
-
         search = params.get("search", "")
         provider = params.get("provider", "")
         family = params.get("family", "")
         expanded = params.get("expanded") == "1"
-        selected_models = self._selected_model_ids(params) & self.available_models_by_name.keys()
+        selected_model_ids = self._valid_selected_model_ids(params)
+
         matches = filter_models(
             self.available_models,
             search=search,
             provider=provider,
             family=family,
         )
-        visible_models = matches if expanded else matches[:VISIBLE_LIMIT]
-        visible_names = {model["model_name"] for model in visible_models}
-
-        hidden_selected_models = [
-            model["model_name"]
-            for model in self.available_models
-            if model["model_name"] in selected_models and model["model_name"] not in visible_names
-        ]
+        pinned_models = self._pinned_models(selected_model_ids, matches)
+        visible_matches = matches if expanded else matches[:VISIBLE_LIMIT]
+        visible_models = [*pinned_models, *visible_matches]
+        hidden_selected_models = self._hidden_selected_models(selected_model_ids, visible_models)
 
         return {
             "model_filter_url_name": self.model_filter_url_name,
@@ -197,14 +235,15 @@ class ModelSelectionContextMixin(AvailableModelsMixin):
             "model_families": self.model_families,
             "visible_models": visible_models,
             "hidden_selected_models": hidden_selected_models,
-            "selected_models": selected_models,
+            "selected_models": selected_model_ids,
             "filter_search": search,
             "filter_provider": provider,
             "filter_family": family,
             "expanded": expanded,
             "match_count": len(matches),
-            "visible_count": len(visible_models),
-            "has_more": len(matches) > len(visible_models),
+            "visible_count": len(visible_matches),
+            "pinned_count": len(pinned_models),
+            "has_more": len(matches) > len(visible_matches),
         }
 
 
@@ -333,6 +372,7 @@ class KeyModelChangeView(KeyScopedMixin, ModelSelectionContextMixin, FormView):
     template_name = "ai_gateway/key-model-change.html"
     form_class = KeyModelChangeForm
     model_filter_url_name = "ai_gateway:key_model_change"
+    pin_filtered_selections = True
 
     def _htmx_model_list_context(self) -> dict[str, Any]:
         return {
@@ -342,16 +382,17 @@ class KeyModelChangeView(KeyScopedMixin, ModelSelectionContextMixin, FormView):
         }
 
     @cached_property
-    def current_key_model_ids(self) -> set[str]:
+    def current_key_model_ids(self) -> list[str]:
         with KeyService.from_settings() as service:
             models = service.get_models_for_key(self.key)
 
-        return {
-            model for model in models if model != KeyService.NO_DEFAULT_MODELS
-        } & self.available_models_by_name.keys()
+        if models == [KeyService.NO_DEFAULT_MODELS]:
+            return []
 
-    def _selected_model_ids(self, params) -> set[str]:
-        selected_models = set(params.getlist("models"))
+        return [model for model in models if model in self.available_models_by_name]
+
+    def _selected_model_ids(self, params) -> list[str]:
+        selected_models = params.getlist("models")
         if selected_models:
             return selected_models
         return self.current_key_model_ids
@@ -398,29 +439,47 @@ class KeyModelChangeConfirmView(KeyScopedMixin, AvailableModelsMixin, FormView):
     def _ordered_model_names(self, model_ids: set[str]) -> list[str]:
         return self._model_display_names(self._ordered_model_ids(model_ids))
 
-    def _change_url(self) -> str:
-        return reverse(
+    def _change_url(self, model_ids: list[str] | None = None) -> str:
+        url = reverse(
             "ai_gateway:key_model_change",
             kwargs={"uuid": self.project.uuid, "pk": self.key.pk},
         )
+        if model_ids is None:
+            return url
+        return f"{url}?{urlencode({'models': model_ids}, doseq=True)}"
+
+    @cached_property
+    def current_gateway_models(self) -> list[str]:
+        with KeyService.from_settings() as service:
+            return service.get_models_for_key(self.key)
 
     @cached_property
     def current_models(self) -> set[str]:
-        with KeyService.from_settings() as service:
-            models = service.get_models_for_key(self.key)
-
-        return {model for model in models if model != KeyService.NO_DEFAULT_MODELS}
+        return {
+            model for model in self.current_gateway_models if model != KeyService.NO_DEFAULT_MODELS
+        }
 
     def form_valid(self, form: KeyModelChangeForm) -> HttpResponse:
         selected_model_ids = form.cleaned_data["models"]
 
         try:
             with KeyService.from_settings() as service:
-                service.update_models_for_key(key=self.key, models=selected_model_ids)
+                service.update_models_for_key(
+                    key=self.key,
+                    models=selected_model_ids,
+                    changed_by=self.request.user,
+                )
         except AIGatewayError as error:
             sentry_sdk.capture_exception(error)
+            error_message = (
+                'If this problem persists, you can <a class="govuk-link" '
+                'href="https://moj.enterprise.slack.com/archives/C0B949G0J2X">raise an issue in '
+                "the #ask-data-platform Slack channel</a>. Include your Project ID and Key ID ("
+                "not your API key) in the message."
+            )
             self.request.session["error_message"] = {
-                "heading": "Could not update models. Please try again later.",
+                "heading": "Could not update models",
+                "message": error_message,
             }
             return redirect("ai_gateway:key_detail", uuid=self.project.uuid, pk=self.key.pk)
 
@@ -447,12 +506,13 @@ class KeyModelChangeConfirmView(KeyScopedMixin, AvailableModelsMixin, FormView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         form = kwargs["form"]
-        selected_model_ids = set(form.cleaned_data["models"])
+        selected_model_ids = form.cleaned_data["models"]
+        selected_model_id_set = set(selected_model_ids)
         current_models = self.current_models
 
-        added_model_ids = selected_model_ids - current_models
-        removed_model_ids = current_models - selected_model_ids
-        retained_model_ids = current_models & selected_model_ids
+        added_model_ids = selected_model_id_set - current_models
+        removed_model_ids = current_models - selected_model_id_set
+        retained_model_ids = current_models & selected_model_id_set
         model_change_rows = [
             {
                 "label": "Added",
@@ -470,8 +530,8 @@ class KeyModelChangeConfirmView(KeyScopedMixin, AvailableModelsMixin, FormView):
 
         context.update(
             {
-                "change_url": self._change_url(),
-                "selected_model_ids": self._ordered_model_ids(selected_model_ids),
+                "change_url": self._change_url(selected_model_ids),
+                "selected_model_ids": selected_model_ids,
                 "model_change_rows": model_change_rows,
             }
         )

@@ -91,7 +91,11 @@ class TestAIGatewayTeamAdminChangeView:
         response = client.post(url, {"access_groups": ["ag-2"], "_save": ""})
 
         assert response.status_code == 302
-        key_service.set_team_model_access.assert_called_once_with(team, ["ag-2", "ag-1"])
+        key_service.set_team_model_access.assert_called_once_with(
+            team,
+            ["ag-2", "ag-1"],
+            changed_by=superuser,
+        )
 
     def test_saving_logs_new_access_groups(self, client, superuser, team, key_service, caplog):
         client.force_login(superuser)
@@ -133,7 +137,11 @@ class TestAIGatewayTeamAdminChangeView:
         response = client.post(url, {"_save": ""}, follow=True)
 
         assert response.status_code == 200
-        key_service.set_team_model_access.assert_called_once_with(team, ["ag-1"])
+        key_service.set_team_model_access.assert_called_once_with(
+            team,
+            ["ag-1"],
+            changed_by=superuser,
+        )
         messages = [str(message) for message in response.context["messages"]]
         assert any(
             "Removed newly restricted models from 1 key(s)." in message for message in messages
