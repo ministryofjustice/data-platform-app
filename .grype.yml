@@ -47,3 +47,21 @@ ignore:
       type: python
       name: cryptography
     expires: 2026-08-10
+
+  - vulnerability: GHSA-f2ff-p2ww-7p4p
+    package:
+      type: python
+      name: sqlparse
+    expires: 2026-08-20
+
+  - vulnerability: GHSA-prg7-hcfm-mfcr
+    package:
+      type: python
+      name: sqlparse
+    expires: 2026-08-20
+
+  - vulnerability: GHSA-pwgv-4x5q-6m9f
+    package:
+      type: python
+      name: sqlparse
+    expires: 2026-08-20

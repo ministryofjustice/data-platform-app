@@ -3,8 +3,7 @@
   Review model changes - {{ key.name }} - {{ project.name }} - Justice Data Platform | Ministry of Justice
 {% endblock title %}
 {% block back_link %}
-  <a href="{% url 'ai_gateway:key_model_change' project.uuid key.pk %}"
-     class="govuk-back-link">Back</a>
+  <a href="{{ change_url }}" class="govuk-back-link">Back</a>
 {% endblock back_link %}
 {% block content %}
   <div class="govuk-grid-row">
