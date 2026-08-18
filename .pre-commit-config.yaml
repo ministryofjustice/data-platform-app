@@ -24,7 +24,7 @@ repos:
       - id: zizmor
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.1
+    rev: v0.16.2
     hooks:
       # Run the linter.
       - id: ruff
@@ -33,7 +33,7 @@ repos:
       - id: ruff-format
 
   - repo: https://github.com/djlint/djLint
-    rev: v1.43.2
+    rev: v1.44.2
     hooks:
       - id: djlint
         args: ["--lint", "--profile=django"]

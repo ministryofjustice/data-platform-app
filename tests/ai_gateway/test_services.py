@@ -18,7 +18,10 @@ def gateway_client():
     client = create_autospec(AIGatewayClient, instance=True)
     client.create_team.return_value = "team-xyz"
     client.generate_key.return_value = {"key": PLAINTEXT_KEY, "token": "tok-1"}
-    client.regenerate_key.return_value = "sk-regenerated-key-value-9999"
+    client.regenerate_key.return_value = {
+        "key": "sk-regenerated-key-value-9999",
+        "token_id": "tok-2",
+    }
     client.get_access_group_id.return_value = "ag-default"
     return client
 
@@ -305,13 +308,14 @@ class TestKeyServiceRegenerateKey:
         )
 
         with KeyService(gateway_client) as service:
-            plaintext = service.regenerate_key(key)
+            new_secret = service.regenerate_key(key)
 
         key.refresh_from_db()
-        assert plaintext == "sk-regenerated-key-value-9999"
+        assert new_secret == "sk-regenerated-key-value-9999"
         assert key.litellm_secret == "sk-regenerated-key-value-9999"
+        assert key.litellm_token == "tok-2"
         assert key.masked_key == "...9999"
-        gateway_client.regenerate_key.assert_called_once_with("sk-old-secret")
+        gateway_client.regenerate_key.assert_called_once_with("tok-1")
 
     def test_raises_when_key_row_is_missing(self, project, gateway_client):
         with KeyService(gateway_client) as service, pytest.raises(Key.DoesNotExist):
@@ -334,7 +338,7 @@ class TestKeyServiceDeleteKey:
         with KeyService(gateway_client) as service:
             service.delete_key(key)
 
-        gateway_client.delete_key.assert_called_once_with(key.litellm_secret)
+        gateway_client.delete_key.assert_called_once_with(key.litellm_token)
         assert not Key.objects.filter(pk=key.pk).exists()
 
 
