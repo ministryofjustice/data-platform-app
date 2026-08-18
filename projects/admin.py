@@ -1,6 +1,7 @@
 from django.contrib import admin
 from simple_history.admin import SimpleHistoryAdmin
 
+from ai_gateway.admin import AIGatewayTeamInline
 from projects.models import BusinessUnit, Project, ProjectUserPermissions
 
 
@@ -29,7 +30,7 @@ class ProjectAdmin(SimpleHistoryAdmin):
     list_filter = ("business_unit",)
     search_fields = ("name",)
     readonly_fields = ("uuid", "created_by", "created", "modified")
-    inlines = (ProjectUserPermissionsInline,)
+    inlines = (ProjectUserPermissionsInline, AIGatewayTeamInline)
 
 
 HISTORY_TYPE_LABELS = {"+": "Added", "~": "Changed", "-": "Removed"}

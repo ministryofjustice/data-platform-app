@@ -4,8 +4,9 @@
     selected_month - the currently selected date object
 {% endcomment %}
 <form method="get" class="app-usage-month-select">
-  <div class="govuk-form-group govuk-!-margin-bottom-0">
-    <label class="govuk-label govuk-!-font-weight-bold" for="usage-month">Month</label>
+  <div class="govuk-form-group govuk-!-margin-bottom-0 govuk-!-display-inline-block">
+    <label class="govuk-label govuk-!-font-weight-bold govuk-!-display-inline-block"
+           for="usage-month">Month</label>
     <select class="govuk-select" id="usage-month" name="month">
       {% for month in month_choices %}
         <option value="{{ month|date:"Y-m" }}"

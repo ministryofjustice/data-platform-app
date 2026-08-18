@@ -1,6 +1,6 @@
 ##### BUILD PYTHON
 
-FROM docker.io/library/ubuntu:26.04@sha256:3131b4cc82a783df6c9df078f86e01819a13594b865c2cad47bd1bca2b7063bb AS build-python
+FROM docker.io/library/ubuntu:26.04@sha256:678c6550cc43645e08669028bc177f50be4e7c5b8cca677067b1914d4afc7a03 AS build-python
 
 SHELL ["/bin/bash", "-e", "-u", "-o", "pipefail", "-c"]
 
@@ -40,7 +40,7 @@ RUN --mount=type=cache,target=/root/.cache \
 
 ##### BUILD NODE
 
-FROM docker.io/library/node:26.5.0-alpine@sha256:e88a35be04478413b7c71c455cd9865de9b9360e1f43456be5951032d7ac1a66 AS build-node
+FROM docker.io/library/node:26.5.1-alpine@sha256:233761595746769ebfdb6090f44fc7cdf818ae0ce62d2b37e0367723b9823e36 AS build-node
 
 WORKDIR /build
 
@@ -57,7 +57,10 @@ EOF
 
 ##### FINAL
 
-FROM docker.io/library/ubuntu:26.04@sha256:3131b4cc82a783df6c9df078f86e01819a13594b865c2cad47bd1bca2b7063bb AS final
+FROM docker.io/library/ubuntu:26.04@sha256:678c6550cc43645e08669028bc177f50be4e7c5b8cca677067b1914d4afc7a03 AS final
+
+ARG VERSION="unknown"
+ARG COMMIT_SHA="unknown"
 
 LABEL org.opencontainers.image.vendor="Ministry of Justice" \
       org.opencontainers.image.authors="Data Platform Services (justicedataplatform@justice.gov.uk)" \
@@ -71,6 +74,8 @@ ENV CONTAINER_USER="dataplatform" \
     CONTAINER_UID="10001" \
     CONTAINER_GROUP="dataplatform" \
     CONTAINER_GID="10001" \
+    VERSION="${VERSION}" \
+    COMMIT_SHA="${COMMIT_SHA}" \
     DEBIAN_FRONTEND="noninteractive" \
     APP_ROOT="/app" \
     PATH="/app/bin:${PATH}"

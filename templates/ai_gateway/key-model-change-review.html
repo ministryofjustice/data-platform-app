@@ -1,0 +1,58 @@
+{% extends "base/base.html" %}
+{% block title %}
+  Review model changes - {{ key.name }} - {{ project.name }} - Justice Data Platform | Ministry of Justice
+{% endblock title %}
+{% block back_link %}
+  <a href="{% url 'ai_gateway:key_model_change' project.uuid key.pk %}"
+     class="govuk-back-link">Back</a>
+{% endblock back_link %}
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <span class="govuk-caption-l">{{ key.name }}</span>
+      <h1 class="govuk-heading-xl">Review model changes</h1>
+      <div class="govuk-summary-card">
+        <div class="govuk-summary-card__title-wrapper">
+          <h2 class="govuk-summary-card__title">Models</h2>
+          <ul class="govuk-summary-card__actions">
+            <li class="govuk-summary-card__action">
+              <a class="govuk-link" href="{{ change_url }}"><!-- djlint:off -->Change<span class="govuk-visually-hidden"> models</span><!-- djlint:on --></a>
+            </li>
+          </ul>
+        </div>
+        <div class="govuk-summary-card__content">
+          <dl class="govuk-summary-list">
+            {% for row in model_change_rows %}
+              <div class="govuk-summary-list__row govuk-summary-list__row--no-actions">
+                <dt class="govuk-summary-list__key">{{ row.label }}</dt>
+                <dd class="govuk-summary-list__value">
+                  {% if row.models %}
+                    <ul class="govuk-list govuk-list--bullet govuk-!-margin-bottom-0">
+                      {% for model_name in row.models %}
+                        <li>{{ model_name }}</li>
+                      {% endfor %}
+                    </ul>
+                  {% else %}
+                    None
+                  {% endif %}
+                </dd>
+              </div>
+            {% endfor %}
+          </dl>
+        </div>
+      </div>
+      <form method="post"
+            action="{% url 'ai_gateway:key_model_change_review' project.uuid key.pk %}">
+        {% csrf_token %}
+        {% for model_id in selected_model_ids %}
+          <input type="hidden" name="models" value="{{ model_id }}">
+        {% endfor %}
+        <div class="govuk-button-group">
+          <button type="submit" class="govuk-button">Save changes</button>
+          <a class="govuk-link"
+             href="{% url 'ai_gateway:key_detail' project.uuid key.pk %}">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock content %}

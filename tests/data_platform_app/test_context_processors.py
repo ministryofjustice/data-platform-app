@@ -3,6 +3,7 @@ import pytest
 from data_platform_app.context_processors import (
     _is_on_app_route,
     _service_navigation_items_for_request,
+    application_metadata,
     feature_flags,
     service_navigation,
 )
@@ -178,3 +179,16 @@ class TestFeatureFlagsContextProcessor:
 
         assert "FEATURE_FLAGS" in context
         assert context["FEATURE_FLAGS"]["EXAMPLE_FEATURE"] is True
+
+
+class TestApplicationMetadataContextProcessor:
+    def test_returns_application_metadata(self, rf, settings):
+        settings.APPLICATION_VERSION = "v4.1.0"
+        settings.COMMIT_SHA = "abc123def456"
+
+        context = application_metadata(rf.get("/"))
+
+        assert context == {
+            "application_version": "v4.1.0",
+            "commit_sha": "abc123def456",
+        }

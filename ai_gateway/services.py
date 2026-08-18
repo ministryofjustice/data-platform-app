@@ -7,15 +7,17 @@ import secrets
 from datetime import date, datetime
 from typing import Any
 
+import sentry_sdk
 from django.conf import settings
 from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.text import slugify
 
-from ai_gateway.charts import bar_chart
 from ai_gateway.client import AIGatewayClient
+from ai_gateway.exceptions import AIGatewayError
 from ai_gateway.models import Key, Team
 from projects.models import Project
 from users.models import User
@@ -78,7 +80,7 @@ class KeyService:
             service.create_key(project, name, models, created_by)
     """
 
-    GENERALLY_AVAILABLE_KEY = "ai_model_generally_available"
+    NO_DEFAULT_MODELS = "no-default-models"
 
     def __init__(self, client: AIGatewayClient) -> None:
         self._client = client
@@ -98,34 +100,55 @@ class KeyService:
         """Close the underlying gateway client."""
         self._client.close()
 
-    def list_default_models(self) -> list[dict[str, Any]]:
-        """Return the models marked as generally available."""
-        models = []
-        for model in self._client.list_models_v1_info():
-            litellm_params = model.get("litellm_params", {})
+    def list_available_models(self, project: Project) -> list[dict[str, Any]]:
+        """Return the models ``project`` may select when creating a key.
 
-            if litellm_params.get(self.GENERALLY_AVAILABLE_KEY) is not True:
-                continue
+        The models granted to the project's gateway team through its access
+        groups. Before the team exists (the first key), the default access
+        group's models are shown.
+        """
+        allowed = self._allowed_model_names(project)
+        return [
+            self._enrich_model(model)
+            for model in self._client.list_models_v1_info()
+            if model.get("model_name") in allowed
+        ]
 
-            model = model.copy()
-            model_info = model.get("model_info", {})
+    def _allowed_model_names(self, project: Project) -> set[str]:
+        """Return every model name ``project`` may currently use.
 
-            input_cost = model_info.get("input_cost_per_token")
-            output_cost = model_info.get("output_cost_per_token")
+        Read from the project's gateway team access groups. Before the team
+        exists (the first key), fall back to the default access group's models.
+        """
+        try:
+            team = project.ai_gateway_team
+        except Team.DoesNotExist:
+            default_group = self._default_access_group_name()
+            return set(self._client.list_models_for_access_group(default_group))
 
-            model["input_cost_per_million"] = (
-                input_cost * 1_000_000 if input_cost is not None else None
-            )
-            model["output_cost_per_million"] = (
-                output_cost * 1_000_000 if output_cost is not None else None
-            )
-            model["display_name"] = litellm_params.get("ai_model_name") or model.get("model_name")
-            model["provider"] = litellm_params.get("ai_model_provider")
-            model["family"] = litellm_params.get("ai_model_family")
+        data = self._client.team_info(team.litellm_team_id)
+        return set(data.get("team_info", {}).get("access_group_models") or [])
 
-            models.append(model)
+    def _enrich_model(self, model: dict[str, Any]) -> dict[str, Any]:
+        """Return a copy of ``model`` with display and pricing fields added."""
+        model = model.copy()
+        litellm_params = model.get("litellm_params", {})
+        model_info = model.get("model_info", {})
 
-        return models
+        input_cost = model_info.get("input_cost_per_token")
+        output_cost = model_info.get("output_cost_per_token")
+
+        model["input_cost_per_million"] = (
+            input_cost * 1_000_000 if input_cost is not None else None
+        )
+        model["output_cost_per_million"] = (
+            output_cost * 1_000_000 if output_cost is not None else None
+        )
+        model["display_name"] = litellm_params.get("ai_model_name") or model.get("model_name")
+        model["provider"] = litellm_params.get("ai_model_provider")
+        model["family"] = litellm_params.get("ai_model_family")
+
+        return model
 
     def create_key(self, project: Project, name: str, models: list[str], created_by: User) -> str:
         """Generate a gateway key for ``project`` and persist its metadata.
@@ -195,6 +218,15 @@ class KeyService:
         cache.set(cache_key, models, timeout=self._key_models_cache_timeout())
         return models
 
+    def update_models_for_key(self, key: Key, models: list[str]) -> None:
+        """Replace the models the gateway key ``key`` can call.
+
+        Uses the key token for gateway updates, then bumps ``modified`` so
+        subsequent ``get_models_for_key`` calls miss stale cache entries.
+        """
+        self._client.update_key_models(key.litellm_token, models)
+        Key.objects.filter(pk=key.pk).update(modified=timezone.now())
+
     def delete_key(self, key: Key) -> None:
         """Delete the virtual key from the gateway and remove its metadata."""
         self._client.delete_key(key.litellm_secret)
@@ -247,12 +279,6 @@ class KeyService:
                 "url": f"?month={month_start.strftime('%Y-%m')}&daily=all",
             }
 
-        # Charts read oldest-to-newest, left to right, so reverse the (newest-first) tables.
-        daily_chart = bar_chart(list(reversed(daily_rows)), label_key="label", value_key="spend")
-        monthly_chart = bar_chart(
-            list(reversed(monthly_rows)), label_key="label", value_key="spend"
-        )
-
         return {
             "has_usage": True,
             "total_spend": total_spend,
@@ -262,10 +288,10 @@ class KeyService:
             "daily_spend": daily_rows,
             "daily_spend_preview": daily_rows[:DAILY_SPEND_PREVIEW_COUNT],
             "daily_show_all": daily_show_all,
-            "daily_chart": daily_chart,
+            "daily_chart": None,
             "daily_chart_label": f"Daily spend for {month_start.strftime('%B %Y')}",
             "monthly_spend_rows": monthly_rows,
-            "monthly_chart": monthly_chart,
+            "monthly_chart": None,
         }
 
     def get_usage_by_key(self, project: Project, month: date) -> dict[str, Any]:
@@ -291,11 +317,10 @@ class KeyService:
             )
         rows.sort(key=lambda row: row["spend"], reverse=True)
 
-        chart = bar_chart(rows, label_key="label", value_key="spend")
         return {
             "has_usage": True,
             "rows": rows,
-            "chart": chart,
+            "chart": None,
             "chart_label": "Spend per API key",
         }
 
@@ -313,8 +338,7 @@ class KeyService:
         ]
         rows.sort(key=lambda row: row["spend"], reverse=True)
 
-        chart = bar_chart(rows, label_key="label", value_key="spend")
-        return {"has_usage": True, "rows": rows, "chart": chart, "chart_label": "Spend per model"}
+        return {"has_usage": True, "rows": rows, "chart": None, "chart_label": "Spend per model"}
 
     def _team_daily_activity(self, team: Team, start: date, end: date) -> list[dict[str, Any]]:
         """Return the raw ``results`` list from the gateway for a date range."""
@@ -387,6 +411,72 @@ class KeyService:
             return project.ai_gateway_team
         except Team.DoesNotExist:
             return None
+
+    def reconcile_team_keys_to_allowed_models(self, team: Team) -> tuple[list[str], list[str]]:
+        """Reconcile each of ``team``'s keys to the models it may currently use.
+
+        Reconciles every key against the team's allowed models, removing any
+        model no longer permitted. A key left with no permitted models is given
+        a sentinel so it cannot fall back to calling every model. Best-effort: a
+        per-key gateway failure is recorded and reconciliation continues.
+
+        Returns the ``(updated, failed)`` key aliases.
+        """
+        allowed = self._allowed_model_names(team.project)
+        updated = []
+        failed = []
+        for gateway_key in self._client.list_team_keys(team.litellm_team_id):
+            current = gateway_key.get("models", [])
+            pruned = [model for model in current if model in allowed]
+            if pruned == current:
+                continue
+
+            alias = gateway_key.get("key_alias", "")
+            try:
+                token = gateway_key.get("token", "")
+                self._client.update_key_models(token, pruned or [self.NO_DEFAULT_MODELS])
+            except AIGatewayError as error:
+                sentry_sdk.capture_exception(error)
+                failed.append(alias)
+                continue
+
+            updated.append(alias)
+
+        self._bust_key_models_cache(updated, team)
+        return updated, failed
+
+    def list_access_groups(self) -> list[dict[str, Any]]:
+        """Return all access groups configured on the gateway."""
+        return self._client.list_access_groups()
+
+    def get_team_access_group_ids(self, team: Team) -> list[str]:
+        """Return the ids of the access groups currently assigned to ``team``."""
+        return self._client.get_team_access_group_ids(team.litellm_team_id)
+
+    def set_team_model_access(
+        self, team: Team, access_group_ids: list[str]
+    ) -> tuple[list[str], list[str]]:
+        """Replace the access groups assigned to ``team`` and reconcile its keys.
+
+        Changing a team's access groups can shrink the models it may use, so
+        every key is reconciled with the new allowed set to keep keys from calling
+        models the team no longer has. Returns the ``(updated, failed)`` key
+        aliases from that reconciliation.
+        """
+        self._client.update_team_access_groups(team.litellm_team_id, access_group_ids)
+        return self.reconcile_team_keys_to_allowed_models(team)
+
+    def _bust_key_models_cache(self, aliases: list[str], team: Team) -> None:
+        """Invalidate the cached models for the DB keys with ``aliases``.
+
+        ``get_models_for_key`` caches by ``Key.modified``; bumping it shifts the
+        cache key so a gateway-side model change is not masked by a stale entry.
+        """
+        if aliases:
+            Key.objects.filter(
+                litellm_alias__in=aliases,
+                project__ai_gateway_team__litellm_team_id=team.litellm_team_id,
+            ).update(modified=timezone.now())
 
     @staticmethod
     def _key_models_cache_key(key: Key) -> str:

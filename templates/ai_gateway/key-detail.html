@@ -8,6 +8,11 @@
 {% endblock back_link %}
 {% block content %}
   <div class="govuk-grid-row">
+    {% if success_message %}
+      <div class="govuk-grid-column-full">
+        {% include "includes/success_message.html" with heading=success_message.heading message=success_message.message only %}
+      </div>
+    {% endif %}
     {% if error_message %}
       <div class="govuk-grid-column-full">
         {% include "includes/error_message.html" with heading=error_message.heading message=error_message.message only %}
@@ -46,6 +51,12 @@
                 Error retrieving models from the AI Gateway. Please contact support if the issue persists.
               {% endfor %}
             </dd>
+            <dd class="govuk-summary-list__actions">
+              <a class="govuk-link"
+                 href="{% url 'ai_gateway:key_model_change' project.uuid key.pk %}">
+                Change models
+              </a>
+            </dd>
           </div>
         </dl>
       </div>
@@ -60,7 +71,7 @@
     <div class="govuk-grid-column-two-thirds">
       <h2 class="govuk-heading-m">Usage</h2>
       <p class="govuk-body">See usage for this API key, including spend history.</p>
-      <a href="{% url 'ai_gateway:usage_by_key' project.uuid %}"
+      <a href="{% url 'ai_gateway:usage' project.uuid %}#spend-per-key"
          class="govuk-link">See usage</a>
     </div>
   </div>

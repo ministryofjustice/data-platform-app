@@ -154,3 +154,8 @@ $masthead-background-color: #381a62;
   padding-bottom: govuk-spacing(0);
   background-color: govuk-colour("blue", $variant: "tint-95");
 }
+
+// remove margin when these 2 classes are together
+.govuk-tabs.app-usage-tabs {
+  margin-bottom: 0px;
+}

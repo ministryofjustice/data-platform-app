@@ -155,6 +155,7 @@ class TestKeyCreateViewFiltering:
         client.force_login(user)
 
         response = client.get(reverse("ai_gateway:key_create", args=[project.uuid]))
+        key_create_url = reverse("ai_gateway:key_create", args=[project.uuid])
 
         assertContains(response, 'name="provider"')
         assertContains(response, 'name="family"')
@@ -162,6 +163,7 @@ class TestKeyCreateViewFiltering:
         assertContains(response, "Anthropic")
         assertContains(response, "GPT")
         assertContains(response, "Claude")
+        assertContains(response, f'hx-get="{key_create_url}"', count=2)
 
     def test_filters_models_by_provider(self, client, user, project, key_service):
         client.force_login(user)
@@ -205,7 +207,7 @@ class TestKeyCreateViewFiltering:
         assertContains(response, 'value="claude-3"')
 
     def test_show_more_reveals_all_matches(self, client, user, project, key_service):
-        key_service.list_default_models.return_value = [
+        key_service.list_available_models.return_value = [
             {
                 "model_name": f"model-{index}",
                 "display_name": f"Model {index}",
@@ -231,6 +233,252 @@ class TestKeyCreateViewFiltering:
 
         assertContains(expanded, 'value="model-11"')
         assertNotContains(expanded, "Show all")
+
+
+class TestKeyModelChangeView:
+    def _change_url(self, project, key):
+        return reverse("ai_gateway:key_model_change", args=[project.uuid, key.pk])
+
+    def _review_url(self, project, key):
+        return reverse("ai_gateway:key_model_change_review", args=[project.uuid, key.pk])
+
+    def _detail_url(self, project, key):
+        return reverse("ai_gateway:key_detail", args=[project.uuid, key.pk])
+
+    def test_get_renders_form_with_current_key_models_selected(
+        self, client, user, project, key, key_service
+    ):
+        client.force_login(user)
+
+        response = client.get(self._change_url(project, key))
+
+        assert response.status_code == 200
+        assertTemplateUsed(response, "ai_gateway/key-model-change.html")
+        assertContains(response, "Change models")
+        assertContains(response, "gpt-4")
+        assertContains(
+            response,
+            '<input class="govuk-checkboxes__input" id="models-1" '
+            'name="models" type="checkbox" value="gpt-4" checked>',
+            html=True,
+        )
+
+    def test_get_uses_submitted_models_over_current_models(
+        self, client, user, project, key, key_service
+    ):
+        client.force_login(user)
+
+        response = client.get(self._change_url(project, key), {"models": ["claude-3"]})
+
+        assertContains(
+            response,
+            '<input class="govuk-checkboxes__input" id="models-2" '
+            'name="models" type="checkbox" value="claude-3" checked>',
+            html=True,
+        )
+        assertContains(
+            response,
+            '<input class="govuk-checkboxes__input" id="models-1" '
+            'name="models" type="checkbox" value="gpt-4">',
+            html=True,
+        )
+
+    def test_htmx_request_returns_fragment_only(self, client, user, project, key, key_service):
+        client.force_login(user)
+
+        response = client.get(self._change_url(project, key), headers={"HX-Request": "true"})
+
+        assert response.status_code == 200
+        assertTemplateUsed(response, "includes/ai_gateway/_model_list.html")
+        assertTemplateNotUsed(response, "ai_gateway/key-model-change.html")
+
+    def test_selection_outside_filter_is_kept_as_hidden_input(
+        self, client, user, project, key, key_service
+    ):
+        client.force_login(user)
+
+        response = client.get(
+            self._change_url(project, key),
+            {"provider": "Anthropic", "models": ["gpt-4"]},
+        )
+
+        assertContains(
+            response,
+            '<input type="hidden" name="models" value="gpt-4">',
+            html=True,
+        )
+
+    def test_post_redirects_to_review_with_models(self, client, user, project, key, key_service):
+        client.force_login(user)
+
+        response = client.post(
+            self._change_url(project, key),
+            data={"models": ["gpt-4", "claude-3"]},
+        )
+
+        assert response.status_code == 302
+        assert response.url.startswith(f"{self._review_url(project, key)}?")
+        assert "models=gpt-4" in response.url
+        assert "models=claude-3" in response.url
+
+    def test_post_requires_at_least_one_model(self, client, user, project, key, key_service):
+        client.force_login(user)
+
+        response = client.post(self._change_url(project, key), data={})
+
+        assert response.status_code == 200
+        assertTemplateUsed(response, "ai_gateway/key-model-change.html")
+        assertContains(response, "Select at least one AI model to continue")
+
+    def test_post_requires_at_least_one_model_change(
+        self, client, user, project, key, key_service
+    ):
+        client.force_login(user)
+
+        response = client.post(
+            self._change_url(project, key),
+            data={"models": ["gpt-4"]},
+        )
+
+        assert response.status_code == 200
+        assertTemplateUsed(response, "ai_gateway/key-model-change.html")
+        assertContains(response, "Make changes to continue")
+
+    def test_review_page_shows_added_removed_and_retained_models(
+        self, client, user, project, key, key_service
+    ):
+        client.force_login(user)
+
+        response = client.get(self._review_url(project, key), {"models": ["claude-3"]})
+
+        assert response.status_code == 200
+        assertTemplateUsed(response, "ai_gateway/key-model-change-review.html")
+        assertContains(response, 'class="govuk-summary-card"')
+        assertContains(response, "Models")
+        assertContains(
+            response,
+            f'href="{self._change_url(project, key)}"',
+        )
+        assertContains(response, "Added")
+        assertContains(response, "Removed")
+        assertContains(response, "Retained")
+        assertContains(response, "Claude 3")
+        assertContains(response, "GPT-4")
+        assertContains(response, "None")
+
+    def test_review_page_without_selected_models_redirects_to_change(
+        self, client, user, project, key, key_service
+    ):
+        client.force_login(user)
+
+        response = client.get(self._review_url(project, key))
+
+        assert response.status_code == 302
+        assert response.url.startswith(f"{self._change_url(project, key)}?")
+        assert "show_errors=1" in response.url
+
+    def test_review_post_updates_models_and_redirects_to_detail(
+        self, client, user, project, key, key_service
+    ):
+        client.force_login(user)
+
+        response = client.post(
+            self._review_url(project, key),
+            data={"models": ["claude-3"]},
+        )
+
+        assert response.status_code == 302
+        assert response.url == self._detail_url(project, key)
+        key_service.update_models_for_key.assert_called_once_with(key, ["claude-3"])
+        assert client.session["success_message"] == {
+            "heading": "Models changed",
+            "message": "You've updated the models for this key",
+        }
+
+    def test_review_post_without_selected_models_redirects_to_change(
+        self, client, user, project, key, key_service
+    ):
+        client.force_login(user)
+
+        response = client.post(self._review_url(project, key), data={})
+
+        assert response.status_code == 302
+        assert response.url.startswith(f"{self._change_url(project, key)}?")
+        assert "show_errors=1" in response.url
+        key_service.update_models_for_key.assert_not_called()
+
+    def test_review_post_without_model_changes_redirects_to_change_with_errors(
+        self, client, user, project, key, key_service
+    ):
+        client.force_login(user)
+
+        response = client.post(self._review_url(project, key), data={"models": ["gpt-4"]})
+
+        assert response.status_code == 302
+        assert response.url.startswith(f"{self._change_url(project, key)}?")
+        assert "models=gpt-4" in response.url
+        assert "show_errors=1" in response.url
+        key_service.update_models_for_key.assert_not_called()
+
+    def test_review_post_gateway_error_redirects_to_detail_with_error_message(
+        self, client, user, project, key, key_service
+    ):
+        key_service.update_models_for_key.side_effect = AIGatewayAPIError(500, "gateway error")
+        client.force_login(user)
+
+        with patch("ai_gateway.views.sentry_sdk.capture_exception") as capture_exception:
+            response = client.post(
+                self._review_url(project, key),
+                data={"models": ["claude-3"]},
+            )
+
+        assert response.status_code == 302
+        assert response.url == self._detail_url(project, key)
+        assert client.session["error_message"] == {
+            "heading": "Could not update models. Please try again later.",
+        }
+        capture_exception.assert_called_once()
+
+    def test_non_member_gets_404_on_change_and_review(
+        self, client, non_project_user, project, key, key_service
+    ):
+        client.force_login(non_project_user)
+
+        change_response = client.get(self._change_url(project, key))
+        review_response = client.get(self._review_url(project, key))
+
+        assert change_response.status_code == 404
+        assert review_response.status_code == 404
+
+    def test_key_from_another_project_gets_404(self, client, user, project, key_service):
+        other_project = baker.make("projects.Project", created_by=user)
+        baker.make(
+            "projects.ProjectUserPermissions",
+            project=other_project,
+            user=user,
+            role="admin",
+        )
+        other_key = baker.make(
+            "ai_gateway.Key",
+            project=other_project,
+            name="other-project-key",
+            litellm_secret="sk-other-project-secret",
+            litellm_alias="alias-other-project-key",
+            litellm_token="token-other-project-key",
+            masked_key="sk-oth...key",
+            created_by=user,
+        )
+        client.force_login(user)
+
+        change_response = client.get(
+            reverse("ai_gateway:key_model_change", args=[project.uuid, other_key.pk])
+        )
+        review_response = client.get(
+            reverse("ai_gateway:key_model_change_review", args=[project.uuid, other_key.pk])
+        )
+
+        assert change_response.status_code == 404
+        assert review_response.status_code == 404
 
 
 class TestKeyCreateConfirmView:
@@ -343,6 +591,22 @@ class TestKeyDetailView:
             response,
             f'href="{reverse("ai_gateway:key_revoke", args=[project.uuid, key.pk])}"',
         )
+        assertContains(
+            response,
+            f'href="{reverse("ai_gateway:key_model_change", args=[project.uuid, key.pk])}"',
+        )
+
+    def test_renders_none_when_key_uses_no_default_models(
+        self, client, user, project, key, key_service
+    ):
+        key_service.get_models_for_key.return_value = ["no-default-models"]
+        client.force_login(user)
+
+        response = client.get(reverse("ai_gateway:key_detail", args=[project.uuid, key.pk]))
+
+        assert response.status_code == 200
+        assertContains(response, "None")
+        assertNotContains(response, "no-default-models")
 
     def test_renders_fallback_message_when_gateway_call_fails(
         self, client, user, project, key, key_service

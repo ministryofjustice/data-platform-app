@@ -16,4 +16,4 @@ jobs:
       contents: read
       id-token: write
       packages: write
-    uses: ministryofjustice/data-platform-github-actions/.github/workflows/chart-release.yml@f81658c938374c2f5a69b0ad8e2c89948e29aad0 # v4.0.10
+    uses: ministryofjustice/data-platform-github-actions/.github/workflows/chart-release.yml@c8dbd40674f1a0401e516e51cd6fa61c7f4fdc23 # v4.1.0

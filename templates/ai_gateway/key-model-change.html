@@ -1,0 +1,23 @@
+{% extends "base/base.html" %}
+{% block title %}
+  Change models - {{ key.name }} - {{ project.name }} - Justice Data Platform | Ministry of Justice
+{% endblock title %}
+{% block back_link %}
+  <a href="{% url 'ai_gateway:key_detail' project.uuid key.pk %}"
+     class="govuk-back-link">Back</a>
+{% endblock back_link %}
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      <span class="govuk-caption-l">{{ key.name }}</span>
+      <h1 class="govuk-heading-xl">Change models</h1>
+      {% include "includes/forms/_error_summary.html" with form=form only %}
+      <form method="post"
+            action="{% url 'ai_gateway:key_model_change' project.uuid key.pk %}">
+        {% csrf_token %}
+        {% url 'ai_gateway:key_detail' project.uuid key.pk as cancel_url %}
+        {% include "includes/ai_gateway/_model_selection.html" with cancel_url=cancel_url %}
+      </form>
+    </div>
+  </div>
+{% endblock content %}

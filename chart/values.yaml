@@ -21,21 +21,6 @@ service:
   type: ClusterIP
   port: 80
 
-ingress:
-  enabled: true
-  className: "default"
-  annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-production-http01
-  hosts:
-    - host: development.data-platform.service.justice.gov.uk
-      paths:
-        - path: /
-          pathType: ImplementationSpecific
-  tls:
-    - secretName: data-platform-app-tls
-      hosts:
-        - development.data-platform.service.justice.gov.uk
-
 affinity: {}
 nodeSelector: {}
 tolerations: []
