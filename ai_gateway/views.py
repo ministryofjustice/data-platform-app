@@ -90,6 +90,7 @@ class ModelSelectionContextMixin(AvailableModelsMixin):
     """Builds shared context for model-selection tables with filtering and paging."""
 
     model_filter_url_name = "ai_gateway:key_create"
+    pin_filtered_selections = False
 
     def _model_filter_url(self, kwargs: dict[str, Any] | None = None) -> str:
         """Return the model-filter endpoint URL for the current view context."""
@@ -108,8 +109,9 @@ class ModelSelectionContextMixin(AvailableModelsMixin):
 
         Selection is stateless: the currently selected model ids are read straight
         from the submitted ``models`` values. Selected models that fall outside the
-        visible slice are rendered as hidden inputs by the template so they survive
-        filtering and paging without a session.
+        visible slice are rendered as hidden inputs, unless the view opts into
+        pinning filtered-out selections. Both approaches preserve filtering and
+        paging without a session.
         """
         params = self.request.POST if self.request.method == "POST" else self.request.GET
 
@@ -124,7 +126,19 @@ class ModelSelectionContextMixin(AvailableModelsMixin):
             provider=provider,
             family=family,
         )
-        visible_models = matches if expanded else matches[:VISIBLE_LIMIT]
+        matching_model_ids = {model["model_name"] for model in matches}
+        pinned_models = (
+            [
+                model
+                for model in self.available_models
+                if model["model_name"] in selected_models
+                and model["model_name"] not in matching_model_ids
+            ]
+            if self.pin_filtered_selections
+            else []
+        )
+        visible_matches = matches if expanded else matches[:VISIBLE_LIMIT]
+        visible_models = [*pinned_models, *visible_matches]
         visible_names = {model["model_name"] for model in visible_models}
 
         hidden_selected_models = [
@@ -146,8 +160,9 @@ class ModelSelectionContextMixin(AvailableModelsMixin):
             "filter_family": family,
             "expanded": expanded,
             "match_count": len(matches),
-            "visible_count": len(visible_models),
-            "has_more": len(matches) > len(visible_models),
+            "visible_count": len(visible_matches),
+            "pinned_count": len(pinned_models),
+            "has_more": len(matches) > len(visible_matches),
         }
 
 
@@ -276,6 +291,7 @@ class KeyModelChangeView(KeyScopedMixin, ModelSelectionContextMixin, FormView):
     template_name = "ai_gateway/key-model-change.html"
     form_class = KeyModelChangeForm
     model_filter_url_name = "ai_gateway:key_model_change"
+    pin_filtered_selections = True
 
     def _htmx_model_list_context(self) -> dict[str, Any]:
         return {

@@ -292,7 +292,7 @@ class TestKeyModelChangeView:
         assertTemplateUsed(response, "includes/ai_gateway/_model_list.html")
         assertTemplateNotUsed(response, "ai_gateway/key-model-change.html")
 
-    def test_selection_outside_filter_is_kept_as_hidden_input(
+    def test_selection_outside_filter_is_pinned_at_top_of_model_list(
         self, client, user, project, key, key_service
     ):
         client.force_login(user)
@@ -304,9 +304,57 @@ class TestKeyModelChangeView:
 
         assertContains(
             response,
-            '<input type="hidden" name="models" value="gpt-4">',
+            '<input class="govuk-checkboxes__input" id="models-1" '
+            'name="models" type="checkbox" value="gpt-4" checked>',
             html=True,
         )
+        assertNotContains(
+            response,
+            '<input type="hidden" name="models" value="gpt-4">',
+        )
+        assert response.content.decode().index("GPT-4") < response.content.decode().index(
+            "Claude 3"
+        )
+        assertContains(response, "1 selected model shown first")
+
+    def test_current_selections_are_pinned_when_changing_provider(
+        self, client, user, project, key, key_service
+    ):
+        key_service.list_available_models.return_value.extend(
+            [
+                {
+                    "model_name": "gemini-2",
+                    "display_name": "Gemini 2",
+                    "family": "Gemini",
+                    "provider": "Google",
+                    "input_cost_per_million": 1.0,
+                    "output_cost_per_million": 2.0,
+                },
+                {
+                    "model_name": "llama-4",
+                    "display_name": "Llama 4",
+                    "family": "Llama",
+                    "provider": "Meta",
+                    "input_cost_per_million": 1.0,
+                    "output_cost_per_million": 2.0,
+                },
+            ]
+        )
+        client.force_login(user)
+
+        response = client.get(
+            self._change_url(project, key),
+            {
+                "provider": "OpenAI",
+                "models": ["claude-3", "gemini-2", "llama-4"],
+            },
+        )
+
+        content = response.content.decode()
+        assert content.index("Claude 3") < content.index("Gemini 2") < content.index("Llama 4")
+        assert content.index("Llama 4") < content.index("GPT-4")
+        assertNotContains(response, 'type="hidden" name="models"')
+        assertContains(response, "3 selected models shown first")
 
     def test_post_redirects_to_review_with_models(self, client, user, project, key, key_service):
         client.force_login(user)

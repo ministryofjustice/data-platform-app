@@ -1,9 +1,10 @@
 <p class="govuk-body">
-  Showing {{ visible_count }} of {{ match_count }} model{{ match_count|pluralize }}
-  {% if has_more %}
-    <span class="govuk-!-margin-left-4"><a class="govuk-link"
+  Showing {{ visible_count }} of {{ match_count }} model{{ match_count|pluralize }}{% if pinned_count %}. {{ pinned_count }} selected model{{ pinned_count|pluralize }} shown first
+{% endif %}
+{% if has_more %}
+  <span class="govuk-!-margin-left-4"><a class="govuk-link"
    href="{{ model_filter_url }}?expanded=1"
    hx-get="{{ model_filter_url }}"
    hx-vals='{"expanded": "1"}'>Show all</a></span>
-  {% endif %}
+{% endif %}
 </p>
