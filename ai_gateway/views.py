@@ -9,6 +9,7 @@ from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.cache import add_never_cache_headers
+from django.utils.safestring import mark_safe
 from django.views.generic import DeleteView, DetailView, FormView, ListView, TemplateView, View
 from django.views.generic.detail import SingleObjectMixin
 
@@ -411,8 +412,15 @@ class KeyModelChangeConfirmView(KeyScopedMixin, AvailableModelsMixin, FormView):
                 )
         except AIGatewayError as error:
             sentry_sdk.capture_exception(error)
+            error_message = (
+                'If this problem persists, you can <a class="govuk-link" '
+                'href="https://moj.enterprise.slack.com/archives/C0B949G0J2X">raise an issue in '
+                "the #ask-data-platform Slack channel</a>. Include your Project ID and Key ID ("
+                "not your API key) in the message."
+            )
             self.request.session["error_message"] = {
-                "heading": "Could not update models. Please try again later.",
+                "heading": "Could not update models",
+                "message": mark_safe(error_message),
             }
             return redirect("ai_gateway:key_detail", uuid=self.project.uuid, pk=self.key.pk)
 

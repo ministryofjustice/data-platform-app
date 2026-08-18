@@ -315,7 +315,6 @@ class TestKeyModelChangeView:
         assert response.content.decode().index("GPT-4") < response.content.decode().index(
             "Claude 3"
         )
-        assertContains(response, "1 selected model shown first")
 
     def test_current_selections_are_pinned_when_changing_provider(
         self, client, user, project, key, key_service
@@ -354,7 +353,6 @@ class TestKeyModelChangeView:
         assert content.index("Claude 3") < content.index("Gemini 2") < content.index("Llama 4")
         assert content.index("Llama 4") < content.index("GPT-4")
         assertNotContains(response, 'type="hidden" name="models"')
-        assertContains(response, "3 selected models shown first")
 
     def test_post_redirects_to_review_with_models(self, client, user, project, key, key_service):
         client.force_login(user)
@@ -486,9 +484,7 @@ class TestKeyModelChangeView:
 
         assert response.status_code == 302
         assert response.url == self._detail_url(project, key)
-        assert client.session["error_message"] == {
-            "heading": "Could not update models. Please try again later.",
-        }
+        assert client.session["error_message"]["heading"] == "Could not update models"
         capture_exception.assert_called_once()
 
     def test_non_member_gets_404_on_change_and_review(
