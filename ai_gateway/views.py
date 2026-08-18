@@ -9,7 +9,6 @@ from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.cache import add_never_cache_headers
-from django.utils.safestring import mark_safe
 from django.views.generic import DeleteView, DetailView, FormView, ListView, TemplateView, View
 from django.views.generic.detail import SingleObjectMixin
 
@@ -326,7 +325,7 @@ class KeyModelChangeView(KeyScopedMixin, ModelSelectionContextMixin, FormView):
         }
 
     @cached_property
-    def current_key_model_ids(self) -> set[str]:
+    def current_key_model_ids(self) -> list[str]:
         with KeyService.from_settings() as service:
             models = service.get_models_for_key(self.key)
 
@@ -423,7 +422,7 @@ class KeyModelChangeConfirmView(KeyScopedMixin, AvailableModelsMixin, FormView):
             )
             self.request.session["error_message"] = {
                 "heading": "Could not update models",
-                "message": mark_safe(error_message),
+                "message": error_message,
             }
             return redirect("ai_gateway:key_detail", uuid=self.project.uuid, pk=self.key.pk)
 
