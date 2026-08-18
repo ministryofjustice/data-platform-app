@@ -131,16 +131,21 @@ class KeyService:
         """Regenerate a gateway key for ``key`` and persist its metadata."""
 
         # Avoid holding a DB row lock while making a network call to the gateway.
-        old_secret = Key.objects.values_list("litellm_secret", flat=True).get(pk=key.pk)
-        plaintext_key = self._client.regenerate_key(old_secret)
+        old_token_id = Key.objects.values_list("litellm_token", flat=True).get(pk=key.pk)
+        data = self._client.regenerate_key(old_token_id)
+        new_token_id = data["token_id"]
+        new_key = data["key"]
 
         with transaction.atomic():
             db_key = Key.objects.select_for_update().get(pk=key.pk)
-            db_key.litellm_secret = plaintext_key
-            db_key.masked_key = self._mask_key(plaintext_key)
-            db_key.save(update_fields=["litellm_secret", "masked_key", "modified"])
+            db_key.litellm_secret = new_key
+            db_key.litellm_token = new_token_id
+            db_key.masked_key = self._mask_key(new_key)
+            db_key.save(
+                update_fields=["litellm_secret", "litellm_token", "masked_key", "modified"]
+            )
 
-        return plaintext_key
+        return new_key
 
     def bulk_delete_keys(self, keys: list[str]) -> None:
         """Bulk delete gateway keys identified by their secrets."""
@@ -189,7 +194,7 @@ class KeyService:
 
     def delete_key(self, key: Key) -> None:
         """Delete the virtual key from the gateway and remove its metadata."""
-        self._client.delete_key(key.litellm_secret)
+        self._client.delete_key(key.litellm_token)
         key.delete()
 
     def reconcile_team_keys_to_allowed_models(
