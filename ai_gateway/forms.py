@@ -68,7 +68,7 @@ class KeyModelChangeForm(forms.Form):
         if not selected_models:
             return selected_models
 
-        if set(selected_models) == self.current_models:
+        if set(selected_models) == set(self.current_models):
             raise forms.ValidationError("Make changes to continue")
 
         return selected_models

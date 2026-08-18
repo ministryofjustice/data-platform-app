@@ -96,13 +96,53 @@ class ModelSelectionContextMixin(AvailableModelsMixin):
         """Return the model-filter endpoint URL for the current view context."""
         return reverse(self.model_filter_url_name, kwargs=kwargs or dict(self.kwargs))
 
-    def _selected_model_ids(self, params) -> set[str]:
-        return set(params.getlist("models"))
+    def _selected_model_ids(self, params) -> list[str]:
+        return params.getlist("models")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.update(self._model_list_context())
         return context
+
+    def _valid_selected_model_ids(self, params) -> list[str]:
+        return [
+            model_id
+            for model_id in self._selected_model_ids(params)
+            if model_id in self.available_models_by_name
+        ]
+
+    def _pinned_models(
+        self,
+        selected_models_ids: list[str],
+        matches: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        if not self.pin_filtered_selections:
+            return []
+
+        matching_model_ids = {model["model_name"] for model in matches}
+
+        return [
+            self.available_models_by_name[model_id]
+            for model_id in selected_models_ids
+            if model_id not in matching_model_ids
+        ]
+
+    def _hidden_selected_models(
+        self,
+        selected_model_ids: list[str],
+        visible_models: list[dict[str, Any]],
+    ) -> list[str]:
+
+        if not selected_model_ids:
+            return []
+
+        visible_model_ids = {model["model_name"] for model in visible_models}
+        return [
+            model["model_name"]
+            for model in self.available_models
+            if model["model_name"] in selected_model_ids
+            and model["model_name"] not in visible_model_ids
+        ]
 
     def _model_list_context(self) -> dict[str, Any]:
         """Build the filtered, paged model-selection context from the request.
@@ -114,38 +154,22 @@ class ModelSelectionContextMixin(AvailableModelsMixin):
         paging without a session.
         """
         params = self.request.POST if self.request.method == "POST" else self.request.GET
-
         search = params.get("search", "")
         provider = params.get("provider", "")
         family = params.get("family", "")
         expanded = params.get("expanded") == "1"
-        selected_models = self._selected_model_ids(params) & self.available_models_by_name.keys()
+        selected_model_ids = self._valid_selected_model_ids(params)
+
         matches = filter_models(
             self.available_models,
             search=search,
             provider=provider,
             family=family,
         )
-        matching_model_ids = {model["model_name"] for model in matches}
-        pinned_models = (
-            [
-                model
-                for model in self.available_models
-                if model["model_name"] in selected_models
-                and model["model_name"] not in matching_model_ids
-            ]
-            if self.pin_filtered_selections
-            else []
-        )
+        pinned_models = self._pinned_models(selected_model_ids, matches)
         visible_matches = matches if expanded else matches[:VISIBLE_LIMIT]
         visible_models = [*pinned_models, *visible_matches]
-        visible_names = {model["model_name"] for model in visible_models}
-
-        hidden_selected_models = [
-            model["model_name"]
-            for model in self.available_models
-            if model["model_name"] in selected_models and model["model_name"] not in visible_names
-        ]
+        hidden_selected_models = self._hidden_selected_models(selected_model_ids, visible_models)
 
         return {
             "model_filter_url_name": self.model_filter_url_name,
@@ -154,7 +178,7 @@ class ModelSelectionContextMixin(AvailableModelsMixin):
             "model_families": self.model_families,
             "visible_models": visible_models,
             "hidden_selected_models": hidden_selected_models,
-            "selected_models": selected_models,
+            "selected_models": selected_model_ids,
             "filter_search": search,
             "filter_provider": provider,
             "filter_family": family,
@@ -305,12 +329,13 @@ class KeyModelChangeView(KeyScopedMixin, ModelSelectionContextMixin, FormView):
         with KeyService.from_settings() as service:
             models = service.get_models_for_key(self.key)
 
-        return {
-            model for model in models if model != KeyService.NO_DEFAULT_MODELS
-        } & self.available_models_by_name.keys()
+        if models == [KeyService.NO_DEFAULT_MODELS]:
+            return []
 
-    def _selected_model_ids(self, params) -> set[str]:
-        selected_models = set(params.getlist("models"))
+        return [model for model in models if model in self.available_models_by_name]
+
+    def _selected_model_ids(self, params) -> list[str]:
+        selected_models = params.getlist("models")
         if selected_models:
             return selected_models
         return self.current_key_model_ids
