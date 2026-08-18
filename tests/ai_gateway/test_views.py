@@ -403,7 +403,7 @@ class TestKeyModelChangeView:
         assertContains(response, "Models")
         assertContains(
             response,
-            f'href="{self._change_url(project, key)}"',
+            f'href="{self._change_url(project, key)}?models=claude-3"',
         )
         assertContains(response, "Added")
         assertContains(response, "Removed")

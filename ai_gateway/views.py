@@ -383,11 +383,14 @@ class KeyModelChangeConfirmView(KeyScopedMixin, AvailableModelsMixin, FormView):
     def _ordered_model_names(self, model_ids: set[str]) -> list[str]:
         return self._model_display_names(self._ordered_model_ids(model_ids))
 
-    def _change_url(self) -> str:
-        return reverse(
+    def _change_url(self, model_ids: list[str] | None = None) -> str:
+        url = reverse(
             "ai_gateway:key_model_change",
             kwargs={"uuid": self.project.uuid, "pk": self.key.pk},
         )
+        if model_ids is None:
+            return url
+        return f"{url}?{urlencode({'models': model_ids}, doseq=True)}"
 
     @cached_property
     def current_gateway_models(self) -> list[str]:
@@ -447,12 +450,13 @@ class KeyModelChangeConfirmView(KeyScopedMixin, AvailableModelsMixin, FormView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         form = kwargs["form"]
-        selected_model_ids = set(form.cleaned_data["models"])
+        selected_model_ids = form.cleaned_data["models"]
+        selected_model_id_set = set(selected_model_ids)
         current_models = self.current_models
 
-        added_model_ids = selected_model_ids - current_models
-        removed_model_ids = current_models - selected_model_ids
-        retained_model_ids = current_models & selected_model_ids
+        added_model_ids = selected_model_id_set - current_models
+        removed_model_ids = current_models - selected_model_id_set
+        retained_model_ids = current_models & selected_model_id_set
         model_change_rows = [
             {
                 "label": "Added",
@@ -470,8 +474,8 @@ class KeyModelChangeConfirmView(KeyScopedMixin, AvailableModelsMixin, FormView):
 
         context.update(
             {
-                "change_url": self._change_url(),
-                "selected_model_ids": self._ordered_model_ids(selected_model_ids),
+                "change_url": self._change_url(selected_model_ids),
+                "selected_model_ids": selected_model_ids,
                 "model_change_rows": model_change_rows,
             }
         )
