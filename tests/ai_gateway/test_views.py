@@ -12,6 +12,7 @@ from pytest_django.asserts import (
 )
 
 from ai_gateway.exceptions import AIGatewayAPIError
+from ai_gateway.filtering import VISIBLE_LIMIT
 from ai_gateway.models import Key
 
 PLAINTEXT_KEY = "sk-plaintext-key-value-123456"
@@ -93,7 +94,7 @@ class TestKeyCreateView:
         assertContains(response, 'value="primary-key"')
         assertContains(
             response,
-            '<input class="govuk-checkboxes__input" id="models-2" '
+            '<input class="govuk-checkboxes__input" id="models-1" '
             'name="models" type="checkbox" value="claude-3" checked>',
             html=True,
         )
@@ -189,7 +190,7 @@ class TestKeyCreateViewFiltering:
         assertTemplateNotUsed(response, "ai_gateway/key-create.html")
         assertContains(response, 'data-module="moj-multi-select"')
 
-    def test_selection_outside_the_filter_is_kept_as_hidden_input(
+    def test_selection_outside_the_filter_is_pinned_at_top_of_model_list(
         self, client, user, project, key_service
     ):
         client.force_login(user)
@@ -201,8 +202,13 @@ class TestKeyCreateViewFiltering:
 
         assertContains(
             response,
-            '<input type="hidden" name="models" value="gpt-4">',
+            '<input class="govuk-checkboxes__input" id="models-1" '
+            'name="models" type="checkbox" value="gpt-4" checked>',
             html=True,
+        )
+        assertNotContains(
+            response,
+            '<input type="hidden" name="models" value="gpt-4">',
         )
         assertContains(response, 'value="claude-3"')
 
@@ -233,6 +239,76 @@ class TestKeyCreateViewFiltering:
 
         assertContains(expanded, 'value="model-11"')
         assertNotContains(expanded, "Show all")
+
+    def test_selected_match_is_pinned_ahead_of_the_visible_limit(
+        self, client, user, project, key_service
+    ):
+        key_service.list_available_models.return_value = [
+            {
+                "model_name": f"model-{index}",
+                "display_name": f"Model {index}",
+                "family": "Test",
+                "provider": "TestProvider",
+                "input_cost_per_million": 1.0,
+                "output_cost_per_million": 2.0,
+            }
+            for index in range(12)
+        ]
+        client.force_login(user)
+
+        response = client.get(
+            reverse("ai_gateway:key_create", args=[project.uuid]),
+            {"models": ["model-11"]},
+        )
+
+        assertContains(
+            response,
+            '<input class="govuk-checkboxes__input" id="models-1" '
+            'name="models" type="checkbox" value="model-11" checked>',
+            html=True,
+        )
+        assertNotContains(
+            response,
+            '<input type="hidden" name="models" value="model-11">',
+        )
+
+    def test_selections_beyond_the_visible_limit_are_kept_as_hidden_inputs(
+        self, client, user, project, key_service
+    ):
+        total_models = VISIBLE_LIMIT + 2
+        key_service.list_available_models.return_value = [
+            {
+                "model_name": f"model-{index}",
+                "display_name": f"Model {index}",
+                "family": "Test",
+                "provider": "TestProvider",
+                "input_cost_per_million": 1.0,
+                "output_cost_per_million": 2.0,
+            }
+            for index in range(total_models)
+        ]
+        client.force_login(user)
+        selected_models = [f"model-{index}" for index in range(VISIBLE_LIMIT + 1)]
+        last_selected_model = selected_models[-1]
+        last_visible_model = selected_models[-2]
+
+        response = client.get(
+            reverse("ai_gateway:key_create", args=[project.uuid]),
+            {"models": selected_models},
+        )
+
+        assertContains(
+            response,
+            f'<input type="hidden" name="models" value="{last_selected_model}">',
+            html=True,
+        )
+        assertNotContains(response, f'value="{last_selected_model}" checked')
+        assertContains(
+            response,
+            f'<input class="govuk-checkboxes__input" id="models-{VISIBLE_LIMIT}" '
+            f'name="models" type="checkbox" value="{last_visible_model}" checked>',
+            html=True,
+        )
 
 
 class TestKeyModelChangeView:
@@ -272,13 +348,13 @@ class TestKeyModelChangeView:
 
         assertContains(
             response,
-            '<input class="govuk-checkboxes__input" id="models-2" '
+            '<input class="govuk-checkboxes__input" id="models-1" '
             'name="models" type="checkbox" value="claude-3" checked>',
             html=True,
         )
         assertContains(
             response,
-            '<input class="govuk-checkboxes__input" id="models-1" '
+            '<input class="govuk-checkboxes__input" id="models-2" '
             'name="models" type="checkbox" value="gpt-4">',
             html=True,
         )

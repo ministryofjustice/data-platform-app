@@ -1,5 +1,5 @@
 <p class="govuk-body">
-  {% if pinned_count %}
+  {% if has_pinned_models %}
     Showing selected models and {{ visible_count }} of {{ match_count }} model{{ match_count|pluralize }} matching your filters.
   {% else %}
     Showing {{ visible_count }} of {{ match_count }} model{{ match_count|pluralize }}
