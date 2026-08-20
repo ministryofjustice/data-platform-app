@@ -10,5 +10,5 @@ def usd(value: float | int | None) -> str:
         return "-"
     try:
         return f"${float(value):,.2f}"
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return "-"
