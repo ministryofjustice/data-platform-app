@@ -1,5 +1,1 @@
-model_list:
-  - model_name: mock-test-model
-    litellm_params:
-      model: openai/gpt-3.5-turbo
-      api_key: sk-fake-key-for-mock-testing
+model_list: []
