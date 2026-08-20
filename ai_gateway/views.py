@@ -17,6 +17,7 @@ from ai_gateway.filtering import VISIBLE_LIMIT, filter_models
 from ai_gateway.forms import KeyCreateForm, KeyModelChangeForm
 from ai_gateway.models import Key
 from ai_gateway.services import KeyService, parse_usage_month, usage_month_choices
+from data_platform_app.mixins import FeatureRequiredMixin
 from projects.mixins import ProjectLayoutContextMixin
 from projects.models import Project
 
@@ -76,8 +77,9 @@ class UsageTabContextMixin(ProjectScopedMixin, ProjectLayoutContextMixin):
         return context
 
 
-class UsageView(UsageTabContextMixin, TemplateView):
+class UsageView(FeatureRequiredMixin, UsageTabContextMixin, TemplateView):
     template_name = "ai_gateway/usage.html"
+    feature_flag = "AI_GATEWAY_COSTS"
 
     def get_usage_data(self, service: KeyService) -> dict[str, Any]:
         result = {}

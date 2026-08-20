@@ -14,10 +14,12 @@
             <a href="{% url 'ai_gateway:key_list' project.uuid %}"
                {% if active_ai_gateway_section == 'keys' %}aria-current="location"{% endif %}>API keys</a>
           </li>
-          <li class="moj-side-navigation__item{% if active_ai_gateway_section == 'usage' %} moj-side-navigation__item--active{% endif %}">
-            <a href="{% url 'ai_gateway:usage' project.uuid %}"
-               {% if active_ai_gateway_section == 'usage' %}aria-current="location"{% endif %}>Usage</a>
-          </li>
+          {% if FEATURE_FLAGS.AI_GATEWAY_COSTS %}
+            <li class="moj-side-navigation__item{% if active_ai_gateway_section == 'usage' %} moj-side-navigation__item--active{% endif %}">
+              <a href="{% url 'ai_gateway:usage' project.uuid %}"
+                 {% if active_ai_gateway_section == 'usage' %}aria-current="location"{% endif %}>Usage</a>
+            </li>
+          {% endif %}
         </ul>
       </li>
       <li class="moj-side-navigation__item{% if active_project_section == 'members' %} moj-side-navigation__item--active{% endif %}">
