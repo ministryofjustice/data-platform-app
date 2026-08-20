@@ -10,11 +10,13 @@ def filter_models(
     search: str = "",
     provider: str = "",
     family: str = "",
+    selected_model_ids: list[str] | None = None,
 ) -> list[dict[str, Any]]:
-    """Return the models matching every supplied filter, preserving input order.
+    """Return the models matching every supplied filter, with selected models moved first.
 
     An empty filter value means "no constraint" for that dimension. ``search`` is
-    matched case-insensitively against the model's display name.
+    matched case-insensitively against the model's display name. Without
+    ``selected_model_ids``, input order is otherwise preserved.
     """
     normalised_search = search.strip().lower()
 
@@ -28,5 +30,8 @@ def filter_models(
             continue
 
         matches.append(model)
+
+    if selected_model_ids:
+        matches.sort(key=lambda model: model["model_name"] not in selected_model_ids)
 
     return matches
