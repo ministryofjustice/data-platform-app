@@ -62,7 +62,7 @@
             </div>
           </div>
         </div>
-        {% if overview_data.percent_used and overview_data.percent_used >= 50 %}
+        {% if overview_data.percent_used and overview_data.percent_used > 50 %}
           {% include "includes/ai_gateway/_usage_budget_banner.html" with percent_used=overview_data.percent_used only %}
         {% endif %}
         {% include "includes/ai_gateway/_usage_spend_section.html" with heading="Daily spend" heading_level="h4" column_label="Date" rows=overview_data.daily_spend_preview chart=overview_data.daily_chart chart_label=overview_data.daily_chart_label show_all=overview_data.daily_show_all empty_message="No spend recorded for this month." only %}
