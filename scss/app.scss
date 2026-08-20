@@ -159,3 +159,12 @@ $masthead-background-color: #381a62;
 .govuk-tabs.app-usage-tabs {
   margin-bottom: 0px;
 }
+
+.app-usage-empty-state {
+  background-color: govuk-colour("black", $variant: "tint-95");
+  padding: govuk-spacing(5);
+
+  a:link {
+    color: govuk-colour("black");
+  }
+}
