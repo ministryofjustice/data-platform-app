@@ -3,7 +3,9 @@
     month_choices  - list of date objects, most recent first
     selected_month - the currently selected date object
 {% endcomment %}
-<form method="get" class="app-usage-month-select">
+<form method="get"
+      class="app-usage-month-select"
+      data-module="app-auto-submit-select">
   <div class="govuk-form-group govuk-!-margin-bottom-0 govuk-!-display-inline-block">
     <label class="govuk-label govuk-!-font-weight-bold govuk-!-display-inline-block"
            for="usage-month">Month</label>
@@ -14,8 +16,10 @@
       {% endfor %}
     </select>
   </div>
-  <button type="submit"
-          class="govuk-button govuk-button--secondary govuk-!-margin-bottom-0 govuk-!-margin-left-2">
-    View
-  </button>
+  <noscript>
+    <button type="submit"
+            class="govuk-button govuk-button--secondary govuk-!-margin-bottom-0 govuk-!-margin-left-2">
+      View
+    </button>
+  </noscript>
 </form>

@@ -66,7 +66,9 @@
           {% include "includes/ai_gateway/_usage_budget_banner.html" with percent_used=overview_data.percent_used only %}
         {% endif %}
         {% include "includes/ai_gateway/_usage_spend_section.html" with heading="Daily spend" heading_level="h4" column_label="Date" rows=overview_data.daily_spend_preview chart=overview_data.daily_chart chart_label=overview_data.daily_chart_label show_all=overview_data.daily_show_all empty_message="No spend recorded for this month." only %}
-        <hr class="govuk-section-break govuk-section-break--m govuk-section-break--visible">
+        {% if overview_data.daily_show_all %}
+          <hr class="govuk-section-break govuk-section-break--m govuk-section-break--visible">
+        {% endif %}
         {% include "includes/ai_gateway/_usage_spend_section.html" with heading="Monthly spend" heading_level="h4" column_label="Month" rows=overview_data.monthly_spend_rows chart=overview_data.monthly_chart chart_label="Monthly spend" empty_message="No spend recorded yet." only %}
       {% endif %}
     </div>
