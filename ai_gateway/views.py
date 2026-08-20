@@ -43,11 +43,11 @@ class ProjectScopedMixin:
 class UsageTabContextMixin(ProjectScopedMixin, ProjectLayoutContextMixin):
     """Shared month-selection, error handling and active-tab context for the usage pages.
 
-    The Usage section is split across three separate pages (Overview, Spend per API
-    key, Spend per model) that are styled to look like GOV.UK tabs but are plain links,
-    since the govuk-tabs JavaScript expects same-page anchor panels rather than
-    separate URLs. ``active_usage_tab`` drives which tab is marked as current in
-    ``includes/ai_gateway/_usage_tabs.html``.
+    The usage UI is a single page with GOV.UK tabs for Overview, Spend per API key and
+    Spend per model.
+
+    ``selected_month`` is derived from the ``month`` query parameter.
+    This mixin also sets sidebar highlighting for the AI Gateway → Usage sub-navigation.
     """
 
     active_project_section = "ai_gateway"
