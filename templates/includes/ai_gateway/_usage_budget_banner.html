@@ -2,12 +2,15 @@
   Expects:
     percent_used - percentage of the monthly budget spent so far (number)
 {% endcomment %}
-<div class="app-usage-budget-banner govuk-!-margin-bottom-6">
-  <p class="govuk-body govuk-!-font-weight-bold govuk-!-margin-bottom-1">
-    You've spent more than {{ percent_used|floatformat:0 }}% of your monthly budget
-  </p>
-  <p class="govuk-body govuk-!-margin-bottom-0">
-    Learn about <a class="govuk-link"
-    href="https://user-guide.data-platform.service.justice.gov.uk/">AI Gateway budgets and how to request an increase</a>
-  </p>
-</div>
+<article class="moj-ticket-panel app-usage-budget-banner"
+         aria-label="Sub navigation 1">
+  <section class="moj-ticket-panel__content" aria-label="Section 1">
+    <p class="govuk-body govuk-!-font-weight-bold govuk-!-margin-bottom-1">
+      You've spent more than {{ percent_used|floatformat:0 }}% of your monthly budget
+    </p>
+    <p class="govuk-body govuk-!-margin-bottom-0">
+      Learn how to <a class="govuk-link"
+    href="https://user-guide.data-platform.service.justice.gov.uk/">request an increase to your AI usage limits</a>
+    </p>
+  </section>
+</article>

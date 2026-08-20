@@ -168,3 +168,15 @@ $masthead-background-color: #381a62;
     color: govuk-colour("black");
   }
 }
+
+.app-usage-budget-banner {
+  border-left: govuk-colour("purple") 8px solid;
+
+  a:link {
+    color: govuk-colour("black");
+  }
+}
+
+.app-usage-budget-banner .moj-ticket-panel__content {
+  background-color: govuk-colour("purple", $variant: "tint-95");
+}
