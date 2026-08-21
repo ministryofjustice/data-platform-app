@@ -8,8 +8,9 @@
     chart_label - accessible label describing what the chart shows
 {% endcomment %}
 <div class="ai-gateway-chart-toggle govuk-!-margin-top-3">
-  {% with chart_data_id=chart_name|add:"-chart-data" %}
+  {% with chart_data_id=chart_name|add:"-chart-data" chart_desc_id=chart_name|add:"-chart-desc" %}
     {{ chart_data|json_script:chart_data_id }}
-    <div class="app-usage-chart" data-chart-data-id="{{ chart_data_id }}"></div>
+    <div class="app-usage-chart" data-chart-data-id="{{ chart_data_id }}" role="img" aria-label="{{ chart_label }}" aria-describedby="{{ chart_desc_id }}"></div>
+    <p id="{{ chart_desc_id }}" class="govuk-visually-hidden">The exact figures behind this chart are in the table above.</p>
   {% endwith %}
 </div>
