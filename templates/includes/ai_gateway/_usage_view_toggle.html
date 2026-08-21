@@ -1,0 +1,29 @@
+{% comment %}
+  Table/Chart toggle for a spend section. Renders the radios only - the page wraps this,
+  along with the month selector, in one shared GET form so that changing any one control
+  preserves the others.
+
+  Expects:
+    param_name - the query param this toggle controls, e.g. "daily_view"
+    current_view - "table" or "chart"
+{% endcomment %}
+<div class="govuk-radios govuk-radios--inline govuk-radios--small app-view-toggle">
+  <div class="govuk-radios__item">
+    <input class="govuk-radios__input"
+           id="{{ param_name }}-table"
+           name="{{ param_name }}"
+           type="radio"
+           value="table"
+           {% if current_view != 'chart' %}checked{% endif %}>
+    <label class="govuk-label govuk-radios__label" for="{{ param_name }}-table">Table</label>
+  </div>
+  <div class="govuk-radios__item">
+    <input class="govuk-radios__input"
+           id="{{ param_name }}-chart"
+           name="{{ param_name }}"
+           type="radio"
+           value="chart"
+           {% if current_view == 'chart' %}checked{% endif %}>
+    <label class="govuk-label govuk-radios__label" for="{{ param_name }}-chart">Chart</label>
+  </div>
+</div>

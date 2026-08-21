@@ -1,0 +1,25 @@
+{% comment %}
+  Expects:
+    month_choices  - list of date objects, most recent first
+    selected_month - the currently selected date object
+{% endcomment %}
+<form method="get"
+      class="app-usage-month-select"
+      data-module="app-auto-submit-select">
+  <div class="govuk-form-group govuk-!-margin-bottom-0 govuk-!-display-inline-block">
+    <label class="govuk-label govuk-!-font-weight-bold govuk-!-display-inline-block"
+           for="usage-month">Month</label>
+    <select class="govuk-select" id="usage-month" name="month">
+      {% for month in month_choices %}
+        <option value="{{ month|date:"Y-m" }}"
+                {% if month == selected_month %}selected{% endif %}>{{ month|date:"F Y" }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <noscript>
+    <button type="submit"
+            class="govuk-button govuk-button--secondary govuk-!-margin-bottom-0 govuk-!-margin-left-2">
+      View
+    </button>
+  </noscript>
+</form>

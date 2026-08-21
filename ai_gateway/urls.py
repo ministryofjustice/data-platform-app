@@ -9,11 +9,13 @@ from ai_gateway.views import (
     KeyModelChangeView,
     KeyRegenerateView,
     KeyRevokeView,
+    UsageView,
 )
 
 app_name = "ai_gateway"
 
 urlpatterns = [
+    path("usage/", UsageView.as_view(), name="usage"),
     path("keys/", KeyListView.as_view(), name="key_list"),
     path("keys/create/", KeyCreateView.as_view(), name="key_create"),
     path("keys/create/confirm/", KeyCreateConfirmView.as_view(), name="key_create_confirm"),

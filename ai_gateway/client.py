@@ -186,6 +186,29 @@ class AIGatewayClient:
         """Return metadata about the virtual key ``key``."""
         return self._request("GET", "/key/info", params={"key": key})
 
+    def team_info(self, team_id: str) -> dict[str, Any]:
+        """Return metadata about the team identified by ``team_id``, including its budget."""
+        return self._request("GET", "/team/info", params={"team_id": team_id})
+
+    def team_daily_activity(self, team_id: str, start_date: str, end_date: str) -> dict[str, Any]:
+        """Return per-day spend for ``team_id`` between ``start_date`` and ``end_date``.
+
+        Dates are ``YYYY-MM-DD`` strings, inclusive. The response contains a
+        ``results`` list with one entry per day, each carrying total ``metrics``
+        (including ``spend``) and a ``breakdown`` of spend by ``api_keys`` and
+        ``models`` for that day.
+        """
+        return self._request(
+            "GET",
+            "/team/daily/activity",
+            params={
+                "team_ids": team_id,
+                "start_date": start_date,
+                "end_date": end_date,
+                "page_size": 31,
+            },
+        )
+
     def list_team_keys(self, team_id: str) -> list[dict[str, Any]]:
         """Return the full key objects belonging to team ``team_id``.
 
@@ -215,10 +238,6 @@ class AIGatewayClient:
     def update_key_models(self, key: str, models: list[str]) -> None:
         """Replace the models the virtual key ``key`` is allowed to call."""
         self._request("POST", "/key/update", json={"key": key, "models": models})
-
-    def team_info(self, team_id: str) -> dict[str, Any]:
-        """Return metadata about the team identified by ``team_id``."""
-        return self._request("GET", "/team/info", params={"team_id": team_id})
 
     def get_team_access_group_ids(self, team_id: str) -> list[str]:
         """Return the ids of the access groups assigned to team ``team_id``."""

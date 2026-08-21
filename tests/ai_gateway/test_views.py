@@ -24,7 +24,7 @@ class TestKeyListView:
         response = client.get(reverse("ai_gateway:key_list", args=[project.uuid]))
         current_ai_gateway_link = (
             f'<a href="{reverse("ai_gateway:key_list", args=[project.uuid])}" '
-            'aria-current="location">AI Gateway</a>'
+            'aria-current="location">API keys</a>'
         )
 
         assert response.status_code == 200
@@ -903,3 +903,29 @@ class TestKeyRevokeView:
         assert get_response.status_code == 404
         assert post_response.status_code == 404
         key_service.delete_key.assert_not_called()
+
+
+class TestUsageView:
+    def test_renders_for_member(self, client, user, project):
+        client.force_login(user)
+        response = client.get(reverse("ai_gateway:usage", args=[project.uuid]))
+
+        assert response.status_code == 200
+        assert "ai_gateway/usage.html" in [t.name for t in response.templates]
+        assertContains(response, '<h2 class="govuk-heading-m">Usage</h2>', html=True)
+
+    def test_renders_sidebar_navigation_links(self, client, user, project):
+        client.force_login(user)
+        response = client.get(reverse("ai_gateway:usage", args=[project.uuid]))
+
+        usage_url = reverse("ai_gateway:usage", args=[project.uuid])
+        keys_url = reverse("ai_gateway:key_list", args=[project.uuid])
+
+        assertContains(response, f'href="{usage_url}"')
+        assertContains(response, f'href="{keys_url}"')
+
+    def test_non_member_gets_404(self, client, non_project_user, project):
+        client.force_login(non_project_user)
+        response = client.get(reverse("ai_gateway:usage", args=[project.uuid]))
+
+        assert response.status_code == 404

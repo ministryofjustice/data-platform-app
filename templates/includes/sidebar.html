@@ -6,9 +6,21 @@
         <a href="{% url 'projects:project_detail' project.uuid %}"
            {% if active_project_section == 'overview' %}aria-current="location"{% endif %}>Overview</a>
       </li>
-      <li class="moj-side-navigation__item{% if active_project_section == 'ai_gateway' %} moj-side-navigation__item--active{% endif %}">
+      <li class="moj-side-navigation__item{% if active_project_section == 'ai_gateway' and not active_ai_gateway_section %} moj-side-navigation__item--active{% endif %}">
         <a href="{% url 'ai_gateway:key_list' project.uuid %}"
-           {% if active_project_section == 'ai_gateway' %}aria-current="location"{% endif %}>AI Gateway</a>
+           {% if active_project_section == 'ai_gateway' and not active_ai_gateway_section %}aria-current="location"{% endif %}>AI Gateway</a>
+        <ul class="moj-side-navigation__list govuk-!-margin-left-3">
+          <li class="moj-side-navigation__item{% if active_ai_gateway_section == 'keys' %} moj-side-navigation__item--active{% endif %}">
+            <a href="{% url 'ai_gateway:key_list' project.uuid %}"
+               {% if active_ai_gateway_section == 'keys' %}aria-current="location"{% endif %}>API keys</a>
+          </li>
+          {% if FEATURE_FLAGS.AI_GATEWAY_COSTS %}
+            <li class="moj-side-navigation__item{% if active_ai_gateway_section == 'usage' %} moj-side-navigation__item--active{% endif %}">
+              <a href="{% url 'ai_gateway:usage' project.uuid %}"
+                 {% if active_ai_gateway_section == 'usage' %}aria-current="location"{% endif %}>Usage</a>
+            </li>
+          {% endif %}
+        </ul>
       </li>
       <li class="moj-side-navigation__item{% if active_project_section == 'members' %} moj-side-navigation__item--active{% endif %}">
         <a href="{% url 'projects:project_users' project.uuid %}"

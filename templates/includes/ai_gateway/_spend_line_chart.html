@@ -1,0 +1,27 @@
+{% comment %}
+  Renders a chart.LineChart (see ai_gateway/charts.py) as an inline SVG. This is always
+  decorative (aria-hidden): the table it accompanies is the accessible source of truth
+  and is visually hidden, not removed, when the chart view is selected.
+
+  Expects:
+    chart - a LineChart instance
+{% endcomment %}
+{% if chart.is_empty %}
+  <p class="govuk-body govuk-!-margin-bottom-0">No spend recorded for this period.</p>
+{% else %}
+  <svg class="app-spend-chart"
+       viewBox="0 0 {{ chart.width }} {{ chart.height }}"
+       aria-hidden="true"
+       focusable="false">
+    {% for gridline in chart.gridlines %}
+      <line class="app-spend-chart__gridline" x1="32" y1="{{ gridline.y }}" x2="{{ chart.width|add:'-8' }}" y2="{{ gridline.y }}" />
+      <text class="app-spend-chart__axis-label" x="0" y="{{ gridline.y }}">{{ gridline.label }}</text>
+    {% endfor %}
+    <polyline class="app-spend-chart__line" fill="none" points="{{ chart.polyline }}" />
+    {% for point in chart.points %}
+      <circle class="app-spend-chart__point" cx="{{ point.x }}" cy="{{ point.y }}" r="3">
+      <title>{{ point.label }}: £{{ point.value|floatformat:2 }}</title>
+      </circle>
+    {% endfor %}
+  </svg>
+{% endif %}

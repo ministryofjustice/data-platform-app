@@ -16,7 +16,8 @@ from ai_gateway.exceptions import AIGatewayError
 from ai_gateway.filtering import VISIBLE_LIMIT, filter_models
 from ai_gateway.forms import KeyCreateForm, KeyModelChangeForm
 from ai_gateway.models import Key
-from ai_gateway.services import KeyService
+from ai_gateway.services import KeyService, parse_usage_month, usage_month_choices
+from data_platform_app.mixins import FeatureRequiredMixin
 from projects.mixins import ProjectLayoutContextMixin
 from projects.models import Project
 
@@ -40,10 +41,68 @@ class ProjectScopedMixin:
         return context
 
 
+class UsageTabContextMixin(ProjectScopedMixin, ProjectLayoutContextMixin):
+    """Shared month-selection, error handling and active-tab context for the usage pages.
+
+    The usage UI is a single page with GOV.UK tabs for Overview, Spend per API key and
+    Spend per model.
+
+    ``selected_month`` is derived from the ``month`` query parameter.
+    This mixin also sets sidebar highlighting for the AI Gateway → Usage sub-navigation.
+    """
+
+    active_project_section = "ai_gateway"
+    active_ai_gateway_section = "usage"
+
+    @cached_property
+    def selected_month(self):
+        return parse_usage_month(self.request.GET.get("month"))
+
+    def get_usage_data(self, service: KeyService) -> dict[str, Any]:
+        raise NotImplementedError
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["month_choices"] = usage_month_choices()
+        context["selected_month"] = self.selected_month
+
+        try:
+            with KeyService.from_settings() as service:
+                context.update(self.get_usage_data(service))
+        except AIGatewayError as error:
+            sentry_sdk.capture_exception(error)
+            context["usage_error"] = True
+            context["has_usage"] = False
+
+        return context
+
+
+class UsageView(FeatureRequiredMixin, UsageTabContextMixin, TemplateView):
+    template_name = "ai_gateway/usage.html"
+    feature_flag = "AI_GATEWAY_COSTS"
+
+    def get_usage_data(self, service: KeyService) -> dict[str, Any]:
+        result = {}
+
+        data = service.get_usage_overview(self.project, self.selected_month)
+        if data.get("has_usage") and self.request.GET.get("daily") == "all":
+            data["daily_spend_preview"] = data["daily_spend"]
+
+        result["overview_data"] = data
+        data = service.get_usage_by_key(self.project, self.selected_month)
+        result["key_data"] = data
+
+        data = service.get_usage_by_model(self.project, self.selected_month)
+        result["model_data"] = data
+
+        return result
+
+
 class KeyListView(ProjectScopedMixin, ProjectLayoutContextMixin, ListView):
     template_name = "ai_gateway/key-list.html"
     context_object_name = "keys"
     active_project_section = "ai_gateway"
+    active_ai_gateway_section = "keys"
 
     def get_queryset(self):
         return self.project.ai_gateway_keys.order_by("-created")

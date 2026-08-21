@@ -8,6 +8,7 @@
 );
 @use "node_modules/@x-govuk/govuk-prototype-components/src/x-govuk";
 @use "components/copy-button/copy-button";
+@use "components/usage/usage";
 
 $masthead-background-color: #381a62;
 
@@ -152,4 +153,30 @@ $masthead-background-color: #381a62;
   padding: govuk-spacing(4);
   padding-bottom: govuk-spacing(0);
   background-color: govuk-colour("blue", $variant: "tint-95");
+}
+
+// remove margin when these 2 classes are together
+.govuk-tabs.app-usage-tabs {
+  margin-bottom: 0px;
+}
+
+.app-usage-empty-state {
+  background-color: govuk-colour("black", $variant: "tint-95");
+  padding: govuk-spacing(5);
+
+  a:link {
+    color: govuk-colour("black");
+  }
+}
+
+.app-usage-budget-banner {
+  border-left: govuk-colour("purple") 8px solid;
+
+  a:link {
+    color: govuk-colour("black");
+  }
+}
+
+.app-usage-budget-banner .moj-ticket-panel__content {
+  background-color: govuk-colour("purple", $variant: "tint-95");
 }
