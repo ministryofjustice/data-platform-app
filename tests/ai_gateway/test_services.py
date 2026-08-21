@@ -421,14 +421,27 @@ class TestKeyServiceUsageData:
         ]
         assert result["daily_spend_preview"] == result["daily_spend"]
         assert result["daily_show_all"] is None
-        assert result["daily_chart"] is None
+        assert result["daily_chart_name"] == "daily-spend"
+        assert result["daily_chart_data"] == {
+            "labels": ["10", "11"],
+            "values": [10.12, 2.22],
+            "category_axis_label": "Day (August 2026)",
+            "value_axis_label": "Spend ($)",
+        }
         assert result["daily_chart_label"] == "Daily spend for August 2026"
         assert result["monthly_spend_rows"] == [
             {"label": "August 2026", "spend": 10.12},
             {"label": "July 2026", "spend": 5},
             {"label": "March 2026", "spend": 1.34},
         ]
-        assert result["monthly_chart"] is None
+        assert result["monthly_chart_data"] == {
+            "labels": ["March 2026", "July 2026", "August 2026"],
+            "values": [1.34, 5, 10.12],
+            "category_axis_label": "Month",
+            "value_axis_label": "Spend ($)",
+            "chart_type": "line",
+        }
+        assert result["monthly_chart_name"] == "monthly-spend"
         assert gateway_client.team_daily_activity.call_args_list[0].args == (
             "team-xyz",
             "2026-08-01",
@@ -514,7 +527,13 @@ class TestKeyServiceUsageData:
                     "spend": 5.46,
                 },
             ],
-            "chart": None,
+            "chart_data": {
+                "labels": ["primary-key", "deleted-token"],
+                "values": [5.46, 9.0],
+                "category_axis_label": "API Key",
+                "value_axis_label": "Spend ($)",
+            },
+            "chart_name": "key-spend",
             "chart_label": "Spend per API key",
         }
         gateway_client.team_daily_activity.assert_called_once_with(
@@ -552,7 +571,14 @@ class TestKeyServiceUsageData:
                 {"label": "gpt-4", "spend": 5.23},
                 {"label": "claude-3", "spend": 5},
             ],
-            "chart": None,
+            "chart_data": {
+                "labels": ["claude-3", "gpt-4"],
+                "values": [5, 5.23],
+                "category_axis_label": "Model",
+                "value_axis_label": "Spend ($)",
+                "horizontal": True,
+            },
+            "chart_name": "model-spend",
             "chart_label": "Spend per model",
         }
 
