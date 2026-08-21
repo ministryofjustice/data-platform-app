@@ -6,10 +6,10 @@
   "dependencies": {
     "@ministryofjustice/frontend": "9.0.0",
     "@x-govuk/govuk-prototype-components": "6.0.0",
-    "echarts": "^6.1.0",
+    "echarts": "6.1.0",
     "govuk-frontend": "6.1.0",
     "htmx.org": "2.0.10"
-  },
+  }
   "devDependencies": {
     "esbuild": "0.28.1",
     "prettier": "3.8.3",
