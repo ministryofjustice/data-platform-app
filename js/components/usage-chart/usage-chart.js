@@ -3,7 +3,13 @@ import { BarChart, LineChart } from "echarts/charts";
 import { GridComponent, TooltipComponent } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
 
-echarts.use([BarChart, LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
+echarts.use([
+  BarChart,
+  LineChart,
+  GridComponent,
+  TooltipComponent,
+  CanvasRenderer,
+]);
 
 const UsageChart = {
   init() {
@@ -26,7 +32,12 @@ const UsageChart = {
         horizontal
           ? {
               grid: { containLabel: true },
-              xAxis: { type: "value", name: valueAxisLabel, nameLocation: "middle", nameGap: 30 },
+              xAxis: {
+                type: "value",
+                name: valueAxisLabel,
+                nameLocation: "middle",
+                nameGap: 30,
+              },
               yAxis: {
                 type: "category",
                 data: labels,
@@ -40,8 +51,19 @@ const UsageChart = {
               tooltip: { trigger: "axis" },
             }
           : {
-              xAxis: { type: "category", data: labels, name: categoryAxisLabel, nameLocation: "middle", nameGap: 30 },
-              yAxis: { type: "value", name: valueAxisLabel, nameLocation: "middle", nameGap: 40 },
+              xAxis: {
+                type: "category",
+                data: labels,
+                name: categoryAxisLabel,
+                nameLocation: "middle",
+                nameGap: 30,
+              },
+              yAxis: {
+                type: "value",
+                name: valueAxisLabel,
+                nameLocation: "middle",
+                nameGap: 40,
+              },
               series: [
                 {
                   type: chartType,
@@ -51,9 +73,9 @@ const UsageChart = {
                 },
               ],
               tooltip: { trigger: "axis" },
-            }
+            },
       );
-    chartsByContainer.set(container, chart);
+      chartsByContainer.set(container, chart);
     });
 
     const isVisible = (container) => container.offsetParent !== null;
@@ -68,9 +90,11 @@ const UsageChart = {
     });
 
     document.addEventListener("usage-chart:visible", (event) => {
-      event.target.querySelectorAll("[data-chart-data-id]").forEach((container) => {
-        chartsByContainer.get(container)?.resize();
-      });
+      event.target
+        .querySelectorAll("[data-chart-data-id]")
+        .forEach((container) => {
+          chartsByContainer.get(container)?.resize();
+        });
     });
   },
 };
