@@ -3,31 +3,13 @@
   Renders spend as a simple SVG bar chart behind a "Show chart" disclosure.
 
   Expects:
-    chart       - geometry from ai_gateway.charts.bar_chart
+    chart_name  - name of the chart (e.g. "daily-spend", "monthly-spend")
+    chart_data  - geometry from ai_gateway.charts.bar_chart
     chart_label - accessible label describing what the chart shows
 {% endcomment %}
-<details class="ai-gateway-chart-toggle govuk-!-margin-top-3">
-  <summary class="govuk-details__summary">
-    <span class="govuk-details__summary-text">Show chart</span>
-  </summary>
-  <div class="ai-gateway-model-filters">
-    <svg viewBox="0 0 {{ chart.width }} {{ chart.height }}"
-         role="img"
-         aria-label="{{ chart_label }}"
-         class="app-usage-chart">
-      {% for line in chart.gridlines %}
-        <line x1="{{ chart.plot_left }}" y1="{{ line.y }}" x2="{{ chart.width }}" y2="{{ line.y }}" class="app-usage-chart__gridline" />
-        <text x="{{ chart.plot_left|add:"-6" }}" y="{{ line.y }}" class="app-usage-chart__axis-label" text-anchor="end" dominant-baseline="middle">{{ line.label }}</text>
-      {% endfor %}
-      {% for bar in chart.bars %}
-        <rect x="{{ bar.x }}" y="{{ bar.y }}" width="{{ bar.width }}" height="{{ bar.height }}" class="app-usage-chart__bar">
-        <title>{{ bar.label }}: {{ bar.value|usd }}</title>
-        </rect>
-        {% if chart.bars|length <= 12 %}
-          <text x="{{ bar.x|add:2 }}" y="{{ chart.plot_bottom|add:14 }}" class="app-usage-chart__bar-label">{{ bar.label }}</text>
-        {% endif %}
-      {% endfor %}
-    </svg>
-    <p class="govuk-visually-hidden">The exact figures behind this chart are in the table above.</p>
-  </div>
-</details>
+<div class="ai-gateway-chart-toggle govuk-!-margin-top-3">
+  {% with chart_data_id=chart_name|add:"-chart-data" %}
+    {{ chart_data|json_script:chart_data_id }}
+    <div class="app-usage-chart" data-chart-data-id="{{ chart_data_id }}"></div>
+  {% endwith %}
+</div>

@@ -24,6 +24,7 @@ from users.models import User
 MONTHS_IN_MONTH_PICKER = 12
 MONTHS_OF_SPEND_HISTORY = 6
 DAILY_SPEND_PREVIEW_COUNT = 10
+LINE_CHART_MIN_POINTS = 2
 
 
 def usage_month_choices(today: date | None = None) -> list[date]:
@@ -281,10 +282,32 @@ class KeyService:
             {"label": day["date"].strftime("%-d %B %Y"), "spend": day["spend"]}
             for day in daily_spend
         ]
+
+        daily_chart_rows = [
+            {"label": day["date"].strftime("%-d"), "spend": day["spend"]} for day in daily_spend
+        ]
+
+        daily_chart_data = self._create_chart_data(
+            daily_chart_rows,
+            "label",
+            "spend",
+            f"Day ({month_start.strftime('%B %Y')})",
+            "Spend ($)",
+            True,
+        )
+        if len(daily_rows) > LINE_CHART_MIN_POINTS:
+            daily_chart_data["chart_type"] = "line"
+
         monthly_rows = [
             {"label": month_row["month"].strftime("%B %Y"), "spend": month_row["spend"]}
             for month_row in monthly_spend
         ]
+
+        monthly_chart_data = self._create_chart_data(
+            monthly_rows, "label", "spend", "Month", "Spend ($)", True
+        )
+        if len(monthly_rows) > LINE_CHART_MIN_POINTS:
+            monthly_chart_data["chart_type"] = "line"
 
         daily_show_all = None
         if len(daily_rows) > DAILY_SPEND_PREVIEW_COUNT:
@@ -303,11 +326,35 @@ class KeyService:
             "daily_spend": daily_rows,
             "daily_spend_preview": daily_rows[:DAILY_SPEND_PREVIEW_COUNT],
             "daily_show_all": daily_show_all,
-            "daily_chart": None,
+            "daily_chart_data": daily_chart_data,
+            "daily_chart_name": "daily-spend",
             "daily_chart_label": f"Daily spend for {month_start.strftime('%B %Y')}",
             "monthly_spend_rows": monthly_rows,
-            "monthly_chart": None,
+            "monthly_chart_name": "monthly-spend",
+            "monthly_chart_data": monthly_chart_data,
         }
+
+    def _create_chart_data(
+        self,
+        rows: list[dict[str, Any]],
+        label_key: str,
+        values_key: str,
+        category_axis_label: str = "",
+        value_axis_label: str = "",
+        reverse: bool = False,
+    ) -> dict[str, Any]:
+        """Return chart data for a list of rows with a label and spend."""
+        if reverse:
+            rows = list(reversed(rows))
+
+        result = {
+            "labels": [row[label_key] for row in rows],
+            "values": [row[values_key] for row in rows],
+        }
+
+        result["category_axis_label"] = category_axis_label
+        result["value_axis_label"] = value_axis_label
+        return result
 
     def get_usage_by_key(self, project: Project, month: date) -> dict[str, Any]:
         """Return per-API-key spend for ``project`` for the calendar month ``month``."""
@@ -331,11 +378,13 @@ class KeyService:
                 {"label": key.name if key else token, "url": url, "spend": round(spend, 2)}
             )
         rows.sort(key=lambda row: row["spend"], reverse=True)
+        chart_data = self._create_chart_data(rows, "label", "spend", "API Key", "Spend ($)", True)
 
         return {
             "has_usage": True,
             "rows": rows,
-            "chart": None,
+            "chart_data": chart_data,
+            "chart_name": "key-spend",
             "chart_label": "Spend per API key",
         }
 
@@ -352,8 +401,16 @@ class KeyService:
             {"label": model_name, "spend": round(spend, 2)} for model_name, spend in totals.items()
         ]
         rows.sort(key=lambda row: row["spend"], reverse=True)
+        chart_data = self._create_chart_data(rows, "label", "spend", "Model", "Spend ($)", True)
+        chart_data["horizontal"] = True
 
-        return {"has_usage": True, "rows": rows, "chart": None, "chart_label": "Spend per model"}
+        return {
+            "has_usage": True,
+            "rows": rows,
+            "chart_data": chart_data,
+            "chart_name": "model-spend",
+            "chart_label": "Spend per model",
+        }
 
     def _team_daily_activity(self, team: Team, start: date, end: date) -> list[dict[str, Any]]:
         """Return the raw ``results`` list from the gateway for a date range."""

@@ -180,3 +180,8 @@ $masthead-background-color: #381a62;
 .app-usage-budget-banner .moj-ticket-panel__content {
   background-color: govuk-colour("purple", $variant: "tint-95");
 }
+
+.app-usage-chart {
+  width: 100%;
+  height: 400px;
+}
