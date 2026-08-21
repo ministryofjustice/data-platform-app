@@ -14,9 +14,9 @@ from django.views.generic.detail import SingleObjectMixin
 
 from ai_gateway.exceptions import AIGatewayError
 from ai_gateway.filtering import VISIBLE_LIMIT, filter_models
-from ai_gateway.forms import KeyCreateForm, KeyModelChangeForm
-from ai_gateway.models import Key
-from ai_gateway.services import KeyService, parse_usage_month, usage_month_choices
+from ai_gateway.forms import KeyCreateForm, KeyModelChangeForm, UsageMonthForm
+from ai_gateway.models import Key, Team
+from ai_gateway.services import KeyService, UsageService
 from data_platform_app.mixins import FeatureRequiredMixin
 from projects.mixins import ProjectLayoutContextMixin
 from projects.models import Project
@@ -41,61 +41,57 @@ class ProjectScopedMixin:
         return context
 
 
-class UsageTabContextMixin(ProjectScopedMixin, ProjectLayoutContextMixin):
-    """Shared month-selection, error handling and active-tab context for the usage pages.
-
+class UsageView(FeatureRequiredMixin, ProjectScopedMixin, ProjectLayoutContextMixin, TemplateView):
+    """
     The usage UI is a single page with GOV.UK tabs for Overview, Spend per API key and
     Spend per model.
-
-    ``selected_month`` is derived from the ``month`` query parameter.
-    This mixin also sets sidebar highlighting for the AI Gateway → Usage sub-navigation.
     """
 
+    template_name = "ai_gateway/usage.html"
+    feature_flag = "AI_GATEWAY_COSTS"
     active_project_section = "ai_gateway"
     active_ai_gateway_section = "usage"
 
-    @cached_property
-    def selected_month(self):
-        return parse_usage_month(self.request.GET.get("month"))
-
-    def get_usage_data(self, service: KeyService) -> dict[str, Any]:
-        raise NotImplementedError
-
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["month_choices"] = usage_month_choices()
-        context["selected_month"] = self.selected_month
+        try:
+            ai_gateway_team = self.project.ai_gateway_team
+        except Team.DoesNotExist:
+            empty = {"has_usage": False}
+            context.update({"overview_data": empty, "key_data": empty, "model_data": empty})
+            return context
 
         try:
-            with KeyService.from_settings() as service:
-                context.update(self.get_usage_data(service))
+            context.update(self._get_usage_context(ai_gateway_team))
         except AIGatewayError as error:
             sentry_sdk.capture_exception(error)
             context["usage_error"] = True
             context["has_usage"] = False
+            return context
+
+        overview_data = context["overview_data"]
+        if overview_data["has_usage"] and self.request.GET.get("daily") == "all":
+            overview_data["daily_spend_preview"] = overview_data["daily_spend"]
 
         return context
 
+    def _get_usage_context(self, team: Team) -> dict[str, Any]:
+        with UsageService.from_settings() as service:
+            month_choices = service.get_usage_month_choices(team)
+            month_form = UsageMonthForm(
+                self.request.GET or None,
+                month_choices=month_choices,
+            )
 
-class UsageView(FeatureRequiredMixin, UsageTabContextMixin, TemplateView):
-    template_name = "ai_gateway/usage.html"
-    feature_flag = "AI_GATEWAY_COSTS"
+            selected_month = month_choices[0]
+            if month_form.is_valid() and month_form.cleaned_data["month"]:
+                selected_month = month_form.cleaned_data["month"]
 
-    def get_usage_data(self, service: KeyService) -> dict[str, Any]:
-        result = {}
-
-        data = service.get_usage_overview(self.project, self.selected_month)
-        if data.get("has_usage") and self.request.GET.get("daily") == "all":
-            data["daily_spend_preview"] = data["daily_spend"]
-
-        result["overview_data"] = data
-        data = service.get_usage_by_key(self.project, self.selected_month)
-        result["key_data"] = data
-
-        data = service.get_usage_by_model(self.project, self.selected_month)
-        result["model_data"] = data
-
-        return result
+            return {
+                "month_form": month_form,
+                "selected_month": selected_month,
+                **service.get_usage(team, selected_month),
+            }
 
 
 class KeyListView(ProjectScopedMixin, ProjectLayoutContextMixin, ListView):

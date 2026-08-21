@@ -1,4 +1,5 @@
-from unittest.mock import patch
+from datetime import date
+from unittest.mock import create_autospec, patch
 
 import pytest
 from django.urls import reverse
@@ -14,6 +15,7 @@ from pytest_django.asserts import (
 from ai_gateway.exceptions import AIGatewayAPIError
 from ai_gateway.filtering import VISIBLE_LIMIT
 from ai_gateway.models import Key
+from ai_gateway.services import UsageService
 
 PLAINTEXT_KEY = "sk-plaintext-key-value-123456"
 
@@ -906,6 +908,28 @@ class TestKeyRevokeView:
 
 
 class TestUsageView:
+    @pytest.mark.parametrize("month", ["2026-01", "not-a-month", "2025-12", None])
+    def test_selects_valid_month_or_defaults_to_current_available_month(
+        self, client, user, team, month
+    ):
+        service = create_autospec(UsageService, instance=True)
+        service.__enter__.return_value = service
+        service.__exit__.return_value = False
+        service.get_usage_month_choices.return_value = [date(2026, 1, 1)]
+        service.get_usage.return_value = {
+            "overview_data": {"has_usage": True},
+            "key_data": {"has_usage": True},
+            "model_data": {"has_usage": True},
+        }
+        query = {"month": month} if month is not None else None
+        with patch("ai_gateway.services.UsageService.from_settings", return_value=service):
+            client.force_login(user)
+            response = client.get(reverse("ai_gateway:usage", args=[team.project.uuid]), query)
+
+        assert response.status_code == 200
+        assert response.context["selected_month"] == date(2026, 1, 1)
+        service.get_usage.assert_called_once_with(team, date(2026, 1, 1))
+
     def test_renders_for_member(self, client, user, project):
         client.force_login(user)
         response = client.get(reverse("ai_gateway:usage", args=[project.uuid]))

@@ -8,11 +8,15 @@
       data-module="app-auto-submit-select">
   <div class="govuk-form-group govuk-!-margin-bottom-0 govuk-!-display-inline-block">
     <label class="govuk-label govuk-!-font-weight-bold govuk-!-display-inline-block"
-           for="usage-month">Month</label>
-    <select class="govuk-select" id="usage-month" name="month">
-      {% for month in month_choices %}
-        <option value="{{ month|date:"Y-m" }}"
-                {% if month == selected_month %}selected{% endif %}>{{ month|date:"F Y" }}</option>
+           for="{{ month_form.month.id_for_label }}">{{ month_form.month.label }}</label>
+    <select class="govuk-select"
+            id="{{ month_form.month.id_for_label }}"
+            name="{{ month_form.month.html_name }}">
+      {% for value, label in month_form.month.field.choices %}
+        <option value="{{ value }}"
+                {% if value == selected_month|date:"Y-m" %}selected{% endif %}>
+          {{ label }}
+        </option>
       {% endfor %}
     </select>
   </div>

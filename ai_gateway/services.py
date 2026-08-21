@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import calendar
 import secrets
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Any
 
 import sentry_sdk
@@ -21,52 +20,204 @@ from ai_gateway.models import Key, Team
 from projects.models import Project
 from users.models import User
 
-MONTHS_IN_MONTH_PICKER = 12
-MONTHS_OF_SPEND_HISTORY = 6
 DAILY_SPEND_PREVIEW_COUNT = 10
 
 
-def usage_month_choices(today: date | None = None) -> list[date]:
-    """Return the most recent ``MONTHS_IN_MONTH_PICKER`` months, newest first.
+class UsageService:
+    """Coordinates AI Gateway usage reporting for a project."""
 
-    Each value is the first day of a calendar month, suitable for populating
-    the usage page's month selector.
-    """
-    today = today or date.today()
-    year, month = today.year, today.month
-    months = []
-    for _ in range(MONTHS_IN_MONTH_PICKER):
-        months.append(date(year, month, 1))
-        month -= 1
-        if month == 0:
-            month, year = 12, year - 1
-    return months
+    def __init__(self, client: AIGatewayClient) -> None:
+        self._client = client
+        self._team_info: dict[str, Any] | None = None
 
+    @classmethod
+    def from_settings(cls) -> UsageService:
+        return cls(AIGatewayClient.from_settings())
 
-def parse_usage_month(value: str | None, today: date | None = None) -> date:
-    """Parse a ``YYYY-MM`` month value, falling back to the current month."""
-    today = today or date.today()
-    if value:
-        try:
-            parsed = datetime.strptime(value, "%Y-%m").date()
-        except ValueError:
-            return today.replace(day=1)
-        if parsed in usage_month_choices(today):
-            return parsed
-    return today.replace(day=1)
+    def __enter__(self) -> UsageService:
+        return self
 
+    def __exit__(self, *exc_info: object) -> None:
+        self.close()
 
-def end_of_month(day: date) -> date:
-    """Return the last calendar day of the month containing ``day``."""
-    last_day = calendar.monthrange(day.year, day.month)[1]
-    return day.replace(day=last_day)
+    def close(self) -> None:
+        self._client.close()
 
+    def get_usage_month_choices(self, team: Team, today: date | None = None) -> list[date]:
+        """Return months from the team's creation month through the current month."""
+        self._team_info = self._client.team_info(team.litellm_team_id)
+        created_at = self._team_info.get("team_info", {}).get("created_at")
+        current_month = self._current_month(today)
+        if not created_at:
+            return [current_month]
 
-def shift_months(day: date, months: int) -> date:
-    """Return the first of the month ``months`` months away from ``day``."""
-    month_index = day.year * 12 + (day.month - 1) + months
-    year, month = divmod(month_index, 12)
-    return date(year, month + 1, 1)
+        created_month = self._team_created_month(self._team_info)
+        choices = []
+        month = current_month
+        while month >= created_month.replace(day=1):
+            choices.append(month)
+            month = self._shift_months(month, -1)
+        return choices
+
+    def get_usage(self, team: Team, month: date) -> dict[str, Any]:
+        """Return overview, API-key, and model usage data for ``month``."""
+        month_start = month.replace(day=1)
+        month_end = self._end_of_month(month)
+        daily_results = self._team_daily_activity(team, month_start, month_end)
+        team_info = self._team_info or self._client.team_info(team.litellm_team_id)
+        self._team_info = team_info
+
+        created_month = self._team_created_month(team_info)
+        history_start = created_month or month_start
+
+        monthly_results = (
+            daily_results
+            if history_start == month_start
+            else self._team_daily_activity(team, history_start, month_end)
+        )
+        return {
+            "overview_data": self._build_overview(
+                month_start, daily_results, monthly_results, team_info
+            ),
+            "key_data": self._build_key_usage(team.project, daily_results),
+            "model_data": self._build_model_usage(daily_results),
+        }
+
+    def _build_overview(
+        self,
+        month_start: date,
+        daily_results: list[dict[str, Any]],
+        monthly_results: list[dict[str, Any]],
+        team_info: dict[str, Any],
+    ) -> dict[str, Any]:
+        daily_spend = self._daily_totals(daily_results)
+        total_spend = round(sum(day["spend"] for day in daily_spend), 2)
+        monthly_spend = self._monthly_totals(monthly_results)
+        max_budget = team_info.get("team_info", {}).get("max_budget")
+        budget_remaining = None if max_budget is None else round(max_budget - total_spend, 2)
+        percent_used = None if not max_budget else round((total_spend / max_budget) * 100, 1)
+        daily_rows = [
+            {"label": day["date"].strftime("%-d %B %Y"), "spend": day["spend"]}
+            for day in daily_spend
+        ]
+        monthly_rows = [
+            {"label": row["month"].strftime("%B %Y"), "spend": row["spend"]}
+            for row in monthly_spend
+        ]
+        daily_show_all = None
+        if len(daily_rows) > DAILY_SPEND_PREVIEW_COUNT:
+            daily_show_all = {
+                "shown": DAILY_SPEND_PREVIEW_COUNT,
+                "total": len(daily_rows),
+                "url": f"?month={month_start.strftime('%Y-%m')}&daily=all",
+            }
+        return {
+            "has_usage": True,
+            "total_spend": total_spend,
+            "max_budget": max_budget,
+            "budget_remaining": budget_remaining,
+            "percent_used": percent_used,
+            "daily_spend": daily_rows,
+            "daily_spend_preview": daily_rows[:DAILY_SPEND_PREVIEW_COUNT],
+            "daily_show_all": daily_show_all,
+            "daily_chart": None,
+            "daily_chart_label": f"Daily spend for {month_start.strftime('%B %Y')}",
+            "monthly_spend_rows": monthly_rows,
+            "monthly_chart": None,
+        }
+
+    def _build_key_usage(
+        self, project: Project, daily_results: list[dict[str, Any]]
+    ) -> dict[str, Any]:
+        totals = self._breakdown_totals(daily_results, "api_keys")
+        keys_by_token = {key.litellm_token: key for key in project.ai_gateway_keys.all()}
+        rows = []
+        for token, spend in totals.items():
+            key = keys_by_token.get(token)
+            url = (
+                reverse("ai_gateway:key_detail", kwargs={"uuid": project.uuid, "pk": key.pk})
+                if key
+                else None
+            )
+            rows.append(
+                {"label": key.name if key else token, "url": url, "spend": round(spend, 2)}
+            )
+        rows.sort(key=lambda row: row["spend"], reverse=True)
+        return {"has_usage": True, "rows": rows, "chart": None, "chart_label": "Spend per API key"}
+
+    def _build_model_usage(self, daily_results: list[dict[str, Any]]) -> dict[str, Any]:
+        totals = self._breakdown_totals(daily_results, "models")
+        rows = [
+            {"label": model_name, "spend": round(spend, 2)} for model_name, spend in totals.items()
+        ]
+        rows.sort(key=lambda row: row["spend"], reverse=True)
+        return {"has_usage": True, "rows": rows, "chart": None, "chart_label": "Spend per model"}
+
+    def _team_daily_activity(self, team: Team, start: date, end: date) -> list[dict[str, Any]]:
+        data = self._client.team_daily_activity(
+            team.litellm_team_id, start.isoformat(), end.isoformat()
+        )
+        return data.get("results", [])
+
+    @staticmethod
+    def _daily_totals(daily_results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        totals = []
+        for entry in daily_results:
+            if not entry.get("date"):
+                continue
+            spend = entry.get("metrics", {}).get("spend", 0) or 0
+            totals.append(
+                {"date": datetime.strptime(entry["date"], "%Y-%m-%d").date(), "spend": spend}
+            )
+        totals.sort(key=lambda row: row["date"], reverse=True)
+        return totals
+
+    @staticmethod
+    def _monthly_totals(daily_results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        totals: dict[date, float] = {}
+        for entry in daily_results:
+            if not entry.get("date"):
+                continue
+            day = datetime.strptime(entry["date"], "%Y-%m-%d").date()
+            month_key = day.replace(day=1)
+            spend = entry.get("metrics", {}).get("spend", 0) or 0
+            totals[month_key] = totals.get(month_key, 0) + spend
+        return [
+            {"month": month_key, "spend": round(spend, 2)}
+            for month_key, spend in sorted(totals.items(), reverse=True)
+        ]
+
+    @staticmethod
+    def _breakdown_totals(daily_results: list[dict[str, Any]], dimension: str) -> dict[str, float]:
+        totals: dict[str, float] = {}
+        for entry in daily_results:
+            for item_id, item_data in entry.get("breakdown", {}).get(dimension, {}).items():
+                spend = item_data.get("metrics", {}).get("spend", 0) or 0
+                totals[item_id] = totals.get(item_id, 0) + spend
+        return totals
+
+    @staticmethod
+    def _current_month(today: date | None = None) -> date:
+        return (today or date.today()).replace(day=1)
+
+    @staticmethod
+    def _end_of_month(day: date) -> date:
+        next_month = UsageService._shift_months(day.replace(day=1), 1)
+        return next_month - timedelta(days=1)
+
+    @staticmethod
+    def _shift_months(day: date, months: int) -> date:
+        month_index = day.year * 12 + day.month - 1 + months
+        year, month = divmod(month_index, 12)
+        return date(year, month + 1, 1)
+
+    @staticmethod
+    def _team_created_month(team_info: dict[str, Any]) -> date | None:
+        created_at = team_info.get("team_info", {}).get("created_at")
+        if not created_at:
+            return None
+
+        return datetime.fromisoformat(created_at.replace("Z", "+00:00")).date().replace(day=1)
 
 
 class KeyService:
@@ -246,186 +397,6 @@ class KeyService:
         """Delete the virtual key from the gateway and remove its metadata."""
         self._client.delete_key(key.litellm_token)
         key.delete()
-
-    def get_usage_overview(self, project: Project, month: date) -> dict[str, Any]:
-        """Return spend-overview data for ``project`` for the calendar month ``month``.
-
-        Returns ``{"has_usage": False}`` when the project has never used the
-        gateway. Otherwise includes the total spend and remaining budget for
-        the month, a daily spend breakdown (as a table and a chart), and a
-        trailing monthly summary, shaped ready for the usage templates.
-        """
-        team = self._get_existing_team(project)
-        if team is None:
-            return {"has_usage": False}
-
-        month_start = month.replace(day=1)
-        month_end = end_of_month(month)
-        daily_results = self._team_daily_activity(team, month_start, month_end)
-        daily_spend = self._daily_totals(daily_results)
-        total_spend = round(sum(day["spend"] for day in daily_spend), 2)
-
-        history_start = shift_months(month_start, -(MONTHS_OF_SPEND_HISTORY - 1))
-        monthly_results = (
-            daily_results
-            if history_start == month_start
-            else self._team_daily_activity(team, history_start, month_end)
-        )
-        monthly_spend = self._monthly_totals(monthly_results)
-
-        max_budget = self._team_max_budget(team)
-        budget_remaining = None if max_budget is None else round(max_budget - total_spend, 2)
-        percent_used = None if not max_budget else round((total_spend / max_budget) * 100, 1)
-
-        daily_rows = [
-            {"label": day["date"].strftime("%-d %B %Y"), "spend": day["spend"]}
-            for day in daily_spend
-        ]
-        monthly_rows = [
-            {"label": month_row["month"].strftime("%B %Y"), "spend": month_row["spend"]}
-            for month_row in monthly_spend
-        ]
-
-        daily_show_all = None
-        if len(daily_rows) > DAILY_SPEND_PREVIEW_COUNT:
-            daily_show_all = {
-                "shown": DAILY_SPEND_PREVIEW_COUNT,
-                "total": len(daily_rows),
-                "url": f"?month={month_start.strftime('%Y-%m')}&daily=all",
-            }
-
-        return {
-            "has_usage": True,
-            "total_spend": total_spend,
-            "max_budget": max_budget,
-            "budget_remaining": budget_remaining,
-            "percent_used": percent_used,
-            "daily_spend": daily_rows,
-            "daily_spend_preview": daily_rows[:DAILY_SPEND_PREVIEW_COUNT],
-            "daily_show_all": daily_show_all,
-            "daily_chart": None,
-            "daily_chart_label": f"Daily spend for {month_start.strftime('%B %Y')}",
-            "monthly_spend_rows": monthly_rows,
-            "monthly_chart": None,
-        }
-
-    def get_usage_by_key(self, project: Project, month: date) -> dict[str, Any]:
-        """Return per-API-key spend for ``project`` for the calendar month ``month``."""
-        team = self._get_existing_team(project)
-        if team is None:
-            return {"has_usage": False}
-
-        daily_results = self._team_daily_activity(team, month.replace(day=1), end_of_month(month))
-        totals = self._breakdown_totals(daily_results, "api_keys")
-
-        keys_by_token = {key.litellm_token: key for key in project.ai_gateway_keys.all()}
-        rows = []
-        for token, spend in totals.items():
-            key = keys_by_token.get(token)
-            url = (
-                reverse("ai_gateway:key_detail", kwargs={"uuid": project.uuid, "pk": key.pk})
-                if key
-                else None
-            )
-            rows.append(
-                {"label": key.name if key else token, "url": url, "spend": round(spend, 2)}
-            )
-        rows.sort(key=lambda row: row["spend"], reverse=True)
-
-        return {
-            "has_usage": True,
-            "rows": rows,
-            "chart": None,
-            "chart_label": "Spend per API key",
-        }
-
-    def get_usage_by_model(self, project: Project, month: date) -> dict[str, Any]:
-        """Return per-model spend for ``project`` for the calendar month ``month``."""
-        team = self._get_existing_team(project)
-        if team is None:
-            return {"has_usage": False}
-
-        daily_results = self._team_daily_activity(team, month.replace(day=1), end_of_month(month))
-        totals = self._breakdown_totals(daily_results, "models")
-
-        rows = [
-            {"label": model_name, "spend": round(spend, 2)} for model_name, spend in totals.items()
-        ]
-        rows.sort(key=lambda row: row["spend"], reverse=True)
-
-        return {"has_usage": True, "rows": rows, "chart": None, "chart_label": "Spend per model"}
-
-    def _team_daily_activity(self, team: Team, start: date, end: date) -> list[dict[str, Any]]:
-        """Return the raw ``results`` list from the gateway for a date range."""
-        data = self._client.team_daily_activity(
-            team.litellm_team_id,
-            start.isoformat(),
-            end.isoformat(),
-        )
-        return data.get("results", [])
-
-    def _team_max_budget(self, team: Team) -> float | None:
-        """Return the team's configured monthly budget, if the gateway reports one."""
-        data = self._client.team_info(team.litellm_team_id)
-        return data.get("team_info", {}).get("max_budget")
-
-    @staticmethod
-    def _daily_totals(daily_results: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """Return ``[{"date": date, "spend": float}, ...]`` sorted most recent first."""
-        totals = []
-        for entry in daily_results:
-            entry_date = entry.get("date")
-            if not entry_date:
-                continue
-            spend = entry.get("metrics", {}).get("spend", 0) or 0
-            totals.append(
-                {"date": datetime.strptime(entry_date, "%Y-%m-%d").date(), "spend": spend}
-            )
-        totals.sort(key=lambda row: row["date"], reverse=True)
-        return totals
-
-    @staticmethod
-    def _monthly_totals(daily_results: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """Aggregate daily results into ``[{"month": date, "spend": float}, ...]``.
-
-        Months are returned most recent first, as the first day of each month.
-        """
-        totals: dict[date, float] = {}
-        for entry in daily_results:
-            entry_date = entry.get("date")
-            if not entry_date:
-                continue
-            day = datetime.strptime(entry_date, "%Y-%m-%d").date()
-            month_key = day.replace(day=1)
-            spend = entry.get("metrics", {}).get("spend", 0) or 0
-            totals[month_key] = totals.get(month_key, 0) + spend
-        return [
-            {"month": month_key, "spend": round(spend, 2)}
-            for month_key, spend in sorted(totals.items(), reverse=True)
-        ]
-
-    @staticmethod
-    def _breakdown_totals(daily_results: list[dict[str, Any]], dimension: str) -> dict[str, float]:
-        """Sum spend across all days for each entry in ``breakdown[dimension]``.
-
-        ``dimension`` is ``"api_keys"`` or ``"models"``, matching the gateway's
-        daily-activity breakdown structure. Returns a mapping of item id (the
-        gateway token for api keys, or model name for models) to total spend.
-        """
-        totals: dict[str, float] = {}
-        for entry in daily_results:
-            breakdown = entry.get("breakdown", {}).get(dimension, {})
-            for item_id, item_data in breakdown.items():
-                spend = item_data.get("metrics", {}).get("spend", 0) or 0
-                totals[item_id] = totals.get(item_id, 0) + spend
-        return totals
-
-    def _get_existing_team(self, project: Project) -> Team | None:
-        """Return the project's gateway team, without creating one if missing."""
-        try:
-            return project.ai_gateway_team
-        except Team.DoesNotExist:
-            return None
 
     def reconcile_team_keys_to_allowed_models(
         self,

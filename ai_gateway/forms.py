@@ -1,9 +1,27 @@
+from datetime import date, datetime
 from typing import Any
 
 from django import forms
 
 from ai_gateway.models import Key
 from projects.models import Project
+
+
+def _parse_usage_month(value: str) -> date:
+    """Convert a form choice in ``YYYY-MM`` format to the first of its month."""
+    return datetime.strptime(value, "%Y-%m").date().replace(day=1)
+
+
+class UsageMonthForm(forms.Form):
+    """Validate a usage month against choices supplied by ``UsageService``."""
+
+    month = forms.TypedChoiceField(required=False, coerce=_parse_usage_month)
+
+    def __init__(self, *args, month_choices: list[date], **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.fields["month"].choices = [
+            (month.strftime("%Y-%m"), month.strftime("%B %Y")) for month in month_choices
+        ]
 
 
 class KeyCreateForm(forms.ModelForm):
