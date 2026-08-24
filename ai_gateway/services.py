@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import calendar
 import secrets
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from typing import Any
 
 import sentry_sdk
@@ -12,6 +13,7 @@ from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
 from django.urls import reverse
+from django.utils.functional import cached_property
 from django.utils.text import slugify
 
 from ai_gateway.client import AIGatewayClient
@@ -23,16 +25,23 @@ from users.models import User
 DAILY_SPEND_PREVIEW_COUNT = 10
 
 
-class UsageService:
-    """Coordinates AI Gateway usage reporting for a project."""
+def previous_month(value: date) -> date:
+    if value.month == 1:
+        return date(year=value.year - 1, month=12, day=1)
 
-    def __init__(self, client: AIGatewayClient) -> None:
+    return date(year=value.year, month=value.month - 1, day=1)
+
+
+class UsageService:
+    """Coordinates AI Gateway usage reporting for a team."""
+
+    def __init__(self, client: AIGatewayClient, team: Team) -> None:
         self._client = client
-        self._team_info: dict[str, Any] | None = None
+        self._team = team
 
     @classmethod
-    def from_settings(cls) -> UsageService:
-        return cls(AIGatewayClient.from_settings())
+    def from_settings(cls, team: Team) -> UsageService:
+        return cls(AIGatewayClient.from_settings(), team)
 
     def __enter__(self) -> UsageService:
         return self
@@ -43,67 +52,60 @@ class UsageService:
     def close(self) -> None:
         self._client.close()
 
-    def get_usage_month_choices(self, team: Team, today: date | None = None) -> list[date]:
-        """Return months from the team's creation month through the current month."""
-        self._team_info = self._client.team_info(team.litellm_team_id)
-        created_at = self._team_info.get("team_info", {}).get("created_at")
-        current_month = self._current_month(today)
-        if not created_at:
-            return [current_month]
+    @cached_property
+    def team_info(self) -> dict[str, Any]:
+        return self._client.team_info(self._team.litellm_team_id).get("team_info", {})
 
-        created_month = self._team_created_month(self._team_info)
+    @cached_property
+    def usage_start(self) -> date:
+        """
+        Uses the Team created_at timestamp to determine when usage data should start from
+        """
+        return datetime.fromisoformat(self.team_info.get("created_at")).date().replace(day=1)
+
+    def get_usage_month_choices(self) -> list[date]:
+        """Return months from the team's creation month to the current month."""
         choices = []
-        month = current_month
-        while month >= created_month.replace(day=1):
+        month = date.today().replace(day=1)
+        while month >= self.usage_start:
             choices.append(month)
-            month = self._shift_months(month, -1)
+            month = previous_month(month)
         return choices
 
-    def get_usage(self, team: Team, month: date) -> dict[str, Any]:
+    def get_usage(self, month: date) -> dict[str, Any]:
         """Return overview, API-key, and model usage data for ``month``."""
         month_start = month.replace(day=1)
-        month_end = self._end_of_month(month)
-        daily_results = self._team_daily_activity(team, month_start, month_end)
-        team_info = self._team_info or self._client.team_info(team.litellm_team_id)
-        self._team_info = team_info
+        month_end = month.replace(day=calendar.monthrange(month.year, month.month)[1])
+        month_spend = self._team_daily_activity(month_start, month_end)
 
-        created_month = self._team_created_month(team_info)
-        history_start = created_month or month_start
+        full_spend_history = month_spend
+        if self.usage_start < month_start:
+            full_spend_history = self._team_daily_activity(self.usage_start, month_end)
 
-        monthly_results = (
-            daily_results
-            if history_start == month_start
-            else self._team_daily_activity(team, history_start, month_end)
-        )
         return {
             "overview_data": self._build_overview(
-                month_start, daily_results, monthly_results, team_info
+                month_start,
+                month_spend,
+                full_spend_history,
             ),
-            "key_data": self._build_key_usage(team.project, daily_results),
-            "model_data": self._build_model_usage(daily_results),
+            "key_data": self._build_key_usage(month_spend),
+            "model_data": self._build_model_usage(month_spend),
         }
 
     def _build_overview(
         self,
         month_start: date,
         daily_results: list[dict[str, Any]],
-        monthly_results: list[dict[str, Any]],
-        team_info: dict[str, Any],
+        full_spend_history: list[dict[str, Any]],
     ) -> dict[str, Any]:
-        daily_spend = self._daily_totals(daily_results)
-        total_spend = round(sum(day["spend"] for day in daily_spend), 2)
-        monthly_spend = self._monthly_totals(monthly_results)
-        max_budget = team_info.get("team_info", {}).get("max_budget")
+        daily_rows = self._daily_rows(daily_results)
+        total_spend = round(sum(day["spend"] for day in daily_rows), 2)
+        monthly_rows = self._monthly_rows(full_spend_history)
+
+        max_budget = self.team_info.get("max_budget")
         budget_remaining = None if max_budget is None else round(max_budget - total_spend, 2)
         percent_used = None if not max_budget else round((total_spend / max_budget) * 100, 1)
-        daily_rows = [
-            {"label": day["date"].strftime("%-d %B %Y"), "spend": day["spend"]}
-            for day in daily_spend
-        ]
-        monthly_rows = [
-            {"label": row["month"].strftime("%B %Y"), "spend": row["spend"]}
-            for row in monthly_spend
-        ]
+
         daily_show_all = None
         if len(daily_rows) > DAILY_SPEND_PREVIEW_COUNT:
             daily_show_all = {
@@ -126,16 +128,18 @@ class UsageService:
             "monthly_chart": None,
         }
 
-    def _build_key_usage(
-        self, project: Project, daily_results: list[dict[str, Any]]
-    ) -> dict[str, Any]:
+    def _build_key_usage(self, daily_results: list[dict[str, Any]]) -> dict[str, Any]:
         totals = self._breakdown_totals(daily_results, "api_keys")
-        keys_by_token = {key.litellm_token: key for key in project.ai_gateway_keys.all()}
+        keys_by_token = {
+            key.litellm_token: key for key in self._team.project.ai_gateway_keys.all()
+        }
         rows = []
         for token, spend in totals.items():
             key = keys_by_token.get(token)
             url = (
-                reverse("ai_gateway:key_detail", kwargs={"uuid": project.uuid, "pk": key.pk})
+                reverse(
+                    "ai_gateway:key_detail", kwargs={"uuid": self._team.project.uuid, "pk": key.pk}
+                )
                 if key
                 else None
             )
@@ -153,71 +157,63 @@ class UsageService:
         rows.sort(key=lambda row: row["spend"], reverse=True)
         return {"has_usage": True, "rows": rows, "chart": None, "chart_label": "Spend per model"}
 
-    def _team_daily_activity(self, team: Team, start: date, end: date) -> list[dict[str, Any]]:
+    def _team_daily_activity(self, start: date, end: date) -> list[dict[str, Any]]:
         data = self._client.team_daily_activity(
-            team.litellm_team_id, start.isoformat(), end.isoformat()
+            self._team.litellm_team_id, start.isoformat(), end.isoformat()
         )
         return data.get("results", [])
 
-    @staticmethod
-    def _daily_totals(daily_results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def _daily_rows(self, daily_results: list[dict[str, Any]]) -> list[dict[str, Any]]:
         totals = []
         for entry in daily_results:
-            if not entry.get("date"):
+            entry_date = entry.get("date")
+            if not entry_date:
                 continue
             spend = entry.get("metrics", {}).get("spend", 0) or 0
+            day = datetime.strptime(entry_date, "%Y-%m-%d").date()
             totals.append(
-                {"date": datetime.strptime(entry["date"], "%Y-%m-%d").date(), "spend": spend}
+                {
+                    "date": day,
+                    "spend": spend,
+                    "label": day.strftime("%-d %B %Y"),
+                }
             )
         totals.sort(key=lambda row: row["date"], reverse=True)
         return totals
 
-    @staticmethod
-    def _monthly_totals(daily_results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def _monthly_rows(self, daily_results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """
+        Totals up a range of daily spends into totals for each month
+        """
         totals: dict[date, float] = {}
         for entry in daily_results:
-            if not entry.get("date"):
+            entry_date = entry.get("date")
+            if not entry_date:
                 continue
-            day = datetime.strptime(entry["date"], "%Y-%m-%d").date()
-            month_key = day.replace(day=1)
+            month = datetime.strptime(entry_date, "%Y-%m-%d").date().replace(day=1)
             spend = entry.get("metrics", {}).get("spend", 0) or 0
-            totals[month_key] = totals.get(month_key, 0) + spend
+            totals[month] = totals.get(month, 0) + spend
+
         return [
-            {"month": month_key, "spend": round(spend, 2)}
-            for month_key, spend in sorted(totals.items(), reverse=True)
+            {
+                "label": month.strftime("%B %Y"),
+                "spend": round(spend, 2),
+            }
+            for month, spend in sorted(
+                totals.items(),
+                reverse=True,
+            )
         ]
 
-    @staticmethod
-    def _breakdown_totals(daily_results: list[dict[str, Any]], dimension: str) -> dict[str, float]:
+    def _breakdown_totals(
+        self, daily_results: list[dict[str, Any]], dimension: str
+    ) -> dict[str, float]:
         totals: dict[str, float] = {}
         for entry in daily_results:
             for item_id, item_data in entry.get("breakdown", {}).get(dimension, {}).items():
                 spend = item_data.get("metrics", {}).get("spend", 0) or 0
                 totals[item_id] = totals.get(item_id, 0) + spend
         return totals
-
-    @staticmethod
-    def _current_month(today: date | None = None) -> date:
-        return (today or date.today()).replace(day=1)
-
-    @staticmethod
-    def _end_of_month(day: date) -> date:
-        next_month = UsageService._shift_months(day.replace(day=1), 1)
-        return next_month - timedelta(days=1)
-
-    @staticmethod
-    def _shift_months(day: date, months: int) -> date:
-        month_index = day.year * 12 + day.month - 1 + months
-        year, month = divmod(month_index, 12)
-        return date(year, month + 1, 1)
-
-    @staticmethod
-    def _team_created_month(team_info: dict[str, Any]) -> date | None:
-        created_at = team_info.get("team_info", {}).get("created_at")
-        if not created_at:
-            return None
-
-        return datetime.fromisoformat(created_at.replace("Z", "+00:00")).date().replace(day=1)
 
 
 class KeyService:

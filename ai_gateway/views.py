@@ -76,8 +76,8 @@ class UsageView(FeatureRequiredMixin, ProjectScopedMixin, ProjectLayoutContextMi
         return context
 
     def _get_usage_context(self, team: Team) -> dict[str, Any]:
-        with UsageService.from_settings() as service:
-            month_choices = service.get_usage_month_choices(team)
+        with UsageService.from_settings(team=team) as service:
+            month_choices = service.get_usage_month_choices()
             month_form = UsageMonthForm(
                 self.request.GET or None,
                 month_choices=month_choices,
@@ -90,7 +90,7 @@ class UsageView(FeatureRequiredMixin, ProjectScopedMixin, ProjectLayoutContextMi
             return {
                 "month_form": month_form,
                 "selected_month": selected_month,
-                **service.get_usage(team, selected_month),
+                **service.get_usage(selected_month),
             }
 
 

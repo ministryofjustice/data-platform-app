@@ -928,7 +928,7 @@ class TestUsageView:
 
         assert response.status_code == 200
         assert response.context["selected_month"] == date(2026, 1, 1)
-        service.get_usage.assert_called_once_with(team, date(2026, 1, 1))
+        service.get_usage.assert_called_once_with(date(2026, 1, 1))
 
     def test_renders_for_member(self, client, user, project):
         client.force_login(user)

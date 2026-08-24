@@ -6,7 +6,7 @@ from django.urls import reverse
 
 from ai_gateway.client import AIGatewayClient
 from ai_gateway.forms import UsageMonthForm
-from ai_gateway.models import Key, Team
+from ai_gateway.models import Key
 from ai_gateway.services import UsageService
 
 
@@ -50,14 +50,13 @@ class TestUsageMonthForm:
 
 
 class TestUsageServiceMonthChoices:
-    def test_returns_months_from_team_creation_month(self, project, gateway_client):
-        team = Team.objects.create(project=project, litellm_team_id="team-xyz")
+    def test_returns_months_from_team_creation_month(self, team, gateway_client):
         gateway_client.team_info.return_value = {
             "team_info": {"created_at": "2025-12-20T14:57:21.001000Z"}
         }
 
-        with UsageService(gateway_client) as service:
-            choices = service.get_usage_month_choices(team, today=date(2026, 8, 21))
+        with UsageService(gateway_client, team) as service:
+            choices = service.get_usage_month_choices()
 
         assert choices == [
             date(2026, 8, 1),
@@ -72,24 +71,13 @@ class TestUsageServiceMonthChoices:
         ]
         gateway_client.team_info.assert_called_once_with("team-xyz")
 
-    def test_defaults_to_current_month_without_creation_date(self, project, gateway_client):
-        team = Team.objects.create(project=project, litellm_team_id="team-xyz")
-        gateway_client.team_info.return_value = {"team_info": {}}
-
-        with UsageService(gateway_client) as service:
-            choices = service.get_usage_month_choices(team, today=date(2026, 8, 21))
-
-        assert choices == [date(2026, 8, 1)]
-        gateway_client.team_info.assert_called_once_with("team-xyz")
-
 
 class TestUsageServiceGetUsage:
     def test_reuses_selected_activity_for_overview_key_and_model_data(
-        self, project, user, gateway_client
+        self, team, user, gateway_client
     ):
-        team = Team.objects.create(project=project, litellm_team_id="team-xyz")
         key = Key.objects.create(
-            project=project,
+            project=team.project,
             name="primary-key",
             litellm_alias="alias-1",
             litellm_secret="sk-1",
@@ -119,8 +107,8 @@ class TestUsageServiceGetUsage:
             {"results": []},
         ]
 
-        with UsageService(gateway_client) as service:
-            result = service.get_usage(team, date(2026, 8, 1))
+        with UsageService(gateway_client, team) as service:
+            result = service.get_usage(date(2026, 8, 1))
 
         assert result["overview_data"]["total_spend"] == 10
         assert result["overview_data"]["daily_chart"] is None
@@ -129,7 +117,7 @@ class TestUsageServiceGetUsage:
             {
                 "label": "primary-key",
                 "url": reverse(
-                    "ai_gateway:key_detail", kwargs={"uuid": project.uuid, "pk": key.pk}
+                    "ai_gateway:key_detail", kwargs={"uuid": team.project.uuid, "pk": key.pk}
                 ),
                 "spend": 10,
             }
