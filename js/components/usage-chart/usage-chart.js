@@ -48,7 +48,10 @@ const UsageChart = {
                 },
               },
               series: [{ type: "bar", data: values }],
-              tooltip: { trigger: "axis" },
+              tooltip: {
+                trigger: "axis",
+                valueFormatter: (value) => '$' + value.toFixed(2),
+              },
             }
           : {
               xAxis: {
@@ -56,7 +59,7 @@ const UsageChart = {
                 data: labels,
                 name: categoryAxisLabel,
                 nameLocation: "middle",
-                nameGap: 30,
+                nameGap: 30
               },
               yAxis: {
                 type: "value",
@@ -72,7 +75,10 @@ const UsageChart = {
                   areaStyle: chartType === "line" ? {} : undefined,
                 },
               ],
-              tooltip: { trigger: "axis" },
+              tooltip: {
+                trigger: "axis",
+                valueFormatter: (value) => '$' + value.toFixed(2),
+              },
             },
       );
       chartsByContainer.set(container, chart);
