@@ -1,0 +1,47 @@
+{% load usage_extras %}
+{% comment %}
+  The table body of a spend section, kept separate so the daily "Show all" link can
+  swap just this table (all rows, no truncation note) in place via HTMX.
+
+  Expects:
+    column_label - label for the first table column (e.g. "Date", "API key")
+    rows         - list of {label, spend, url (optional)}
+    show_all     - optional {shown, total, url}; when set, renders the truncation note
+                   and HTMX "Show all" link. Omitted once the table is expanded.
+{% endcomment %}
+<table class="govuk-table" data-module="moj-sortable-table">
+  <thead class="govuk-table__head">
+    <tr class="govuk-table__row">
+      <th scope="col" class="govuk-table__header" aria-sort="none">{{ column_label }}</th>
+      <th scope="col"
+          class="govuk-table__header govuk-table__header--numeric"
+          aria-sort="none">Spend</th>
+    </tr>
+  </thead>
+  <tbody class="govuk-table__body">
+    {% for row in rows %}
+      <tr class="govuk-table__row">
+        <td class="govuk-table__cell">
+          {% if row.url %}
+            <a class="govuk-link" href="{{ row.url }}">{{ row.label }}</a>
+          {% else %}
+            {{ row.label }}
+          {% endif %}
+        </td>
+        <td class="govuk-table__cell govuk-table__cell--numeric">{{ row.spend|usd }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% if show_all %}
+  <p class="govuk-body-s">
+    Showing {{ show_all.shown }} of {{ show_all.total }} days.
+    <a class="govuk-link"
+       href="{{ show_all.url }}"
+       hx-get="{{ show_all.url }}"
+       hx-target="closest [data-view='table']"
+       hx-swap="innerHTML"
+       hx-push-url="true">Show all</a>
+  </p>
+  <hr class="govuk-section-break govuk-section-break--m govuk-section-break--visible">
+{% endif %}

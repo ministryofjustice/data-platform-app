@@ -953,3 +953,54 @@ class TestUsageView:
         response = client.get(reverse("ai_gateway:usage", args=[project.uuid]))
 
         assert response.status_code == 404
+
+    def _mock_service_with_daily_spend(self):
+        daily = [{"label": str(day), "spend": 1.0} for day in range(1, 14)]
+        service = create_autospec(UsageService, instance=True)
+        service.__enter__.return_value = service
+        service.__exit__.return_value = False
+        service.get_usage_month_choices.return_value = [date(2026, 1, 1)]
+        service.get_usage.return_value = {
+            "overview_data": {
+                "has_usage": True,
+                "daily_spend": daily,
+                "daily_spend_preview": daily[:10],
+                "daily_show_all": {"shown": 10, "total": 13, "url": "?daily=all"},
+            },
+            "key_data": {"has_usage": False},
+            "model_data": {"has_usage": False},
+        }
+        return service
+
+    def test_daily_table_shows_truncation_note_by_default(self, client, user, team):
+        service = self._mock_service_with_daily_spend()
+        with patch("ai_gateway.services.UsageService.from_settings", return_value=service):
+            client.force_login(user)
+            response = client.get(reverse("ai_gateway:usage", args=[team.project.uuid]))
+
+        assertContains(response, "Showing 10 of 13 days")
+
+    def test_show_all_days_expands_table_and_hides_truncation_note(self, client, user, team):
+        service = self._mock_service_with_daily_spend()
+        with patch("ai_gateway.services.UsageService.from_settings", return_value=service):
+            client.force_login(user)
+            response = client.get(
+                reverse("ai_gateway:usage", args=[team.project.uuid]), {"daily": "all"}
+            )
+
+        assertNotContains(response, "Showing 10 of 13 days")
+
+    def test_show_all_days_htmx_returns_table_fragment_only(self, client, user, team):
+        service = self._mock_service_with_daily_spend()
+        with patch("ai_gateway.services.UsageService.from_settings", return_value=service):
+            client.force_login(user)
+            response = client.get(
+                reverse("ai_gateway:usage", args=[team.project.uuid]),
+                {"daily": "all"},
+                headers={"HX-Request": "true"},
+            )
+
+        assert response.status_code == 200
+        assertTemplateUsed(response, "includes/ai_gateway/_usage_spend_table.html")
+        assertTemplateNotUsed(response, "ai_gateway/usage.html")
+        assertNotContains(response, "Showing 10 of 13 days")

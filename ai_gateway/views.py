@@ -52,6 +52,21 @@ class UsageView(FeatureRequiredMixin, ProjectScopedMixin, ProjectLayoutContextMi
     active_project_section = "ai_gateway"
     active_ai_gateway_section = "usage"
 
+    def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+        context = self.get_context_data(**kwargs)
+        overview_data = context.get("overview_data", {})
+        if request.htmx and request.GET.get("daily") == "all" and overview_data.get("has_usage"):
+            return render(
+                request,
+                "includes/ai_gateway/_usage_spend_table.html",
+                {
+                    "column_label": "Date",
+                    "rows": overview_data["daily_spend_preview"],
+                    "show_all": overview_data["daily_show_all"],
+                },
+            )
+        return self.render_to_response(context)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         try:
@@ -72,6 +87,8 @@ class UsageView(FeatureRequiredMixin, ProjectScopedMixin, ProjectLayoutContextMi
         overview_data = context["overview_data"]
         if overview_data["has_usage"] and self.request.GET.get("daily") == "all":
             overview_data["daily_spend_preview"] = overview_data["daily_spend"]
+            # Expanded view shows every day, so drop the "Showing X of Y" truncation note.
+            overview_data["daily_show_all"] = None
 
         return context
 
