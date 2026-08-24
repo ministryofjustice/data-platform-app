@@ -87,6 +87,7 @@ class UsageView(FeatureRequiredMixin, UsageTabContextMixin, TemplateView):
         data = service.get_usage_overview(self.project, self.selected_month)
         if data.get("has_usage") and self.request.GET.get("daily") == "all":
             data["daily_spend_preview"] = data["daily_spend"]
+            data["daily_show_all"] = None
 
         result["overview_data"] = data
         data = service.get_usage_by_key(self.project, self.selected_month)
