@@ -5,6 +5,8 @@ import htmx from "htmx.org";
 import AddAnotherAutocomplete from "./components/add-another-autocomplete/add-another-autocomplete.js";
 import AutoSubmitSelect from "./components/auto-submit-select/auto-submit-select.js";
 import CopyButton from "./components/copy-button/copy-button.js";
+import UsageChart from "./components/usage-chart/usage-chart.js";
+import ViewToggle from "./components/view-toggle/view-toggle.js";
 
 window.htmx = htmx;
 
@@ -38,6 +40,8 @@ const App = {
     AddAnotherAutocomplete.init();
     AutoSubmitSelect.init();
     CopyButton.init();
+    UsageChart.init();
+    ViewToggle.init();
 
     document.body.addEventListener("htmx:afterSwap", function (event) {
       reinitialiseSwappedContent(event.detail.target);
