@@ -50,7 +50,7 @@ const UsageChart = {
               series: [{ type: "bar", data: values }],
               tooltip: {
                 trigger: "axis",
-                valueFormatter: (value) => '$' + value.toFixed(2),
+                valueFormatter: (value) => "$" + value.toFixed(2),
               },
             }
           : {
@@ -59,7 +59,7 @@ const UsageChart = {
                 data: labels,
                 name: categoryAxisLabel,
                 nameLocation: "middle",
-                nameGap: 30
+                nameGap: 30,
               },
               yAxis: {
                 type: "value",
@@ -77,7 +77,7 @@ const UsageChart = {
               ],
               tooltip: {
                 trigger: "axis",
-                valueFormatter: (value) => '$' + value.toFixed(2),
+                valueFormatter: (value) => "$" + value.toFixed(2),
               },
             },
       );
