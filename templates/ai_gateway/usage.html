@@ -69,11 +69,8 @@
           {% if overview_data.percent_used and overview_data.percent_used > 50 %}
             {% include "includes/ai_gateway/_usage_budget_banner.html" with percent_used=overview_data.percent_used only %}
           {% endif %}
-          {% include "includes/ai_gateway/_usage_spend_section.html" with heading="Daily spend" heading_level="h4" column_label="Date" rows=overview_data.daily_spend_preview chart=overview_data.daily_chart chart_label=overview_data.daily_chart_label show_all=overview_data.daily_show_all empty_message="No spend recorded for this month." only %}
-          {% if overview_data.daily_show_all %}
-            <hr class="govuk-section-break govuk-section-break--m govuk-section-break--visible">
-          {% endif %}
-          {% include "includes/ai_gateway/_usage_spend_section.html" with heading="Monthly spend" heading_level="h4" column_label="Month" rows=overview_data.monthly_spend_rows chart=overview_data.monthly_chart chart_label="Monthly spend" empty_message="No spend recorded yet." only %}
+          {% include "includes/ai_gateway/_usage_spend_section.html" with heading="Daily spend" heading_level="h4" column_label="Date" rows=overview_data.daily_spend_preview chart_name=overview_data.daily_chart_name chart_data=overview_data.daily_chart_data chart_label=overview_data.daily_chart_label show_all=overview_data.daily_show_all empty_message="No spend recorded for this month." only %}
+          {% include "includes/ai_gateway/_usage_spend_section.html" with heading="Monthly spend" heading_level="h4" column_label="Month" rows=overview_data.monthly_spend_rows chart_name=overview_data.monthly_chart_name chart_data=overview_data.monthly_chart_data chart_label="Monthly spend" empty_message="No spend recorded yet." only %}
         {% endif %}
       </div>
       <div class="govuk-tabs__panel govuk-tabs__panel--hidden"
@@ -96,7 +93,7 @@
               {% include "includes/ai_gateway/_usage_month_select.html" %}
             </div>
           </div>
-          {% include "includes/ai_gateway/_usage_spend_section.html" with heading_level="h4" column_label="API key" rows=key_data.rows chart=key_data.chart chart_label=key_data.chart_label empty_message="No API key spend recorded for this month." only %}
+          {% include "includes/ai_gateway/_usage_spend_section.html" with heading_level="h4" column_label="API key" rows=key_data.rows chart_name=key_data.chart_name chart_data=key_data.chart_data chart_label=key_data.chart_label empty_message="No API key spend recorded for this month." only %}
         {% endif %}
       </div>
       <div class="govuk-tabs__panel govuk-tabs__panel--hidden"
@@ -119,7 +116,7 @@
               {% include "includes/ai_gateway/_usage_month_select.html" %}
             </div>
           </div>
-          {% include "includes/ai_gateway/_usage_spend_section.html" with heading_level="h4" column_label="Model" rows=model_data.rows chart=model_data.chart chart_label=model_data.chart_label empty_message="No model spend recorded for this month." only %}
+          {% include "includes/ai_gateway/_usage_spend_section.html" with heading_level="h4" column_label="Model" rows=model_data.rows chart_name=model_data.chart_name chart_data=model_data.chart_data chart_label=model_data.chart_label empty_message="No model spend recorded for this month." only %}
         {% endif %}
       </div>
     </div>

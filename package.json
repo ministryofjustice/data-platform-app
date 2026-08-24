@@ -6,6 +6,7 @@
   "dependencies": {
     "@ministryofjustice/frontend": "9.0.0",
     "@x-govuk/govuk-prototype-components": "6.0.0",
+    "echarts": "6.1.0",
     "govuk-frontend": "6.1.0",
     "htmx.org": "2.0.10"
   },
