@@ -1,4 +1,5 @@
-from unittest.mock import patch
+from datetime import date
+from unittest.mock import create_autospec, patch
 
 import pytest
 from django.urls import reverse
@@ -14,6 +15,7 @@ from pytest_django.asserts import (
 from ai_gateway.exceptions import AIGatewayAPIError
 from ai_gateway.filtering import VISIBLE_LIMIT
 from ai_gateway.models import Key
+from ai_gateway.services import UsageService
 
 PLAINTEXT_KEY = "sk-plaintext-key-value-123456"
 
@@ -906,6 +908,28 @@ class TestKeyRevokeView:
 
 
 class TestUsageView:
+    @pytest.mark.parametrize("month", ["2026-01", "not-a-month", "2025-12", None])
+    def test_selects_valid_month_or_defaults_to_current_available_month(
+        self, client, user, team, month
+    ):
+        service = create_autospec(UsageService, instance=True)
+        service.__enter__.return_value = service
+        service.__exit__.return_value = False
+        service.get_usage_month_choices.return_value = [date(2026, 1, 1)]
+        service.get_usage.return_value = {
+            "overview_data": {"has_usage": True},
+            "key_data": {"has_usage": True},
+            "model_data": {"has_usage": True},
+        }
+        query = {"month": month} if month is not None else None
+        with patch("ai_gateway.services.UsageService.from_settings", return_value=service):
+            client.force_login(user)
+            response = client.get(reverse("ai_gateway:usage", args=[team.project.uuid]), query)
+
+        assert response.status_code == 200
+        assert response.context["selected_month"] == date(2026, 1, 1)
+        service.get_usage.assert_called_once_with(date(2026, 1, 1))
+
     def test_renders_for_member(self, client, user, project):
         client.force_login(user)
         response = client.get(reverse("ai_gateway:usage", args=[project.uuid]))
@@ -929,3 +953,67 @@ class TestUsageView:
         response = client.get(reverse("ai_gateway:usage", args=[project.uuid]))
 
         assert response.status_code == 404
+
+    def _mock_service_with_daily_spend(self):
+        daily = [{"label": str(day), "spend": 1.0} for day in range(1, 14)]
+        service = create_autospec(UsageService, instance=True)
+        service.__enter__.return_value = service
+        service.__exit__.return_value = False
+        service.get_usage_month_choices.return_value = [date(2026, 1, 1)]
+        service.get_usage.return_value = {
+            "overview_data": {
+                "has_usage": True,
+                "daily_spend": daily,
+                "daily_spend_preview": daily[:10],
+                "daily_show_all": {"shown": 10, "total": 13, "url": "?daily=all"},
+            },
+            "key_data": {"has_usage": False},
+            "model_data": {"has_usage": False},
+        }
+        return service
+
+    def test_daily_table_shows_truncation_note_by_default(self, client, user, team):
+        service = self._mock_service_with_daily_spend()
+        with patch("ai_gateway.services.UsageService.from_settings", return_value=service):
+            client.force_login(user)
+            response = client.get(reverse("ai_gateway:usage", args=[team.project.uuid]))
+
+        assertContains(response, "Showing 10 of 13 days")
+
+    def test_show_all_days_expands_table_and_hides_truncation_note(self, client, user, team):
+        service = self._mock_service_with_daily_spend()
+        with patch("ai_gateway.services.UsageService.from_settings", return_value=service):
+            client.force_login(user)
+            response = client.get(
+                reverse("ai_gateway:usage", args=[team.project.uuid]), {"daily": "all"}
+            )
+
+        assertNotContains(response, "Showing 10 of 13 days")
+
+    def test_show_all_days_htmx_returns_table_fragment_only(self, client, user, team):
+        service = self._mock_service_with_daily_spend()
+        with patch("ai_gateway.services.UsageService.from_settings", return_value=service):
+            client.force_login(user)
+            response = client.get(
+                reverse("ai_gateway:usage", args=[team.project.uuid]),
+                {"daily": "all"},
+                headers={"HX-Request": "true"},
+            )
+
+        assert response.status_code == 200
+        assertTemplateUsed(response, "includes/ai_gateway/_usage_spend_table.html")
+        assertTemplateNotUsed(response, "ai_gateway/usage.html")
+        assertNotContains(response, "Showing 10 of 13 days")
+
+    def test_gateway_error_shows_message_without_500(self, client, user, team):
+        service = create_autospec(UsageService, instance=True)
+        service.__enter__.return_value = service
+        service.__exit__.return_value = False
+        service.get_usage_month_choices.return_value = [date(2026, 1, 1)]
+        service.get_usage.side_effect = AIGatewayAPIError(503, "gateway unavailable")
+        with patch("ai_gateway.services.UsageService.from_settings", return_value=service):
+            client.force_login(user)
+            response = client.get(reverse("ai_gateway:usage", args=[team.project.uuid]))
+
+        assert response.status_code == 200
+        assertContains(response, "Could not load usage data")

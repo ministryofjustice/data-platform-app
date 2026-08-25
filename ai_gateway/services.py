@@ -13,6 +13,7 @@ from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
 from django.urls import reverse
+from django.utils.functional import cached_property
 from django.utils.text import slugify
 
 from ai_gateway.client import AIGatewayClient
@@ -21,53 +22,265 @@ from ai_gateway.models import Key, Team
 from projects.models import Project
 from users.models import User
 
-MONTHS_IN_MONTH_PICKER = 12
-MONTHS_OF_SPEND_HISTORY = 6
 DAILY_SPEND_PREVIEW_COUNT = 10
 LINE_CHART_MIN_POINTS = 2
 
 
-def usage_month_choices(today: date | None = None) -> list[date]:
-    """Return the most recent ``MONTHS_IN_MONTH_PICKER`` months, newest first.
+def previous_month(value: date) -> date:
+    if value.month == 1:
+        return date(year=value.year - 1, month=12, day=1)
 
-    Each value is the first day of a calendar month, suitable for populating
-    the usage page's month selector.
-    """
-    today = today or date.today()
-    year, month = today.year, today.month
-    months = []
-    for _ in range(MONTHS_IN_MONTH_PICKER):
-        months.append(date(year, month, 1))
-        month -= 1
-        if month == 0:
-            month, year = 12, year - 1
-    return months
+    return date(year=value.year, month=value.month - 1, day=1)
 
 
-def parse_usage_month(value: str | None, today: date | None = None) -> date:
-    """Parse a ``YYYY-MM`` month value, falling back to the current month."""
-    today = today or date.today()
-    if value:
-        try:
-            parsed = datetime.strptime(value, "%Y-%m").date()
-        except ValueError:
-            return today.replace(day=1)
-        if parsed in usage_month_choices(today):
-            return parsed
-    return today.replace(day=1)
+class UsageService:
+    """Coordinates AI Gateway usage reporting for a team."""
 
+    def __init__(self, client: AIGatewayClient, team: Team) -> None:
+        self._client = client
+        self._team = team
 
-def end_of_month(day: date) -> date:
-    """Return the last calendar day of the month containing ``day``."""
-    last_day = calendar.monthrange(day.year, day.month)[1]
-    return day.replace(day=last_day)
+    @classmethod
+    def from_settings(cls, team: Team) -> UsageService:
+        return cls(AIGatewayClient.from_settings(), team)
 
+    def __enter__(self) -> UsageService:
+        return self
 
-def shift_months(day: date, months: int) -> date:
-    """Return the first of the month ``months`` months away from ``day``."""
-    month_index = day.year * 12 + (day.month - 1) + months
-    year, month = divmod(month_index, 12)
-    return date(year, month + 1, 1)
+    def __exit__(self, *exc_info: object) -> None:
+        self.close()
+
+    def close(self) -> None:
+        self._client.close()
+
+    @cached_property
+    def team_info(self) -> dict[str, Any]:
+        return self._client.team_info(self._team.litellm_team_id).get("team_info", {})
+
+    @cached_property
+    def usage_start(self) -> date:
+        """
+        Uses the Team created_at timestamp to determine when usage data should start from
+        """
+        return datetime.fromisoformat(self.team_info.get("created_at")).date().replace(day=1)
+
+    def get_usage_month_choices(self) -> list[date]:
+        """Return months from the team's creation month to the current month."""
+        choices = []
+        month = date.today().replace(day=1)
+        while month >= self.usage_start:
+            choices.append(month)
+            month = previous_month(month)
+        return choices
+
+    def get_usage(self, month: date) -> dict[str, Any]:
+        """Return overview, API-key, and model usage data for ``month``."""
+        month_start = month.replace(day=1)
+        month_end = month.replace(day=calendar.monthrange(month.year, month.month)[1])
+        month_spend = self._team_daily_activity(month_start, month_end)
+
+        full_spend_history = month_spend
+        if self.usage_start < month_start:
+            full_spend_history = self._team_daily_activity(self.usage_start, month_end)
+
+        return {
+            "overview_data": self._build_overview(
+                month_start,
+                month_spend,
+                full_spend_history,
+            ),
+            "key_data": self._build_key_usage(month_spend),
+            "model_data": self._build_model_usage(month_spend),
+        }
+
+    def _build_overview(
+        self,
+        month_start: date,
+        daily_results: list[dict[str, Any]],
+        full_spend_history: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        daily_rows = self._daily_rows(daily_results)
+        total_spend = round(sum(day["spend"] for day in daily_rows), 2)
+        monthly_rows = self._monthly_rows(full_spend_history)
+
+        max_budget = self.team_info.get("max_budget")
+        budget_remaining = None if max_budget is None else round(max_budget - total_spend, 2)
+        percent_used = None if not max_budget else round((total_spend / max_budget) * 100, 1)
+
+        daily_show_all = None
+        if len(daily_rows) > DAILY_SPEND_PREVIEW_COUNT:
+            daily_show_all = {
+                "shown": DAILY_SPEND_PREVIEW_COUNT,
+                "total": len(daily_rows),
+                "url": f"?month={month_start.strftime('%Y-%m')}&daily=all",
+            }
+
+        daily_chart_rows = [
+            {"label": row["date"].strftime("%-d"), "spend": row["spend"]} for row in daily_rows
+        ]
+        daily_chart_data = self._create_chart_data(
+            daily_chart_rows,
+            "label",
+            "spend",
+            f"Day ({month_start.strftime('%B %Y')})",
+            "Spend ($)",
+            reverse=True,
+        )
+        if len(daily_rows) > LINE_CHART_MIN_POINTS:
+            daily_chart_data["chart_type"] = "line"
+
+        monthly_chart_data = self._create_chart_data(
+            monthly_rows, "label", "spend", "Month", "Spend ($)", reverse=True
+        )
+        if len(monthly_rows) > LINE_CHART_MIN_POINTS:
+            monthly_chart_data["chart_type"] = "line"
+
+        return {
+            "has_usage": True,
+            "total_spend": total_spend,
+            "max_budget": max_budget,
+            "budget_remaining": budget_remaining,
+            "percent_used": percent_used,
+            "daily_spend": daily_rows,
+            "daily_spend_preview": daily_rows[:DAILY_SPEND_PREVIEW_COUNT],
+            "daily_show_all": daily_show_all,
+            "daily_chart_data": daily_chart_data,
+            "daily_chart_name": "daily-spend",
+            "daily_chart_label": f"Daily spend for {month_start.strftime('%B %Y')}",
+            "monthly_spend_rows": monthly_rows,
+            "monthly_chart_name": "monthly-spend",
+            "monthly_chart_data": monthly_chart_data,
+        }
+
+    @staticmethod
+    def _create_chart_data(
+        rows: list[dict[str, Any]],
+        label_key: str,
+        values_key: str,
+        category_axis_label: str = "",
+        value_axis_label: str = "",
+        reverse: bool = False,
+    ) -> dict[str, Any]:
+        """Return chart data for a list of rows with a label and spend."""
+        if reverse:
+            rows = list(reversed(rows))
+
+        return {
+            "labels": [row[label_key] for row in rows],
+            "values": [row[values_key] for row in rows],
+            "category_axis_label": category_axis_label,
+            "value_axis_label": value_axis_label,
+        }
+
+    def _build_key_usage(self, daily_results: list[dict[str, Any]]) -> dict[str, Any]:
+        totals = self._breakdown_totals(daily_results, "api_keys")
+        keys_by_alias = {
+            key.litellm_alias: key for key in self._team.project.ai_gateway_keys.all()
+        }
+        rows = []
+        for alias, spend in totals.items():
+            key = keys_by_alias.get(alias)
+            url = (
+                reverse(
+                    "ai_gateway:key_detail", kwargs={"uuid": self._team.project.uuid, "pk": key.pk}
+                )
+                if key
+                else None
+            )
+            rows.append(
+                {"label": key.name if key else alias, "url": url, "spend": round(spend, 2)}
+            )
+        rows.sort(key=lambda row: row["spend"], reverse=True)
+        chart_data = self._create_chart_data(
+            rows, "label", "spend", "API Key", "Spend ($)", reverse=True
+        )
+        return {
+            "has_usage": True,
+            "rows": rows,
+            "chart_data": chart_data,
+            "chart_name": "key-spend",
+            "chart_label": "Spend per API key",
+        }
+
+    def _build_model_usage(self, daily_results: list[dict[str, Any]]) -> dict[str, Any]:
+        totals = self._breakdown_totals(daily_results, "models")
+        rows = [
+            {"label": model_name, "spend": round(spend, 2)} for model_name, spend in totals.items()
+        ]
+        rows.sort(key=lambda row: row["spend"], reverse=True)
+        chart_data = self._create_chart_data(
+            rows, "label", "spend", "Model", "Spend ($)", reverse=True
+        )
+        chart_data["horizontal"] = True
+        return {
+            "has_usage": True,
+            "rows": rows,
+            "chart_data": chart_data,
+            "chart_name": "model-spend",
+            "chart_label": "Spend per model",
+        }
+
+    def _team_daily_activity(self, start: date, end: date) -> list[dict[str, Any]]:
+        data = self._client.team_daily_activity(
+            self._team.litellm_team_id, start.isoformat(), end.isoformat()
+        )
+        return data.get("results", [])
+
+    def _daily_rows(self, daily_results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        totals = []
+        for entry in daily_results:
+            entry_date = entry.get("date")
+            if not entry_date:
+                continue
+            spend = entry.get("metrics", {}).get("spend", 0) or 0
+            day = datetime.strptime(entry_date, "%Y-%m-%d").date()
+            totals.append(
+                {
+                    "date": day,
+                    "spend": spend,
+                    "label": day.strftime("%-d %B %Y"),
+                }
+            )
+        totals.sort(key=lambda row: row["date"], reverse=True)
+        return totals
+
+    def _monthly_rows(self, daily_results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """
+        Totals up a range of daily spends into totals for each month
+        """
+        totals: dict[date, float] = {}
+        for entry in daily_results:
+            entry_date = entry.get("date")
+            if not entry_date:
+                continue
+            month = datetime.strptime(entry_date, "%Y-%m-%d").date().replace(day=1)
+            spend = entry.get("metrics", {}).get("spend", 0) or 0
+            totals[month] = totals.get(month, 0) + spend
+
+        return [
+            {
+                "label": month.strftime("%B %Y"),
+                "spend": round(spend, 2),
+            }
+            for month, spend in sorted(
+                totals.items(),
+                reverse=True,
+            )
+        ]
+
+    def _breakdown_totals(
+        self, daily_results: list[dict[str, Any]], dimension: str
+    ) -> dict[str, float]:
+        totals: dict[str, float] = {}
+        for entry in daily_results:
+            for item_id, item_data in entry.get("breakdown", {}).get(dimension, {}).items():
+                spend = item_data.get("metrics", {}).get("spend", 0) or 0
+                _id = item_id
+                # API key ID/token changes when regenerated so use the alias to group spend by key
+                if dimension == "api_keys":
+                    _id = item_data["metadata"]["key_alias"]
+                totals[_id] = totals.get(_id, 0) + spend
+        return totals
 
 
 class KeyService:
@@ -247,242 +460,6 @@ class KeyService:
         """Delete the virtual key from the gateway and remove its metadata."""
         self._client.delete_key(key.litellm_token)
         key.delete()
-
-    def get_usage_overview(self, project: Project, month: date) -> dict[str, Any]:
-        """Return spend-overview data for ``project`` for the calendar month ``month``.
-
-        Returns ``{"has_usage": False}`` when the project has never used the
-        gateway. Otherwise includes the total spend and remaining budget for
-        the month, a daily spend breakdown (as a table and a chart), and a
-        trailing monthly summary, shaped ready for the usage templates.
-        """
-        team = self._get_existing_team(project)
-        if team is None:
-            return {"has_usage": False}
-
-        month_start = month.replace(day=1)
-        month_end = end_of_month(month)
-        daily_results = self._team_daily_activity(team, month_start, month_end)
-        daily_spend = self._daily_totals(daily_results)
-        total_spend = round(sum(day["spend"] for day in daily_spend), 2)
-
-        history_start = shift_months(month_start, -(MONTHS_OF_SPEND_HISTORY - 1))
-        monthly_results = (
-            daily_results
-            if history_start == month_start
-            else self._team_daily_activity(team, history_start, month_end)
-        )
-        monthly_spend = self._monthly_totals(monthly_results)
-
-        max_budget = self._team_max_budget(team)
-        budget_remaining = None if max_budget is None else round(max_budget - total_spend, 2)
-        percent_used = None if not max_budget else round((total_spend / max_budget) * 100, 1)
-
-        daily_rows = [
-            {"label": day["date"].strftime("%-d %B %Y"), "spend": day["spend"]}
-            for day in daily_spend
-        ]
-
-        daily_chart_rows = [
-            {"label": day["date"].strftime("%-d"), "spend": day["spend"]} for day in daily_spend
-        ]
-
-        daily_chart_data = self._create_chart_data(
-            daily_chart_rows,
-            "label",
-            "spend",
-            f"Day ({month_start.strftime('%B %Y')})",
-            "Spend ($)",
-            True,
-        )
-        if len(daily_rows) > LINE_CHART_MIN_POINTS:
-            daily_chart_data["chart_type"] = "line"
-
-        monthly_rows = [
-            {"label": month_row["month"].strftime("%B %Y"), "spend": month_row["spend"]}
-            for month_row in monthly_spend
-        ]
-
-        monthly_chart_data = self._create_chart_data(
-            monthly_rows, "label", "spend", "Month", "Spend ($)", True
-        )
-        if len(monthly_rows) > LINE_CHART_MIN_POINTS:
-            monthly_chart_data["chart_type"] = "line"
-
-        daily_show_all = None
-        if len(daily_rows) > DAILY_SPEND_PREVIEW_COUNT:
-            daily_show_all = {
-                "shown": DAILY_SPEND_PREVIEW_COUNT,
-                "total": len(daily_rows),
-                "url": f"?month={month_start.strftime('%Y-%m')}&daily=all",
-            }
-
-        return {
-            "has_usage": True,
-            "total_spend": total_spend,
-            "max_budget": max_budget,
-            "budget_remaining": budget_remaining,
-            "percent_used": percent_used,
-            "daily_spend": daily_rows,
-            "daily_spend_preview": daily_rows[:DAILY_SPEND_PREVIEW_COUNT],
-            "daily_show_all": daily_show_all,
-            "daily_chart_data": daily_chart_data,
-            "daily_chart_name": "daily-spend",
-            "daily_chart_label": f"Daily spend for {month_start.strftime('%B %Y')}",
-            "monthly_spend_rows": monthly_rows,
-            "monthly_chart_name": "monthly-spend",
-            "monthly_chart_data": monthly_chart_data,
-        }
-
-    def _create_chart_data(
-        self,
-        rows: list[dict[str, Any]],
-        label_key: str,
-        values_key: str,
-        category_axis_label: str = "",
-        value_axis_label: str = "",
-        reverse: bool = False,
-    ) -> dict[str, Any]:
-        """Return chart data for a list of rows with a label and spend."""
-        if reverse:
-            rows = list(reversed(rows))
-
-        result = {
-            "labels": [row[label_key] for row in rows],
-            "values": [row[values_key] for row in rows],
-        }
-
-        result["category_axis_label"] = category_axis_label
-        result["value_axis_label"] = value_axis_label
-        return result
-
-    def get_usage_by_key(self, project: Project, month: date) -> dict[str, Any]:
-        """Return per-API-key spend for ``project`` for the calendar month ``month``."""
-        team = self._get_existing_team(project)
-        if team is None:
-            return {"has_usage": False}
-
-        daily_results = self._team_daily_activity(team, month.replace(day=1), end_of_month(month))
-        totals = self._breakdown_totals(daily_results, "api_keys")
-
-        keys_by_token = {key.litellm_token: key for key in project.ai_gateway_keys.all()}
-        rows = []
-        for token, spend in totals.items():
-            key = keys_by_token.get(token)
-            url = (
-                reverse("ai_gateway:key_detail", kwargs={"uuid": project.uuid, "pk": key.pk})
-                if key
-                else None
-            )
-            rows.append(
-                {"label": key.name if key else token, "url": url, "spend": round(spend, 2)}
-            )
-        rows.sort(key=lambda row: row["spend"], reverse=True)
-        chart_data = self._create_chart_data(rows, "label", "spend", "API Key", "Spend ($)", True)
-
-        return {
-            "has_usage": True,
-            "rows": rows,
-            "chart_data": chart_data,
-            "chart_name": "key-spend",
-            "chart_label": "Spend per API key",
-        }
-
-    def get_usage_by_model(self, project: Project, month: date) -> dict[str, Any]:
-        """Return per-model spend for ``project`` for the calendar month ``month``."""
-        team = self._get_existing_team(project)
-        if team is None:
-            return {"has_usage": False}
-
-        daily_results = self._team_daily_activity(team, month.replace(day=1), end_of_month(month))
-        totals = self._breakdown_totals(daily_results, "models")
-
-        rows = [
-            {"label": model_name, "spend": round(spend, 2)} for model_name, spend in totals.items()
-        ]
-        rows.sort(key=lambda row: row["spend"], reverse=True)
-        chart_data = self._create_chart_data(rows, "label", "spend", "Model", "Spend ($)", True)
-        chart_data["horizontal"] = True
-
-        return {
-            "has_usage": True,
-            "rows": rows,
-            "chart_data": chart_data,
-            "chart_name": "model-spend",
-            "chart_label": "Spend per model",
-        }
-
-    def _team_daily_activity(self, team: Team, start: date, end: date) -> list[dict[str, Any]]:
-        """Return the raw ``results`` list from the gateway for a date range."""
-        data = self._client.team_daily_activity(
-            team.litellm_team_id,
-            start.isoformat(),
-            end.isoformat(),
-        )
-        return data.get("results", [])
-
-    def _team_max_budget(self, team: Team) -> float | None:
-        """Return the team's configured monthly budget, if the gateway reports one."""
-        data = self._client.team_info(team.litellm_team_id)
-        return data.get("team_info", {}).get("max_budget")
-
-    @staticmethod
-    def _daily_totals(daily_results: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """Return ``[{"date": date, "spend": float}, ...]`` sorted most recent first."""
-        totals = []
-        for entry in daily_results:
-            entry_date = entry.get("date")
-            if not entry_date:
-                continue
-            spend = entry.get("metrics", {}).get("spend", 0) or 0
-            totals.append(
-                {"date": datetime.strptime(entry_date, "%Y-%m-%d").date(), "spend": spend}
-            )
-        totals.sort(key=lambda row: row["date"], reverse=True)
-        return totals
-
-    @staticmethod
-    def _monthly_totals(daily_results: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """Aggregate daily results into ``[{"month": date, "spend": float}, ...]``.
-
-        Months are returned most recent first, as the first day of each month.
-        """
-        totals: dict[date, float] = {}
-        for entry in daily_results:
-            entry_date = entry.get("date")
-            if not entry_date:
-                continue
-            day = datetime.strptime(entry_date, "%Y-%m-%d").date()
-            month_key = day.replace(day=1)
-            spend = entry.get("metrics", {}).get("spend", 0) or 0
-            totals[month_key] = totals.get(month_key, 0) + spend
-        return [
-            {"month": month_key, "spend": round(spend, 2)}
-            for month_key, spend in sorted(totals.items(), reverse=True)
-        ]
-
-    @staticmethod
-    def _breakdown_totals(daily_results: list[dict[str, Any]], dimension: str) -> dict[str, float]:
-        """Sum spend across all days for each entry in ``breakdown[dimension]``.
-
-        ``dimension`` is ``"api_keys"`` or ``"models"``, matching the gateway's
-        daily-activity breakdown structure. Returns a mapping of item id (the
-        gateway token for api keys, or model name for models) to total spend.
-        """
-        totals: dict[str, float] = {}
-        for entry in daily_results:
-            breakdown = entry.get("breakdown", {}).get(dimension, {})
-            for item_id, item_data in breakdown.items():
-                spend = item_data.get("metrics", {}).get("spend", 0) or 0
-                totals[item_id] = totals.get(item_id, 0) + spend
-        return totals
-
-    def _get_existing_team(self, project: Project) -> Team | None:
-        """Return the project's gateway team, without creating one if missing."""
-        try:
-            return project.ai_gateway_team
-        except Team.DoesNotExist:
-            return None
 
     def reconcile_team_keys_to_allowed_models(
         self,

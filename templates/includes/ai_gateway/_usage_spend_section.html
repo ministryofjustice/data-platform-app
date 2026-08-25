@@ -21,38 +21,8 @@
   {% if rows %}
     {% include "includes/ai_gateway/_usage_view_toggle.html" with param_name=chart_name current_view="table" only %}
     <div class="app-usage-view" data-view="table">
-      <table class="govuk-table" data-module="moj-sortable-table">
-        <thead class="govuk-table__head">
-          <tr class="govuk-table__row">
-            <th scope="col" class="govuk-table__header" aria-sort="none">{{ column_label }}</th>
-            <th scope="col"
-                class="govuk-table__header govuk-table__header--numeric"
-                aria-sort="none">Spend</th>
-          </tr>
-        </thead>
-        <tbody class="govuk-table__body">
-          {% for row in rows %}
-            <tr class="govuk-table__row">
-              <td class="govuk-table__cell">
-                {% if row.url %}
-                  <a class="govuk-link" href="{{ row.url }}">{{ row.label }}</a>
-                {% else %}
-                  {{ row.label }}
-                {% endif %}
-              </td>
-              <td class="govuk-table__cell govuk-table__cell--numeric">{{ row.spend|usd }}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      {% include "includes/ai_gateway/_usage_spend_table.html" with column_label=column_label rows=rows show_all=show_all only %}
     </div>
-    {% if show_all %}
-      <p class="govuk-body-s">
-        Showing {{ show_all.shown }} of {{ show_all.total }} days.
-        <a class="govuk-link" href="{{ show_all.url }}">Show all</a>
-      </p>
-      <hr class="govuk-section-break govuk-section-break--m govuk-section-break--visible">
-    {% endif %}
     {% if chart_data %}
       <div class="app-usage-view" data-view="chart" hidden>
         {% include "includes/ai_gateway/_usage_chart.html" with chart_data=chart_data chart_name=chart_name chart_label=chart_label only %}

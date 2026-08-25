@@ -31,6 +31,12 @@ def project(db, user):
 
 
 @pytest.fixture
+def team(db, project):
+    """A gateway team whose only allowed model is gpt-4."""
+    return baker.make("ai_gateway.Team", project=project, litellm_team_id="team-xyz")
+
+
+@pytest.fixture
 def non_project_user(db):
     """A user who is not part of any project."""
 
