@@ -174,12 +174,12 @@ class UsageService:
 
     def _build_key_usage(self, daily_results: list[dict[str, Any]]) -> dict[str, Any]:
         totals = self._breakdown_totals(daily_results, "api_keys")
-        keys_by_token = {
+        keys_by_alias = {
             key.litellm_alias: key for key in self._team.project.ai_gateway_keys.all()
         }
         rows = []
-        for token, spend in totals.items():
-            key = keys_by_token.get(token)
+        for alias, spend in totals.items():
+            key = keys_by_alias.get(alias)
             url = (
                 reverse(
                     "ai_gateway:key_detail", kwargs={"uuid": self._team.project.uuid, "pk": key.pk}
@@ -188,7 +188,7 @@ class UsageService:
                 else None
             )
             rows.append(
-                {"label": key.name if key else token, "url": url, "spend": round(spend, 2)}
+                {"label": key.name if key else alias, "url": url, "spend": round(spend, 2)}
             )
         rows.sort(key=lambda row: row["spend"], reverse=True)
         chart_data = self._create_chart_data(
