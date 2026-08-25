@@ -6,7 +6,6 @@ from django.urls import reverse
 
 from ai_gateway.client import AIGatewayClient
 from ai_gateway.forms import UsageMonthForm
-from ai_gateway.models import Key
 from ai_gateway.services import UsageService
 
 
@@ -74,17 +73,8 @@ class TestUsageServiceMonthChoices:
 
 class TestUsageServiceGetUsage:
     def test_reuses_selected_activity_for_overview_key_and_model_data(
-        self, team, user, gateway_client
+        self, team, gateway_client, key
     ):
-        key = Key.objects.create(
-            project=team.project,
-            name="primary-key",
-            litellm_alias="alias-1",
-            litellm_secret="sk-1",
-            litellm_token="known-token",
-            masked_key="...1",
-            created_by=user,
-        )
         gateway_client.team_info.return_value = {
             "team_info": {
                 "created_at": "2026-01-15T10:00:00.000000Z",
@@ -98,7 +88,12 @@ class TestUsageServiceGetUsage:
                         "date": "2026-08-10",
                         "metrics": {"spend": 10},
                         "breakdown": {
-                            "api_keys": {"known-token": {"metrics": {"spend": 10}}},
+                            "api_keys": {
+                                key.litellm_token: {
+                                    "metrics": {"spend": 10},
+                                    "metadata": {"key_alias": key.litellm_alias},
+                                }
+                            },
                             "models": {"gpt-4": {"metrics": {"spend": 10}}},
                         },
                     }

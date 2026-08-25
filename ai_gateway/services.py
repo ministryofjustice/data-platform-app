@@ -175,7 +175,7 @@ class UsageService:
     def _build_key_usage(self, daily_results: list[dict[str, Any]]) -> dict[str, Any]:
         totals = self._breakdown_totals(daily_results, "api_keys")
         keys_by_token = {
-            key.litellm_token: key for key in self._team.project.ai_gateway_keys.all()
+            key.litellm_alias: key for key in self._team.project.ai_gateway_keys.all()
         }
         rows = []
         for token, spend in totals.items():
@@ -275,7 +275,11 @@ class UsageService:
         for entry in daily_results:
             for item_id, item_data in entry.get("breakdown", {}).get(dimension, {}).items():
                 spend = item_data.get("metrics", {}).get("spend", 0) or 0
-                totals[item_id] = totals.get(item_id, 0) + spend
+                _id = item_id
+                # API key ID/token changes when regenerated so use the alias to group spend by key
+                if dimension == "api_keys":
+                    _id = item_data["metadata"]["key_alias"]
+                totals[_id] = totals.get(_id, 0) + spend
         return totals
 
 
