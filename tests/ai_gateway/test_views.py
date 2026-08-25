@@ -1004,3 +1004,16 @@ class TestUsageView:
         assertTemplateUsed(response, "includes/ai_gateway/_usage_spend_table.html")
         assertTemplateNotUsed(response, "ai_gateway/usage.html")
         assertNotContains(response, "Showing 10 of 13 days")
+
+    def test_gateway_error_shows_message_without_500(self, client, user, team):
+        service = create_autospec(UsageService, instance=True)
+        service.__enter__.return_value = service
+        service.__exit__.return_value = False
+        service.get_usage_month_choices.return_value = [date(2026, 1, 1)]
+        service.get_usage.side_effect = AIGatewayAPIError(503, "gateway unavailable")
+        with patch("ai_gateway.services.UsageService.from_settings", return_value=service):
+            client.force_login(user)
+            response = client.get(reverse("ai_gateway:usage", args=[team.project.uuid]))
+
+        assert response.status_code == 200
+        assertContains(response, "Could not load usage data")

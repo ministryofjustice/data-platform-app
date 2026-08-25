@@ -80,8 +80,13 @@ class UsageView(FeatureRequiredMixin, ProjectScopedMixin, ProjectLayoutContextMi
             context.update(self._get_usage_context(ai_gateway_team))
         except AIGatewayError as error:
             sentry_sdk.capture_exception(error)
-            context["usage_error"] = True
-            context["has_usage"] = False
+            error_message = (
+                'If this problem persists, you can <a class="govuk-link" '
+                'href="https://moj.enterprise.slack.com/archives/C0B949G0J2X">raise an issue in '
+                "the #ask-data-platform Slack channel</a>. Include your Project ID and Key ID ("
+                "not your API key) in the message."
+            )
+            context["usage_error"] = error_message
             return context
 
         overview_data = context["overview_data"]

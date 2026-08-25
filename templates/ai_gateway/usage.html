@@ -8,7 +8,9 @@
 {% endblock back_link %}
 {% block project_main_content %}
   {% include "includes/ai_gateway/_usage_intro.html" %}
-  {% if not overview_data.has_usage %}
+  {% if usage_error %}
+    {% include "includes/error_message.html" with heading="Could not load usage data" message=usage_error only %}
+  {% elif not overview_data.has_usage %}
     {% include "includes/ai_gateway/_usage_empty_state.html" %}
   {% else %}
     <p class="govuk-body">See the AI spend for this project, including spend per API key and spend per model.</p>
@@ -27,9 +29,7 @@
         </li>
       </ul>
       <div class="govuk-tabs__panel" id="overview">
-        {% if usage_error %}
-          {% include "includes/error_message.html" with heading="Could not load usage data" message="Please try again later. If the problem persists, contact support." only %}
-        {% elif not overview_data.has_usage %}
+        {% if not overview_data.has_usage %}
           {% include "includes/ai_gateway/_usage_empty_state.html" %}
         {% else %}
           <div class="govuk-grid-row govuk-!-margin-bottom-4">
@@ -75,9 +75,7 @@
       </div>
       <div class="govuk-tabs__panel govuk-tabs__panel--hidden"
            id="spend-per-key">
-        {% if usage_error %}
-          {% include "includes/error_message.html" with heading="Could not load usage data" message="Please try again later. If the problem persists, contact support." only %}
-        {% elif not key_data.has_usage %}
+        {% if not key_data.has_usage %}
           {% include "includes/ai_gateway/_usage_empty_state.html" %}
         {% else %}
           <div class="govuk-grid-row govuk-!-margin-bottom-4">
@@ -98,9 +96,7 @@
       </div>
       <div class="govuk-tabs__panel govuk-tabs__panel--hidden"
            id="spend-per-model">
-        {% if usage_error %}
-          {% include "includes/error_message.html" with heading="Could not load usage data" message="Please try again later. If the problem persists, contact support." only %}
-        {% elif not model_data.has_usage %}
+        {% if not model_data.has_usage %}
           {% include "includes/ai_gateway/_usage_empty_state.html" %}
         {% else %}
           <div class="govuk-grid-row govuk-!-margin-bottom-4">
