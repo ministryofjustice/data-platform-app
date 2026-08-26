@@ -35,13 +35,13 @@
 </table>
 {% if show_all %}
   <p class="govuk-body-s">
-    Showing {{ show_all.shown }} of {{ show_all.total }} days.
-    <a class="govuk-link"
-       href="{{ show_all.url }}"
-       hx-get="{{ show_all.url }}"
-       hx-target="closest [data-view='table']"
-       hx-swap="innerHTML"
-       hx-push-url="true">Show all</a>
+    Showing {{ show_all.shown }} of {{ show_all.total }} days
+    <span class="govuk-!-margin-left-4"><a class="govuk-link"
+   href="{{ show_all.url }}"
+   hx-get="{{ show_all.url }}"
+   hx-target="closest [data-view='table']"
+   hx-swap="innerHTML"
+   hx-push-url="true">Show all</a></span>
   </p>
   <hr class="govuk-section-break govuk-section-break--m govuk-section-break--visible">
 {% endif %}

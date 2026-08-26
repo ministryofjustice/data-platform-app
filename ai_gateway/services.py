@@ -101,6 +101,10 @@ class UsageService:
     ) -> dict[str, Any]:
         daily_rows = self._daily_rows(daily_results)
         total_spend = round(sum(day["spend"] for day in daily_rows), 2)
+
+        if not total_spend:
+            return {"has_usage": False}
+
         monthly_rows = self._monthly_rows(full_spend_history)
 
         max_budget = self.team_info.get("max_budget")

@@ -23,13 +23,6 @@
     <div class="app-usage-view" data-view="table">
       {% include "includes/ai_gateway/_usage_spend_table.html" with column_label=column_label rows=rows show_all=show_all only %}
     </div>
-    {% if show_all %}
-      <p class="govuk-body-s">
-        Showing {{ show_all.shown }} of {{ show_all.total }} days
-        <span class="govuk-!-margin-left-4"><a class="govuk-link" href="{{ show_all.url }}">Show all</a></span>
-      </p>
-      <hr class="govuk-section-break govuk-section-break--m govuk-section-break--visible">
-    {% endif %}
     {% if chart_data %}
       <div class="app-usage-view" data-view="chart" hidden>
         {% include "includes/ai_gateway/_usage_chart.html" with chart_data=chart_data chart_name=chart_name chart_label=chart_label only %}

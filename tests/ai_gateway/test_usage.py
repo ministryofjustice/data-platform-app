@@ -177,3 +177,20 @@ class TestUsageServiceGetUsage:
 
         assert result["overview_data"]["daily_chart_data"]["chart_type"] == "line"
         assert result["overview_data"]["monthly_chart_data"]["chart_type"] == "line"
+
+    def test_overview_reports_no_usage_when_team_has_no_spend(self, team, gateway_client):
+        gateway_client.team_info.return_value = {
+            "team_info": {
+                "created_at": "2026-01-15T10:00:00.000000Z",
+                "max_budget": 100,
+            }
+        }
+        gateway_client.team_daily_activity.side_effect = [
+            {"results": []},
+            {"results": []},
+        ]
+
+        with UsageService(gateway_client, team) as service:
+            result = service.get_usage(date(2026, 8, 1))
+
+        assert result["overview_data"] == {"has_usage": False}
