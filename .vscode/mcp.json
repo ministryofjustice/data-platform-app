@@ -10,7 +10,7 @@
       "args": ["mcp"],
       "cwd": "${workspaceFolder}",
       "env": {
-        "MCP_USER_EMAIL": "you@example.com"
+        "MCP_USER_EMAIL": "admin@example.com"
       }
     }
   },

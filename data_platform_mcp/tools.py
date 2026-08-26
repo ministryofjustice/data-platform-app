@@ -5,13 +5,12 @@ and comprehensive audit logging.
 """
 
 import logging
-from typing import Optional
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
-from ai_gateway.models import Key, Team
+from ai_gateway.models import Key
 from data_platform_mcp.auth import MCPAuthorization, MCPAuthorizationError
 from data_platform_mcp.models import MCPAuditor
 
@@ -32,9 +31,9 @@ class APIKeyManager:
     MAX_KEYS_PER_PROJECT = 10
     VALID_MODEL_PATTERN = r"^[a-zA-Z0-9\-_.]+$"
 
-    def __init__(self, user: User, ip_address: Optional[str] = None):
+    def __init__(self, user: User, ip_address: str | None = None):
         """Initialize manager with user context.
-        
+
         Args:
             user: The authenticated user
             ip_address: IP address of the request origin
@@ -50,15 +49,15 @@ class APIKeyManager:
         models: list[str],
     ) -> dict:
         """Create a new API key.
-        
+
         Args:
             project_id: UUID of the project
             name: Name for the key
             models: List of model IDs to grant access to
-            
+
         Returns:
             Dictionary with key details (excluding secret)
-            
+
         Raises:
             MCPAuthorizationError: If user lacks permission
             APIKeyOperationError: If operation fails
@@ -66,34 +65,32 @@ class APIKeyManager:
         try:
             # Authorization: must be project admin
             project = self.auth.authorize_key_creation(project_id)
-            
+
             # Validation
             if not name or len(name) > 255:
                 raise ValidationError("Key name must be 1-255 characters")
-            
+
             if not models or len(models) == 0:
                 raise ValidationError("At least one model must be specified")
-            
+
             if len(models) > 50:
                 raise ValidationError("Maximum 50 models per key")
-            
+
             # Policy check: max keys per project
             existing_key_count = Key.objects.filter(project=project).count()
             if existing_key_count >= self.MAX_KEYS_PER_PROJECT:
                 raise APIKeyOperationError(
                     f"Project has reached maximum of {self.MAX_KEYS_PER_PROJECT} keys"
                 )
-            
+
             # Check for duplicate name in project
             if Key.objects.filter(project=project, name=name).exists():
-                raise APIKeyOperationError(
-                    f"Key name '{name}' already exists in this project"
-                )
-            
+                raise APIKeyOperationError(f"Key name '{name}' already exists in this project")
+
             # Create the key using AI Gateway client
             # TODO: Call AI Gateway API to create key
             # For now, we'll create a placeholder that demonstrates the flow
-            
+
             key = Key.objects.create(
                 project=project,
                 name=name,
@@ -104,7 +101,7 @@ class APIKeyManager:
                 created_by=self.user,
                 models=models,
             )
-            
+
             # Audit log
             self.auditor.log_key_create(
                 key_id=str(key.id),
@@ -113,7 +110,7 @@ class APIKeyManager:
                 models=models,
                 success=True,
             )
-            
+
             logger.info(
                 "API key created",
                 extra={
@@ -124,7 +121,7 @@ class APIKeyManager:
                     "model_count": len(models),
                 },
             )
-            
+
             return {
                 "id": str(key.id),
                 "project_id": project_id,
@@ -133,7 +130,7 @@ class APIKeyManager:
                 "models": key.models,
                 "created": key.created.isoformat(),
             }
-            
+
         except MCPAuthorizationError:
             self.auditor.log_key_create(
                 key_id="unknown",
@@ -157,11 +154,11 @@ class APIKeyManager:
 
     def delete_key(self, key_id: str, project_id: str) -> None:
         """Delete an API key.
-        
+
         Args:
             key_id: ID of the key to delete
             project_id: UUID of the project
-            
+
         Raises:
             MCPAuthorizationError: If user lacks permission
             APIKeyOperationError: If operation fails
@@ -169,21 +166,21 @@ class APIKeyManager:
         try:
             # Authorization: must be project admin
             project = self.auth.authorize_key_deletion(project_id)
-            
+
             # Get the key
             try:
                 key = Key.objects.get(id=key_id, project=project)
             except Key.DoesNotExist:
-                raise APIKeyOperationError(f"Key {key_id} not found in project")
-            
+                raise APIKeyOperationError(f"Key {key_id} not found in project") from None
+
             key_name = key.name
-            
+
             # Delete from AI Gateway
             # TODO: Call AI Gateway API to delete key
-            
+
             with transaction.atomic():
                 key.delete()
-            
+
             # Audit log
             self.auditor.log_key_delete(
                 key_id=key_id,
@@ -191,7 +188,7 @@ class APIKeyManager:
                 key_name=key_name,
                 success=True,
             )
-            
+
             logger.info(
                 "API key deleted",
                 extra={
@@ -201,7 +198,7 @@ class APIKeyManager:
                     "key_name": key_name,
                 },
             )
-            
+
         except MCPAuthorizationError:
             self.auditor.log_key_delete(
                 key_id=key_id,
@@ -223,14 +220,14 @@ class APIKeyManager:
 
     def rotate_key(self, key_id: str, project_id: str) -> dict:
         """Rotate an API key (generate new secret).
-        
+
         Args:
             key_id: ID of the key to rotate
             project_id: UUID of the project
-            
+
         Returns:
             Dictionary with updated key details (excluding secret)
-            
+
         Raises:
             MCPAuthorizationError: If user lacks permission
             APIKeyOperationError: If operation fails
@@ -238,21 +235,21 @@ class APIKeyManager:
         try:
             # Authorization: must be project admin
             project = self.auth.authorize_key_rotation(project_id)
-            
+
             # Get the key
             try:
                 key = Key.objects.get(id=key_id, project=project)
             except Key.DoesNotExist:
-                raise APIKeyOperationError(f"Key {key_id} not found in project")
-            
+                raise APIKeyOperationError(f"Key {key_id} not found in project") from None
+
             # Rotate the key in AI Gateway
             # TODO: Call AI Gateway API to rotate key
             # Would update litellm_secret and litellm_token
-            
+
             key.litellm_secret = "rotated_secret_placeholder"
             key.litellm_token = "rotated_token_placeholder"
             key.save()
-            
+
             # Audit log
             self.auditor.log_key_rotate(
                 key_id=key_id,
@@ -260,7 +257,7 @@ class APIKeyManager:
                 key_name=key.name,
                 success=True,
             )
-            
+
             logger.info(
                 "API key rotated",
                 extra={
@@ -269,7 +266,7 @@ class APIKeyManager:
                     "project_id": project_id,
                 },
             )
-            
+
             return {
                 "id": str(key.id),
                 "project_id": project_id,
@@ -279,7 +276,7 @@ class APIKeyManager:
                 "created": key.created.isoformat(),
                 "rotated": key.modified.isoformat(),
             }
-            
+
         except MCPAuthorizationError:
             self.auditor.log_key_rotate(
                 key_id=key_id,
@@ -301,22 +298,22 @@ class APIKeyManager:
 
     def list_keys(self, project_id: str) -> list[dict]:
         """List API keys for a project.
-        
+
         Args:
             project_id: UUID of the project
-            
+
         Returns:
             List of key details (excluding secrets)
-            
+
         Raises:
             MCPAuthorizationError: If user lacks permission
         """
         try:
             # Authorization: must have access to project
             project = self.auth.authorize_project_access(project_id)
-            
+
             keys = Key.objects.filter(project=project).select_related("created_by")
-            
+
             keys_data = [
                 {
                     "id": str(key.id),
@@ -329,7 +326,7 @@ class APIKeyManager:
                 }
                 for key in keys
             ]
-            
+
             logger.info(
                 "API keys listed",
                 extra={
@@ -338,8 +335,8 @@ class APIKeyManager:
                     "key_count": len(keys_data),
                 },
             )
-            
+
             return keys_data
-            
+
         except MCPAuthorizationError:
             raise

@@ -57,7 +57,9 @@ class MCPAuthorization:
                 "Unauthorized access attempt to non-existent project",
                 extra={"user_id": self.user.id, "project_id": project_id},
             )
-            raise MCPAuthorizationError(f"Project {project_id} not found or access denied")
+            raise MCPAuthorizationError(
+                f"Project {project_id} not found or access denied"
+            ) from None
 
         # Superusers have automatic access to all projects
         if self.user.is_superuser:
@@ -85,7 +87,9 @@ class MCPAuthorization:
                     "action": "project_access",
                 },
             )
-            raise MCPAuthorizationError(f"User does not have access to project {project_id}")
+            raise MCPAuthorizationError(
+                f"User does not have access to project {project_id}"
+            ) from None
 
         # Check role if specified
         if required_role and permission.role not in self.ALLOWED_ROLES:

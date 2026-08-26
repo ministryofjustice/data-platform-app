@@ -1,7 +1,5 @@
 """Tests for MCP server wiring."""
 
-import json
-import os
 import uuid
 
 import pytest

@@ -21,7 +21,7 @@ dependencies = [
     "sentry-sdk==2.67.1",
     "django-htmx==1.29.0",
     "notifications-python-client==12.1.0",
-    "mcp>=1.0,<2.0",
+    "mcp==2.0.0",
 ]
 
 [dependency-groups]

@@ -81,7 +81,10 @@ stop-ai-gateway:
 mcp:
 	@if [ -z "$$MCP_USER_EMAIL" ]; then \
 		echo "Error: MCP_USER_EMAIL is not set."; \
-		echo "Usage: MCP_USER_EMAIL=you@example.com make mcp"; \
+		echo "Usage: MCP_USER_EMAIL=admin@example.com make mcp"; \
 		exit 1; \
 	fi
+	DB_USER=data_platform_app \
+	DB_PASSWORD=data_platform_app \
+	DB_NAME=data_platform_app \
 	uv run python -m data_platform_mcp.cli

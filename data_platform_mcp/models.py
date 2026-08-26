@@ -89,38 +89,91 @@ class MCPAuditor:
             },
         )
 
-    def log_project_read(self, project_id: str, success: bool = True, details: dict[str, Any] | None = None) -> None:
+    def log_project_read(
+        self, project_id: str, success: bool = True, details: dict[str, Any] | None = None
+    ) -> None:
         """Log a project data read operation."""
-        self.log_event(MCPAuditEventType.PROJECT_READ, "project", project_id, "read", success, details)
+        self.log_event(
+            MCPAuditEventType.PROJECT_READ, "project", project_id, "read", success, details
+        )
 
-    def log_team_read(self, team_id: str, success: bool = True, details: dict[str, Any] | None = None) -> None:
+    def log_team_read(
+        self, team_id: str, success: bool = True, details: dict[str, Any] | None = None
+    ) -> None:
         """Log a team data read operation."""
         self.log_event(MCPAuditEventType.TEAM_READ, "team", team_id, "read", success, details)
 
-    def log_key_read(self, key_id: str, project_id: str, success: bool = True, details: dict[str, Any] | None = None) -> None:
+    def log_key_read(
+        self,
+        key_id: str,
+        project_id: str,
+        success: bool = True,
+        details: dict[str, Any] | None = None,
+    ) -> None:
         """Log an API key read operation."""
-        self.log_event(MCPAuditEventType.KEY_READ, "key", key_id, "read", success, {**(details or {}), "project_id": project_id})
+        self.log_event(
+            MCPAuditEventType.KEY_READ,
+            "key",
+            key_id,
+            "read",
+            success,
+            {**(details or {}), "project_id": project_id},
+        )
 
-    def log_key_create(self, key_id: str, project_id: str, key_name: str, models: list[str], success: bool = True, error_message: str = "") -> None:
+    def log_key_create(
+        self,
+        key_id: str,
+        project_id: str,
+        key_name: str,
+        models: list[str],
+        success: bool = True,
+        error_message: str = "",
+    ) -> None:
         """Log an API key creation operation."""
         self.log_event(
-            MCPAuditEventType.KEY_CREATE, "key", key_id, "create", success,
+            MCPAuditEventType.KEY_CREATE,
+            "key",
+            key_id,
+            "create",
+            success,
             {"project_id": project_id, "key_name": key_name, "models_count": len(models)},
             error_message,
         )
 
-    def log_key_delete(self, key_id: str, project_id: str, key_name: str, success: bool = True, error_message: str = "") -> None:
+    def log_key_delete(
+        self,
+        key_id: str,
+        project_id: str,
+        key_name: str,
+        success: bool = True,
+        error_message: str = "",
+    ) -> None:
         """Log an API key deletion operation."""
         self.log_event(
-            MCPAuditEventType.KEY_DELETE, "key", key_id, "delete", success,
+            MCPAuditEventType.KEY_DELETE,
+            "key",
+            key_id,
+            "delete",
+            success,
             {"project_id": project_id, "key_name": key_name},
             error_message,
         )
 
-    def log_key_rotate(self, key_id: str, project_id: str, key_name: str, success: bool = True, error_message: str = "") -> None:
+    def log_key_rotate(
+        self,
+        key_id: str,
+        project_id: str,
+        key_name: str,
+        success: bool = True,
+        error_message: str = "",
+    ) -> None:
         """Log an API key rotation operation."""
         self.log_event(
-            MCPAuditEventType.KEY_ROTATE, "key", key_id, "rotate", success,
+            MCPAuditEventType.KEY_ROTATE,
+            "key",
+            key_id,
+            "rotate",
+            success,
             {"project_id": project_id, "key_name": key_name},
             error_message,
         )

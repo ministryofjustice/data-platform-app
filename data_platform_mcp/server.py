@@ -12,17 +12,11 @@ where there is no HTTP request context.
 import json
 import logging
 import os
-from typing import Any
+from typing import Annotated
 
 from asgiref.sync import sync_to_async
-from mcp.server import Server
-from mcp.server.stdio import stdio_server
-from mcp.types import (
-    AnyUrl,
-    Resource,
-    TextContent,
-    Tool,
-)
+from mcp.server import MCPServer
+from pydantic import Field
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +38,7 @@ def _get_current_user():
     if not email:
         raise RuntimeError(
             "MCP_USER_EMAIL environment variable must be set to the email of a Django user. "
-            "Example: export MCP_USER_EMAIL=you@example.com"
+            "Example: export MCP_USER_EMAIL=admin@example.com"
         )
 
     try:
@@ -53,7 +47,23 @@ def _get_current_user():
         raise RuntimeError(
             f"No user found with email '{email}'. "
             "Ensure the user exists in the database and MCP_USER_EMAIL is correct."
-        )
+        ) from None
+
+
+async def _run_tool(name, operation):
+    """Run a tool operation, converting known domain errors into JSON payloads."""
+    from data_platform_mcp.auth import MCPAuthorizationError
+    from data_platform_mcp.tools import APIKeyOperationError
+
+    try:
+        return await operation()
+    except MCPAuthorizationError as e:
+        return json.dumps({"error": "authorization_denied", "message": str(e)})
+    except APIKeyOperationError as e:
+        return json.dumps({"error": "operation_failed", "message": str(e)})
+    except Exception as e:
+        logger.exception("Unexpected error in tool %s", name)
+        return json.dumps({"error": "internal_error", "message": str(e)})
 
 
 class DataPlatformMCPServer:
@@ -66,193 +76,162 @@ class DataPlatformMCPServer:
 
     def __init__(self):
         """Initialise the MCP server."""
-        self.server = Server("data-platform")
+        self.server = MCPServer("data-platform")
         self._register_resources()
         self._register_tools()
+
+    async def _current_user(self):
+        """Resolve the authenticated user off the event loop."""
+        return await sync_to_async(_get_current_user, thread_sensitive=False)()
 
     def _register_resources(self) -> None:
         """Register data resources."""
 
-        @self.server.list_resources()
-        async def list_resources() -> list[Resource]:
-            """List available resources."""
-            return [
-                Resource(
-                    uri=AnyUrl("mcp://data-platform/projects"),
-                    name="Projects",
-                    description="List of projects accessible to the authenticated user",
-                    mimeType="application/json",
-                ),
-                Resource(
-                    uri=AnyUrl("mcp://data-platform/teams"),
-                    name="AI Gateway Teams",
-                    description="AI Gateway teams for user's projects",
-                    mimeType="application/json",
-                ),
-                Resource(
-                    uri=AnyUrl("mcp://data-platform/keys"),
-                    name="API Keys",
-                    description="API keys for user's projects (secrets masked)",
-                    mimeType="application/json",
-                ),
-            ]
-
-        @self.server.read_resource()
-        async def read_resource(uri: AnyUrl) -> str:
-            """Read a resource by URI."""
-            uri_str = str(uri)
-            user = await sync_to_async(_get_current_user, thread_sensitive=False)()
-
+        @self.server.resource(
+            "mcp://data-platform/projects",
+            name="Projects",
+            description="List of projects accessible to the authenticated user",
+            mime_type="application/json",
+        )
+        async def read_projects() -> str:
             from data_platform_mcp.resources import OperationalDataReader
 
-            reader = OperationalDataReader(user=user)
+            reader = OperationalDataReader(user=await self._current_user())
+            return await sync_to_async(reader.read_projects, thread_sensitive=False)()
 
-            if uri_str == "mcp://data-platform/projects":
-                return await sync_to_async(reader.read_projects, thread_sensitive=False)()
-            elif uri_str == "mcp://data-platform/teams":
-                return await sync_to_async(reader.read_teams, thread_sensitive=False)()
-            elif uri_str == "mcp://data-platform/keys":
-                return await sync_to_async(reader.read_keys, thread_sensitive=False)()
-            else:
-                raise ValueError(f"Unknown resource URI: {uri_str}")
+        @self.server.resource(
+            "mcp://data-platform/teams",
+            name="AI Gateway Teams",
+            description="AI Gateway teams for user's projects",
+            mime_type="application/json",
+        )
+        async def read_teams() -> str:
+            from data_platform_mcp.resources import OperationalDataReader
+
+            reader = OperationalDataReader(user=await self._current_user())
+            return await sync_to_async(reader.read_teams, thread_sensitive=False)()
+
+        @self.server.resource(
+            "mcp://data-platform/keys",
+            name="API Keys",
+            description="API keys for user's projects (secrets masked)",
+            mime_type="application/json",
+        )
+        async def read_keys() -> str:
+            from data_platform_mcp.resources import OperationalDataReader
+
+            reader = OperationalDataReader(user=await self._current_user())
+            return await sync_to_async(reader.read_keys, thread_sensitive=False)()
 
     def _register_tools(self) -> None:
         """Register available tools."""
 
-        @self.server.list_tools()
-        async def list_tools() -> list[Tool]:
-            """List available tools."""
-            return [
-                Tool(
-                    name="create_api_key",
-                    description="Create a new API key for a project. Requires admin role on the project.",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "project_id": {
-                                "type": "string",
-                                "description": "UUID of the project",
-                            },
-                            "name": {
-                                "type": "string",
-                                "description": "Name for the API key (1-255 characters, unique within project)",
-                            },
-                            "models": {
-                                "type": "array",
-                                "items": {"type": "string"},
-                                "description": "List of model IDs to grant access to (1-50 models)",
-                            },
-                        },
-                        "required": ["project_id", "name", "models"],
-                    },
+        @self.server.tool(
+            name="list_projects",
+            description="List all projects accessible to the authenticated user.",
+        )
+        async def list_projects() -> str:
+            async def _op() -> str:
+                from data_platform_mcp.resources import OperationalDataReader
+
+                reader = OperationalDataReader(user=await self._current_user())
+                return await sync_to_async(reader.read_projects, thread_sensitive=False)()
+
+            return await _run_tool("list_projects", _op)
+
+        @self.server.tool(
+            name="list_api_keys",
+            description="List API keys for a project. Available to all project members.",
+        )
+        async def list_api_keys(
+            project_id: Annotated[str, Field(description="UUID of the project")],
+        ) -> str:
+            async def _op() -> str:
+                from data_platform_mcp.resources import OperationalDataReader
+
+                reader = OperationalDataReader(user=await self._current_user())
+                return await sync_to_async(reader.read_keys, thread_sensitive=False)(
+                    project_id=project_id
+                )
+
+            return await _run_tool("list_api_keys", _op)
+
+        @self.server.tool(
+            name="create_api_key",
+            description="Create a new API key for a project. Requires admin role on the project.",
+        )
+        async def create_api_key(
+            project_id: Annotated[str, Field(description="UUID of the project")],
+            name: Annotated[
+                str,
+                Field(
+                    description="Name for the API key (1-255 characters, unique within project)"
                 ),
-                Tool(
-                    name="delete_api_key",
-                    description="Delete an API key. Requires admin role on the project.",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "key_id": {
-                                "type": "string",
-                                "description": "ID of the key to delete",
-                            },
-                            "project_id": {
-                                "type": "string",
-                                "description": "UUID of the project the key belongs to",
-                            },
-                        },
-                        "required": ["key_id", "project_id"],
-                    },
-                ),
-                Tool(
-                    name="list_api_keys",
-                    description="List API keys for a project. Available to all project members.",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "project_id": {
-                                "type": "string",
-                                "description": "UUID of the project",
-                            },
-                        },
-                        "required": ["project_id"],
-                    },
-                ),
-                Tool(
-                    name="rotate_api_key",
-                    description="Rotate an API key (generates a new secret). Requires admin role on the project.",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "key_id": {
-                                "type": "string",
-                                "description": "ID of the key to rotate",
-                            },
-                            "project_id": {
-                                "type": "string",
-                                "description": "UUID of the project the key belongs to",
-                            },
-                        },
-                        "required": ["key_id", "project_id"],
-                    },
-                ),
-            ]
+            ],
+            models: Annotated[
+                list[str],
+                Field(description="List of model IDs to grant access to (1-50 models)"),
+            ],
+        ) -> str:
+            async def _op() -> str:
+                from data_platform_mcp.tools import APIKeyManager
 
-        @self.server.call_tool()
-        async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
-            """Handle tool calls."""
-            user = await sync_to_async(_get_current_user, thread_sensitive=False)()
+                manager = APIKeyManager(user=await self._current_user())
+                key = await sync_to_async(manager.create_key, thread_sensitive=False)(
+                    project_id=project_id,
+                    name=name,
+                    models=models,
+                )
+                return json.dumps(key, indent=2)
 
-            from data_platform_mcp.auth import MCPAuthorizationError
-            from data_platform_mcp.resources import OperationalDataReader
-            from data_platform_mcp.tools import APIKeyManager, APIKeyOperationError
+            return await _run_tool("create_api_key", _op)
 
-            try:
-                if name == "list_api_keys":
-                    reader = OperationalDataReader(user=user)
-                    result = await sync_to_async(reader.read_keys, thread_sensitive=False)(project_id=arguments["project_id"])
-                    return [TextContent(type="text", text=result)]
+        @self.server.tool(
+            name="delete_api_key",
+            description="Delete an API key. Requires admin role on the project.",
+        )
+        async def delete_api_key(
+            key_id: Annotated[str, Field(description="ID of the key to delete")],
+            project_id: Annotated[
+                str, Field(description="UUID of the project the key belongs to")
+            ],
+        ) -> str:
+            async def _op() -> str:
+                from data_platform_mcp.tools import APIKeyManager
 
-                manager = APIKeyManager(user=user)
+                manager = APIKeyManager(user=await self._current_user())
+                await sync_to_async(manager.delete_key, thread_sensitive=False)(
+                    key_id=key_id,
+                    project_id=project_id,
+                )
+                return json.dumps({"deleted": True, "key_id": key_id})
 
-                if name == "create_api_key":
-                    key = await sync_to_async(manager.create_key, thread_sensitive=False)(
-                        project_id=arguments["project_id"],
-                        name=arguments["name"],
-                        models=arguments["models"],
-                    )
-                    return [TextContent(type="text", text=json.dumps(key, indent=2))]
+            return await _run_tool("delete_api_key", _op)
 
-                elif name == "delete_api_key":
-                    await sync_to_async(manager.delete_key, thread_sensitive=False)(
-                        key_id=arguments["key_id"],
-                        project_id=arguments["project_id"],
-                    )
-                    return [TextContent(type="text", text=json.dumps({"deleted": True, "key_id": arguments["key_id"]}))]
+        @self.server.tool(
+            name="rotate_api_key",
+            description=(
+                "Rotate an API key (generates a new secret). Requires admin role on the project."
+            ),
+        )
+        async def rotate_api_key(
+            key_id: Annotated[str, Field(description="ID of the key to rotate")],
+            project_id: Annotated[
+                str, Field(description="UUID of the project the key belongs to")
+            ],
+        ) -> str:
+            async def _op() -> str:
+                from data_platform_mcp.tools import APIKeyManager
 
-                elif name == "rotate_api_key":
-                    key = await sync_to_async(manager.rotate_key, thread_sensitive=False)(
-                        key_id=arguments["key_id"],
-                        project_id=arguments["project_id"],
-                    )
-                    return [TextContent(type="text", text=json.dumps(key, indent=2))]
+                manager = APIKeyManager(user=await self._current_user())
+                key = await sync_to_async(manager.rotate_key, thread_sensitive=False)(
+                    key_id=key_id,
+                    project_id=project_id,
+                )
+                return json.dumps(key, indent=2)
 
-                else:
-                    raise ValueError(f"Unknown tool: {name}")
-
-            except MCPAuthorizationError as e:
-                return [TextContent(type="text", text=json.dumps({"error": "authorization_denied", "message": str(e)}))]
-            except APIKeyOperationError as e:
-                return [TextContent(type="text", text=json.dumps({"error": "operation_failed", "message": str(e)}))]
-            except Exception as e:
-                logger.exception("Unexpected error in tool %s", name)
-                return [TextContent(type="text", text=json.dumps({"error": "internal_error", "message": str(e)}))]
+            return await _run_tool("rotate_api_key", _op)
 
     async def run(self) -> None:
         """Run the MCP server over stdio."""
-        async with stdio_server() as (read_stream, write_stream):
-            await self.server.run(
-                read_stream,
-                write_stream,
-                self.server.create_initialization_options(),
-            )
+        await self.server.run_stdio_async()

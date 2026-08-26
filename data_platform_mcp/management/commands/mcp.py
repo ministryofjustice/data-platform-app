@@ -35,7 +35,6 @@ class Command(BaseCommand):
     def handle(self, *args: Any, **options: Any) -> None:
         """Run the MCP server."""
         transport = options["transport"]
-        port = options["port"]
 
         try:
             self.stdout.write(
