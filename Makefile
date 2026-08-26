@@ -8,7 +8,11 @@ run:
 install:
 	uv sync --locked
 	$(MAKE) npm-install
-	uv run pre-commit install --hook-type pre-commit --hook-type pre-push
+	@if [ -d .git ]; then \
+		uv run pre-commit install --hook-type pre-commit --hook-type pre-push; \
+	else \
+		echo "Skipping pre-commit hook installation: not inside a git checkout."; \
+	fi
 	$(MAKE) build-static
 
 npm-install:
