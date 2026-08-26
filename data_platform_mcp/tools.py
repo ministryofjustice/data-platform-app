@@ -12,8 +12,8 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from ai_gateway.models import Key, Team
-from mcp.auth import MCPAuthorization, MCPAuthorizationError
-from mcp.models import MCPAuditor
+from data_platform_mcp.auth import MCPAuthorization, MCPAuthorizationError
+from data_platform_mcp.models import MCPAuditor
 
 logger = logging.getLogger(__name__)
 User = get_user_model()

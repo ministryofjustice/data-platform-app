@@ -6,7 +6,7 @@ import uuid
 import pytest
 
 from ai_gateway.models import Key, Team
-from mcp.resources import OperationalDataReader
+from data_platform_mcp.resources import OperationalDataReader
 from projects.models import BusinessUnit, Project, ProjectUserPermissions
 
 

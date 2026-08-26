@@ -93,7 +93,7 @@ Add to `~/.config/Claude/claude_desktop_config.json` (Linux/macOS):
         "run",
         "python",
         "manage.py",
-        "mcp"
+        "data_platform_mcp"
       ]
     }
   }
@@ -103,7 +103,7 @@ Add to `~/.config/Claude/claude_desktop_config.json` (Linux/macOS):
 ### With Custom Client
 ```python
 import json
-from mcp.client import Client
+from data_platform_mcp.client import Client
 
 client = Client("data-platform")
 await client.connect("stdio")

@@ -10,8 +10,8 @@ from typing import Optional
 from django.contrib.auth import get_user_model
 
 from ai_gateway.models import Key, Team
-from mcp.auth import MCPAuthorization
-from mcp.models import MCPAuditor, MCPAuditEventType
+from data_platform_mcp.auth import MCPAuthorization
+from data_platform_mcp.models import MCPAuditor, MCPAuditEventType
 from projects.models import Project
 
 logger = logging.getLogger(__name__)

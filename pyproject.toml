@@ -60,7 +60,7 @@ select = [
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "data_platform_app.settings.test"
-addopts = "-v --tb=auto --cov=data_platform_app --cov=users --cov=projects --cov=ai_gateway --cov=mcp --cov-branch --cov-report=term-missing --cov-report=xml --cov-fail-under=90"
+addopts = "-v --tb=auto --cov=data_platform_app --cov=users --cov=projects --cov=ai_gateway --cov=data_platform_mcp --cov-branch --cov-report=term-missing --cov-report=xml --cov-fail-under=90"
 testpaths = ["tests"]
 
 [tool.coverage.run]

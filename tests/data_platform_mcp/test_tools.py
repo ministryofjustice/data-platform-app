@@ -6,8 +6,8 @@ import pytest
 from django.core.exceptions import ValidationError
 
 from ai_gateway.models import Key
-from mcp.auth import MCPAuthorizationError
-from mcp.tools import APIKeyManager, APIKeyOperationError
+from data_platform_mcp.auth import MCPAuthorizationError
+from data_platform_mcp.tools import APIKeyManager, APIKeyOperationError
 from projects.models import BusinessUnit, Project, ProjectUserPermissions
 
 

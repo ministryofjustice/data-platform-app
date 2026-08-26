@@ -6,7 +6,7 @@ from typing import Any
 
 from django.core.management.base import BaseCommand, CommandError
 
-from mcp.server import DataPlatformMCPServer
+from data_platform_mcp.server import DataPlatformMCPServer
 
 logger = logging.getLogger(__name__)
 

@@ -4,7 +4,7 @@ import uuid
 
 import pytest
 
-from mcp.auth import MCPAuthorization, MCPAuthorizationError
+from data_platform_mcp.auth import MCPAuthorization, MCPAuthorizationError
 from projects.models import BusinessUnit, Project, ProjectUserPermissions
 
 
