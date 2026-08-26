@@ -69,6 +69,7 @@
     "nindent",
     "noinput",
     "noninteractive",
+    "nonexistent",
     "opengraph",
     "openssf",
     "pgdg",
