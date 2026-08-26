@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "users",
     "projects",
     "ai_gateway",
+    "mcp",
     "simple_history",
     "django_extensions",
     "django_htmx",
