@@ -1,6 +1,10 @@
+import httpx
 import sentry_sdk
+from azure_auth.handlers import AuthHandler
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
 from django.db.models import Prefetch
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.views.generic.base import View
@@ -40,6 +44,65 @@ def clear_project_create_session(request):
         request.session[ADD_USER_SESSION_KEY] = session_map
     else:
         request.session.pop(ADD_USER_SESSION_KEY, None)
+
+
+class EntraUserSearchView(LoginRequiredMixin, View):
+    """Search the Entra tenant for users, on behalf of the signed-in user.
+
+    Returns a small JSON representation so the member-picker autocomplete never
+    receives raw Microsoft Graph objects or the delegated bearer token.
+    """
+
+    GRAPH_USERS_ENDPOINT = "https://graph.microsoft.com/v1.0/users"
+    MIN_QUERY_LENGTH = 3
+    MAX_QUERY_LENGTH = 256
+    RESULT_LIMIT = 10
+    GRAPH_TIMEOUT_SECONDS = 5.0
+
+    def get(self, request, *args, **kwargs):
+        query = request.GET.get("q", "").strip()
+        if len(query) < self.MIN_QUERY_LENGTH:
+            return JsonResponse({"results": []})
+        query = query[: self.MAX_QUERY_LENGTH]
+
+        token = AuthHandler(request).get_token_from_cache()
+        access_token = token.get("access_token") if token else None
+        if not access_token:
+            return JsonResponse({"error": "authentication_required"}, status=401)
+
+        # Double single quotes to escape the OData string literal.
+        escaped_query = query.replace("'", "''")
+        try:
+            response = httpx.get(
+                self.GRAPH_USERS_ENDPOINT,
+                params={
+                    "$filter": f"startsWith(mail,'{escaped_query}')",
+                    "$select": "id,displayName,mail",
+                    "$top": str(self.RESULT_LIMIT),
+                    "$count": "true",
+                },
+                # ConsistencyLevel lets Graph evaluate the startsWith filter.
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "ConsistencyLevel": "eventual",
+                },
+                timeout=self.GRAPH_TIMEOUT_SECONDS,
+            )
+            response.raise_for_status()
+        except httpx.HTTPError as error:
+            sentry_sdk.capture_exception(error)
+            return JsonResponse({"error": "search_failed"}, status=502)
+
+        results = [self._serialise(user) for user in response.json().get("value", [])]
+        return JsonResponse({"results": results})
+
+    @staticmethod
+    def _serialise(user: dict) -> dict:
+        return {
+            "id": user.get("id"),
+            "display_name": user.get("displayName", ""),
+            "email": user.get("mail", ""),
+        }
 
 
 class ProjectListView(ListView):
