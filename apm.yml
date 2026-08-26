@@ -6,4 +6,4 @@ targets:
 dependencies:
   apm:
     - ministryofjustice/ai-toolkit/toolkits/universal#main
-    - ministryofjustice/data-platform-ai-toolkit/toolkits/software-engineering#main
+    - ministryofjustice/ai-toolkit/toolkits/data-platform/software-engineering#main
