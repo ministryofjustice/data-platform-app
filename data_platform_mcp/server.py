@@ -14,6 +14,7 @@ import logging
 import os
 from typing import Any
 
+from asgiref.sync import sync_to_async
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import (
@@ -100,18 +101,18 @@ class DataPlatformMCPServer:
         async def read_resource(uri: AnyUrl) -> str:
             """Read a resource by URI."""
             uri_str = str(uri)
-            user = _get_current_user()
+            user = await sync_to_async(_get_current_user, thread_sensitive=False)()
 
             from data_platform_mcp.resources import OperationalDataReader
 
             reader = OperationalDataReader(user=user)
 
             if uri_str == "mcp://data-platform/projects":
-                return reader.read_projects()
+                return await sync_to_async(reader.read_projects, thread_sensitive=False)()
             elif uri_str == "mcp://data-platform/teams":
-                return reader.read_teams()
+                return await sync_to_async(reader.read_teams, thread_sensitive=False)()
             elif uri_str == "mcp://data-platform/keys":
-                return reader.read_keys()
+                return await sync_to_async(reader.read_keys, thread_sensitive=False)()
             else:
                 raise ValueError(f"Unknown resource URI: {uri_str}")
 
@@ -200,7 +201,7 @@ class DataPlatformMCPServer:
         @self.server.call_tool()
         async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
             """Handle tool calls."""
-            user = _get_current_user()
+            user = await sync_to_async(_get_current_user, thread_sensitive=False)()
 
             from data_platform_mcp.auth import MCPAuthorizationError
             from data_platform_mcp.resources import OperationalDataReader
@@ -209,13 +210,13 @@ class DataPlatformMCPServer:
             try:
                 if name == "list_api_keys":
                     reader = OperationalDataReader(user=user)
-                    result = reader.read_keys(project_id=arguments["project_id"])
+                    result = await sync_to_async(reader.read_keys, thread_sensitive=False)(project_id=arguments["project_id"])
                     return [TextContent(type="text", text=result)]
 
                 manager = APIKeyManager(user=user)
 
                 if name == "create_api_key":
-                    key = manager.create_key(
+                    key = await sync_to_async(manager.create_key, thread_sensitive=False)(
                         project_id=arguments["project_id"],
                         name=arguments["name"],
                         models=arguments["models"],
@@ -223,14 +224,14 @@ class DataPlatformMCPServer:
                     return [TextContent(type="text", text=json.dumps(key, indent=2))]
 
                 elif name == "delete_api_key":
-                    manager.delete_key(
+                    await sync_to_async(manager.delete_key, thread_sensitive=False)(
                         key_id=arguments["key_id"],
                         project_id=arguments["project_id"],
                     )
                     return [TextContent(type="text", text=json.dumps({"deleted": True, "key_id": arguments["key_id"]}))]
 
                 elif name == "rotate_api_key":
-                    key = manager.rotate_key(
+                    key = await sync_to_async(manager.rotate_key, thread_sensitive=False)(
                         key_id=arguments["key_id"],
                         project_id=arguments["project_id"],
                     )
