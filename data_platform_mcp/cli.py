@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import sys
 
 import django
 
@@ -15,6 +16,7 @@ def main() -> None:
 
     from data_platform_mcp.server import DataPlatformMCPServer
 
+    print("Starting MCP server over stdio...", file=sys.stderr, flush=True)
     server = DataPlatformMCPServer()
     asyncio.run(server.run())
 
