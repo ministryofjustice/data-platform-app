@@ -70,7 +70,7 @@ uv sync
 MCP_USER_EMAIL=admin@example.com make mcp
 ```
 
-The `make mcp` target starts the server over stdio for use with MCP clients such as VS Code Copilot Chat.
+The `make mcp` target starts the server over stdio for use with MCP clients such as Visual Studio Code Copilot Chat.
 
 ## Configuration
 

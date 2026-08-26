@@ -43,9 +43,9 @@ class TestOperationalDataReader:
 
     @pytest.fixture
     def business_unit(self, db):
-        """Create a business unit."""
+        """Create a test business unit."""
         return BusinessUnit.objects.create(
-            name="Test BU",
+            name="Test Business Unit",
             code="TBU",
         )
 
