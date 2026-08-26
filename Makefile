@@ -84,4 +84,4 @@ mcp:
 		echo "Usage: MCP_USER_EMAIL=you@example.com make mcp"; \
 		exit 1; \
 	fi
-	uv run python manage.py mcp --transport=stdio
+	uv run python -m data_platform_mcp.cli

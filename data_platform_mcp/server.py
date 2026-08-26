@@ -14,7 +14,6 @@ import logging
 import os
 from typing import Any
 
-import django
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import (
@@ -248,18 +247,11 @@ class DataPlatformMCPServer:
                 logger.exception("Unexpected error in tool %s", name)
                 return [TextContent(type="text", text=json.dumps({"error": "internal_error", "message": str(e)}))]
 
-    async def run(self, transport: str = "stdio") -> None:
-        """Run the MCP server with the specified transport.
-
-        Args:
-            transport: Transport type — 'stdio' (default) for CLI/Claude Desktop use.
-        """
-        if transport == "stdio":
-            async with stdio_server() as (read_stream, write_stream):
-                await self.server.run(
-                    read_stream,
-                    write_stream,
-                    self.server.create_initialization_options(),
-                )
-        else:
-            raise NotImplementedError(f"Transport '{transport}' is not yet supported. Use 'stdio'.")
+    async def run(self) -> None:
+        """Run the MCP server over stdio."""
+        async with stdio_server() as (read_stream, write_stream):
+            await self.server.run(
+                read_stream,
+                write_stream,
+                self.server.create_initialization_options(),
+            )
