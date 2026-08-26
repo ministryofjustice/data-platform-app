@@ -1,4 +1,4 @@
-.PHONY: run install npm-install build-css build-js build-static lint format lint-templates format-templates test start-ai-gateway stop-ai-gateway
+.PHONY: run install npm-install build-css build-js build-static lint format lint-templates format-templates test start-ai-gateway stop-ai-gateway mcp
 
 run:
 	uv run python manage.py makemigrations --check
@@ -73,3 +73,11 @@ start-ai-gateway:
 
 stop-ai-gateway:
 	docker compose --file contrib/docker-compose-ai-gateway.yml down --remove-orphans
+
+mcp:
+	@if [ -z "$$MCP_USER_EMAIL" ]; then \
+		echo "Error: MCP_USER_EMAIL is not set."; \
+		echo "Usage: MCP_USER_EMAIL=you@example.com make mcp"; \
+		exit 1; \
+	fi
+	uv run mcp dev "python manage.py mcp --transport=stdio"
