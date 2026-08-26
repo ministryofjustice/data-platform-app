@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 
 import django
@@ -15,7 +16,7 @@ def main() -> None:
     from data_platform_mcp.server import DataPlatformMCPServer
 
     server = DataPlatformMCPServer()
-    server.run()
+    asyncio.run(server.run())
 
 
 if __name__ == "__main__":
