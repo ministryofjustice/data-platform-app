@@ -70,7 +70,9 @@ const AddAnotherAutocomplete = {
       delete mount.dataset.initialised;
 
       newItem
-        .querySelectorAll('input[type="hidden"][data-entra-user-id]')
+        .querySelectorAll(
+          'input[type="hidden"][data-entra-user-id], input[type="hidden"][data-entra-user-email], input[type="hidden"][data-entra-user-name]',
+        )
         .forEach((hidden) => {
           hidden.value = "";
         });

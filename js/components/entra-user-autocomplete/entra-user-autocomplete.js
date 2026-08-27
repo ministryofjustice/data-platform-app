@@ -41,11 +41,27 @@ function userToSuggestion(user) {
   return `${email} <span class="autocomplete__option-hint">${escapeHtml(user.display_name)}</span>`;
 }
 
+function findFieldsContainer(mount) {
+  return mount.closest(".govuk-form-group") || mount.parentElement;
+}
+
 function findHiddenField(mount) {
-  const container = mount.closest(".govuk-form-group") || mount.parentElement;
+  const container = findFieldsContainer(mount);
   return container
     ? container.querySelector('input[type="hidden"][data-entra-user-id]')
     : null;
+}
+
+function findSnapshotFields(mount) {
+  const container = findFieldsContainer(mount);
+  return {
+    email: container
+      ? container.querySelector('input[type="hidden"][data-entra-user-email]')
+      : null,
+    name: container
+      ? container.querySelector('input[type="hidden"][data-entra-user-name]')
+      : null,
+  };
 }
 
 function fetchUsers(searchUrl, query, signal) {
@@ -62,11 +78,26 @@ function fetchUsers(searchUrl, query, signal) {
 }
 
 function enhance(mount, searchUrl, hiddenField) {
+  // Snapshot fields let the confirmation page redisplay the choice without
+  // another Graph call; they travel in the submitted form data.
+  const snapshot = findSnapshotFields(mount);
+
   // Remote search state shared by the source and no-results message.
   let status = "idle";
   let confirmedLabel = null;
   let debounceTimer;
   let controller;
+
+  const clearSelection = () => {
+    hiddenField.value = "";
+    if (snapshot.email) {
+      snapshot.email.value = "";
+    }
+    if (snapshot.name) {
+      snapshot.name.value = "";
+    }
+    confirmedLabel = null;
+  };
 
   const runSearch = (query, populateResults) => {
     // Cancel any in-flight request so its response can't overwrite this one.
@@ -128,6 +159,12 @@ function enhance(mount, searchUrl, hiddenField) {
     onConfirm: (user) => {
       if (user && user.id) {
         hiddenField.value = user.id;
+        if (snapshot.email) {
+          snapshot.email.value = user.email || "";
+        }
+        if (snapshot.name) {
+          snapshot.name.value = user.display_name || "";
+        }
         confirmedLabel = userToLabel(user);
       }
     },
@@ -139,8 +176,7 @@ function enhance(mount, searchUrl, hiddenField) {
     // A confirmed selection is only valid while the text matches it.
     input.addEventListener("input", () => {
       if (input.value !== confirmedLabel) {
-        hiddenField.value = "";
-        confirmedLabel = null;
+        clearSelection();
       }
     });
   }

@@ -24,6 +24,19 @@ class ProjectAddMemberForm(forms.Form):
         widget=forms.HiddenInput(attrs={"data-entra-user-name": ""}),
     )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # MOJ Add Another clones rows and rewrites %index% in data-name/data-id,
+        # so the hidden fields must advertise their formset-indexed names.
+        formset_prefix = self.prefix.rsplit("-", 1)[0]
+        for name in ("oid", "email", "display_name"):
+            self.fields[name].widget.attrs.update(
+                {
+                    "data-name": f"{formset_prefix}-%index%-{name}",
+                    "data-id": f"id_{formset_prefix}-%index%-{name}",
+                }
+            )
+
 
 class BaseProjectAddMemberFormSet(BaseFormSet):
     def __init__(self, *args, project=None, **kwargs):

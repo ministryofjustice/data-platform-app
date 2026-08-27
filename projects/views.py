@@ -81,7 +81,7 @@ class EntraUserSearchView(LoginRequiredMixin, View):
         return {
             "id": user.get("id"),
             "display_name": user.get("displayName", ""),
-            "email": user.get("mail", ""),
+            "email": (user.get("mail") or "").strip().lower(),
         }
 
 

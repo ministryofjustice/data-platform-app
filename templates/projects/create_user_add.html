@@ -24,13 +24,13 @@
                 {% endfor %}
                 {% for error in form.non_form_errors %}
                   <li>
-                    <a href="#id_members-0-user">{{ error }}</a>
+                    <a href="#id_members-0-oid-autocomplete">{{ error }}</a>
                   </li>
                 {% endfor %}
                 {% for member_form in form %}
-                  {% for error in member_form.user.errors %}
+                  {% for error in member_form.oid.errors %}
                     <li>
-                      <a href="#{{ member_form.user.id_for_label }}">{{ error }}</a>
+                      <a href="#{{ member_form.oid.auto_id }}-autocomplete">{{ error }}</a>
                     </li>
                   {% endfor %}
                 {% endfor %}
@@ -94,8 +94,8 @@
                     <legend class="govuk-fieldset__legend moj-add-another__title govuk-fieldset__legend--m">
                       Email
                     </legend>
-                    <div class="govuk-form-group{% if form.user.errors or formset.non_form_errors and forloop.first %} govuk-form-group--error{% endif %}">
-                      <label class="govuk-label" for="{{ form.user.id_for_label }}">Enter an email address to add a project member</label>
+                    <div class="govuk-form-group{% if form.oid.errors or formset.non_form_errors and forloop.first %} govuk-form-group--error{% endif %}">
+                      <label class="govuk-label" for="{{ form.oid.auto_id }}-autocomplete">Enter an email address to add a project member</label>
                       {% if formset.non_form_errors and forloop.first %}
                         {% for error in formset.non_form_errors %}
                           <p class="govuk-error-message">
@@ -104,15 +104,20 @@
                           </p>
                         {% endfor %}
                       {% endif %}
-                      {% if form.user.errors %}
-                        {% for error in form.user.errors %}
+                      {% if form.oid.errors %}
+                        {% for error in form.oid.errors %}
                           <p class="govuk-error-message">
                             <span class="govuk-visually-hidden">Error:</span>
                             {{ error }}
                           </p>
                         {% endfor %}
                       {% endif %}
-                      {{ form.user }}
+                      <div data-module="entra-user-autocomplete"
+                           data-search-url="{% url 'projects:entra_user_search' %}"
+                           data-input-id="{{ form.oid.auto_id }}-autocomplete"></div>
+                      {{ form.oid }}
+                      {{ form.email }}
+                      {{ form.display_name }}
                     </div>
                     {% if formset.total_form_count > 1 %}
                       <button type="button"
