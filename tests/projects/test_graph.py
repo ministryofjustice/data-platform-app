@@ -38,7 +38,7 @@ class TestFromRequest:
                 MicrosoftGraphClient.from_request(request=object())
 
 
-class TestSearchUsersByEmail:
+class TestSearchUsers:
     def test_builds_expected_search_request(self):
         captured = {}
 
@@ -46,25 +46,25 @@ class TestSearchUsersByEmail:
             captured["request"] = request
             return httpx.Response(200, json={"value": []})
 
-        make_client(handler).search_users_by_email("mic", limit=10)
+        make_client(handler).search_users("mic", limit=10)
 
         request = captured["request"]
         assert request.url.path == "/v1.0/users"
-        assert request.url.params["$filter"] == "startsWith(mail,'mic')"
+        assert request.url.params["$search"] == '"displayName:mic" OR "mail:mic"'
         assert request.url.params["$select"] == "id,displayName,mail"
         assert request.url.params["$top"] == "10"
         assert request.headers["ConsistencyLevel"] == "eventual"
 
-    def test_escapes_single_quotes(self):
+    def test_escapes_double_quotes(self):
         captured = {}
 
         def handler(request):
             captured["request"] = request
             return httpx.Response(200, json={"value": []})
 
-        make_client(handler).search_users_by_email("O'Brien")
+        make_client(handler).search_users('a"b')
 
-        assert "O''Brien" in captured["request"].url.params["$filter"]
+        assert 'a\\"b' in captured["request"].url.params["$search"]
 
     def test_returns_value_list(self):
         value = [{"id": "id-1", "displayName": "Michael", "mail": "michael@example.gov.uk"}]
@@ -72,7 +72,7 @@ class TestSearchUsersByEmail:
         def handler(request):
             return httpx.Response(200, json={"value": value})
 
-        assert make_client(handler).search_users_by_email("mic") == value
+        assert make_client(handler).search_users("mic") == value
 
     @pytest.mark.parametrize("status", [401, 403, 429, 500, 503])
     def test_raises_on_error_response(self, status):
@@ -80,14 +80,14 @@ class TestSearchUsersByEmail:
             return httpx.Response(status, json={"error": {"code": "Error"}})
 
         with pytest.raises(EntraRequestError):
-            make_client(handler).search_users_by_email("mic")
+            make_client(handler).search_users("mic")
 
     def test_raises_on_transport_error(self):
         def handler(request):
             raise httpx.TimeoutException("timed out")
 
         with pytest.raises(EntraRequestError):
-            make_client(handler).search_users_by_email("mic")
+            make_client(handler).search_users("mic")
 
 
 class TestGetUser:

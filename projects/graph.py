@@ -66,22 +66,22 @@ class MicrosoftGraphClient:
         """Close underlying HTTP resources."""
         self._client.close()
 
-    def search_users_by_email(
+    def search_users(
         self, query: str, *, limit: int = DEFAULT_RESULT_LIMIT
     ) -> list[dict[str, Any]]:
-        """Return directory users whose email starts with ``query``."""
-        # Double single quotes to escape the OData string literal.
-        escaped_query = query.replace("'", "''")
+        """Return directory users whose name or email matches ``query``."""
+        # Escape the double quotes that delimit each $search token.
+        escaped_query = query.replace('"', '\\"')
         try:
             response = self._client.get(
                 "users",
                 params={
-                    "$filter": f"startsWith(mail,'{escaped_query}')",
+                    "$search": (f'"displayName:{escaped_query}" OR "mail:{escaped_query}"'),
                     "$select": self.SEARCH_SELECT,
                     "$top": str(limit),
                     "$count": "true",
                 },
-                # ConsistencyLevel lets Graph evaluate the startsWith filter.
+                # ConsistencyLevel lets Graph evaluate the $search query.
                 headers={"ConsistencyLevel": "eventual"},
             )
             response.raise_for_status()

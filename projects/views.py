@@ -67,7 +67,7 @@ class EntraUserSearchView(LoginRequiredMixin, View):
 
         try:
             with MicrosoftGraphClient.from_request(request) as client:
-                users = client.search_users_by_email(query, limit=self.RESULT_LIMIT)
+                users = client.search_users(query, limit=self.RESULT_LIMIT)
         except EntraAuthenticationError:
             return JsonResponse({"error": "authentication_required"}, status=401)
         except EntraRequestError as error:

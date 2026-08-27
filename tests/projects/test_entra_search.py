@@ -41,7 +41,7 @@ class TestEntraUserSearchView:
 
     def test_returns_serialised_matches(self, client, user, graph):
         _, graph_client = graph
-        graph_client.search_users_by_email.return_value = [
+        graph_client.search_users.return_value = [
             {
                 "id": "id-1",
                 "displayName": "Michael Example",
@@ -66,7 +66,7 @@ class TestEntraUserSearchView:
 
     def test_email_comes_from_mail(self, client, user, graph):
         _, graph_client = graph
-        graph_client.search_users_by_email.return_value = [
+        graph_client.search_users.return_value = [
             {"id": "id-2", "displayName": "Mila Match", "mail": "mila.match@justice.gov.uk"}
         ]
         client.force_login(user)
@@ -77,7 +77,7 @@ class TestEntraUserSearchView:
 
     def test_email_is_normalised_to_lowercase(self, client, user, graph):
         _, graph_client = graph
-        graph_client.search_users_by_email.return_value = [
+        graph_client.search_users.return_value = [
             {"id": "id-4", "displayName": "Mixed Case", "mail": "Mixed.Case@Justice.GOV.uk"}
         ]
         client.force_login(user)
@@ -88,7 +88,7 @@ class TestEntraUserSearchView:
 
     def test_does_not_leak_extra_graph_fields(self, client, user, graph):
         _, graph_client = graph
-        graph_client.search_users_by_email.return_value = [
+        graph_client.search_users.return_value = [
             {
                 "id": "id-3",
                 "displayName": "Jane Doe",
@@ -105,12 +105,12 @@ class TestEntraUserSearchView:
 
     def test_caps_query_length_before_searching(self, client, user, graph):
         _, graph_client = graph
-        graph_client.search_users_by_email.return_value = []
+        graph_client.search_users.return_value = []
         client.force_login(user)
 
         client.get(search_url(), {"q": "a" * 500})
 
-        sent_query = graph_client.search_users_by_email.call_args.args[0]
+        sent_query = graph_client.search_users.call_args.args[0]
         assert len(sent_query) == 256
 
     def test_missing_cached_token_returns_401(self, client, user, graph):
@@ -125,7 +125,7 @@ class TestEntraUserSearchView:
 
     def test_graph_error_returns_502(self, client, user, graph):
         _, graph_client = graph
-        graph_client.search_users_by_email.side_effect = EntraRequestError("boom")
+        graph_client.search_users.side_effect = EntraRequestError("boom")
         client.force_login(user)
 
         with patch("projects.views.sentry_sdk.capture_exception") as capture_exception:
