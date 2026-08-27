@@ -4,6 +4,14 @@
       "type": "http",
       "url": "https://api.githubcopilot.com/mcp/",
       "headers": {}
+    },
+    "data-platform": {
+      "command": "make",
+      "args": ["mcp"],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "MCP_USER_EMAIL": "admin@example.com"
+      }
     }
   },
   "inputs": []

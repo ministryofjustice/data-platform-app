@@ -6,6 +6,14 @@ SECRET_KEY = "test-secret-key-not-for-production"
 
 DEBUG = False
 
+# Override database for tests - use SQLite for speed and no external dependency
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": ":memory:",
+    }
+}
+
 # Pin AZURE_AUTH to dummy values and use ModelBackend so the suite is deterministic
 # regardless of any AZURE_* values in the developer's environment. No test exercises
 # the provider views, so real credentials are never read.

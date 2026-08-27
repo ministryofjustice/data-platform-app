@@ -1,4 +1,4 @@
-.PHONY: run install npm-install build-css build-js build-static lint format lint-templates format-templates test start-ai-gateway stop-ai-gateway
+.PHONY: run install npm-install build-css build-js build-static lint format lint-templates format-templates test start-ai-gateway stop-ai-gateway mcp
 
 run:
 	uv run python manage.py makemigrations --check
@@ -8,7 +8,11 @@ run:
 install:
 	uv sync --locked
 	$(MAKE) npm-install
-	uv run pre-commit install --hook-type pre-commit --hook-type pre-push
+	@if [ -d .git ]; then \
+		uv run pre-commit install --hook-type pre-commit --hook-type pre-push; \
+	else \
+		echo "Skipping pre-commit hook installation: not inside a git checkout."; \
+	fi
 	$(MAKE) build-static
 
 npm-install:
@@ -73,3 +77,14 @@ start-ai-gateway:
 
 stop-ai-gateway:
 	docker compose --file contrib/docker-compose-ai-gateway.yml down --remove-orphans
+
+mcp:
+	@if [ -z "$$MCP_USER_EMAIL" ]; then \
+		echo "Error: MCP_USER_EMAIL is not set."; \
+		echo "Usage: MCP_USER_EMAIL=admin@example.com make mcp"; \
+		exit 1; \
+	fi
+	DB_USER=data_platform_app \
+	DB_PASSWORD=data_platform_app \
+	DB_NAME=data_platform_app \
+	uv run python -m data_platform_mcp.cli
