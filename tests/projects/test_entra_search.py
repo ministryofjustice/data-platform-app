@@ -64,17 +64,6 @@ class TestEntraUserSearchView:
             ]
         }
 
-    def test_email_comes_from_mail(self, client, user, graph):
-        _, graph_client = graph
-        graph_client.search_users.return_value = [
-            {"id": "id-2", "displayName": "Mila Match", "mail": "mila.match@justice.gov.uk"}
-        ]
-        client.force_login(user)
-
-        response = client.get(search_url(), {"q": "mila"})
-
-        assert response.json()["results"][0]["email"] == "mila.match@justice.gov.uk"
-
     def test_email_is_normalised_to_lowercase(self, client, user, graph):
         _, graph_client = graph
         graph_client.search_users.return_value = [

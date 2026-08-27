@@ -8,6 +8,9 @@
 {% block content %}
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-two-thirds">
+      {% if error_message %}
+        {% include "includes/error_message.html" with heading=error_message.heading message=error_message.message only %}
+      {% endif %}
       {% if decision_form.errors or form.total_error_count %}
         <div class="govuk-error-summary" data-module="govuk-error-summary">
           <div role="alert">

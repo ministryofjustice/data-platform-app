@@ -9,6 +9,9 @@
 {% block content %}
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-two-thirds">
+      {% if error_message %}
+        {% include "includes/error_message.html" with heading=error_message.heading message=error_message.message only %}
+      {% endif %}
       {% if formset.non_form_errors %}
         <div class="govuk-error-summary" data-module="govuk-error-summary">
           <div role="alert">

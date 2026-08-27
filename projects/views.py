@@ -180,6 +180,7 @@ class ProjectUserSelectionFormView(ProjectUserSelectionSessionMixin, FormView):
         context = super().get_context_data(**kwargs)
         context["formset"] = context["form"]
         context["project"] = self.get_project()
+        context["error_message"] = self.request.session.pop("error_message", None)
         return context
 
     def form_valid(self, form):
@@ -316,9 +317,10 @@ class ProjectCreateConfirmView(
                 )
         except EntraDirectoryError as error:
             sentry_sdk.capture_exception(error)
-            request.session["error_message"] = (
-                "Sorry, there was a problem adding one or more members. Please try again."
-            )
+            request.session["error_message"] = {
+                "heading": "There was a problem adding one or more members",
+                "message": "Please try again.",
+            }
             return redirect("projects:project_create_add_users")
 
         self.send_member_added_notifications(
@@ -449,9 +451,10 @@ class ProjectAddUsersConfirmView(
                 )
         except EntraDirectoryError as error:
             sentry_sdk.capture_exception(error)
-            request.session["error_message"] = (
-                "Sorry, there was a problem adding one or more members. Please try again."
-            )
+            request.session["error_message"] = {
+                "heading": "There was a problem adding one or more members",
+                "message": "Please try again.",
+            }
             return redirect("projects:project_users_add", uuid=project.uuid)
 
         self.send_member_added_notifications(
