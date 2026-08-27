@@ -48,6 +48,19 @@ class TestProjectAddMemberFormSet:
         assert not formset.is_valid()
         assert "Enter a valid email address" in formset.non_form_errors()
 
+    def test_canonicalises_oid_casing(self, project):
+        selected_oid = uuid.uuid4()
+        data = management_form(1) | {
+            "members-0-oid": str(selected_oid).upper(),
+            "members-0-email": "chosen.member@example.com",
+            "members-0-display_name": "Chosen Member",
+        }
+
+        formset = build_project_add_member_formset(project=project, data=data)
+
+        assert formset.is_valid()
+        assert formset.selected_members[0]["oid"] == str(selected_oid)
+
     def test_malformed_oid_is_rejected(self, project):
         data = management_form(1) | {
             "members-0-oid": "not-a-uuid",

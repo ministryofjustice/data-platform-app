@@ -57,7 +57,8 @@ class BaseProjectAddMemberFormSet(BaseFormSet):
             if not oid:
                 continue
             try:
-                uuid.UUID(oid)
+                # Canonicalise so downstream lookups keyed on str(user.oid) match.
+                oid = str(uuid.UUID(oid))
             except ValueError as error:
                 raise ValidationError("Enter a valid email address") from error
             if oid in seen:
