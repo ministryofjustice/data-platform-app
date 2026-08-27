@@ -82,9 +82,19 @@ function enhance(mount, searchUrl, hiddenField) {
   // another Graph call; they travel in the submitted form data.
   const snapshot = findSnapshotFields(mount);
 
+  // Restore a previously chosen user (e.g. when the page re-renders after a
+  // validation error) so the search box shows the selection, not an empty box.
+  const initialLabel = hiddenField.value
+    ? userToLabel({
+        id: hiddenField.value,
+        email: snapshot.email ? snapshot.email.value : "",
+        display_name: snapshot.name ? snapshot.name.value : "",
+      })
+    : "";
+
   // Remote search state shared by the source and no-results message.
   let status = "idle";
-  let confirmedLabel = null;
+  let confirmedLabel = initialLabel || null;
   let debounceTimer;
   let controller;
 
@@ -154,6 +164,7 @@ function enhance(mount, searchUrl, hiddenField) {
     name: "",
     minLength: MIN_QUERY_LENGTH,
     confirmOnBlur: false,
+    defaultValue: initialLabel,
     source,
     templates: { inputValue: userToLabel, suggestion: userToSuggestion },
     onConfirm: (user) => {

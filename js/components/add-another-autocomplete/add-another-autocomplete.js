@@ -77,6 +77,20 @@ const AddAnotherAutocomplete = {
           hidden.value = "";
         });
 
+      // MOJ renumbers the hidden fields but not the mount, so derive a unique
+      // input id from the (already renumbered) oid field and realign the label.
+      const oidField = newItem.querySelector(
+        'input[type="hidden"][data-entra-user-id]',
+      );
+      if (oidField) {
+        const inputId = `${oidField.id}-autocomplete`;
+        mount.dataset.inputId = inputId;
+        const label = newItem.querySelector("label");
+        if (label) {
+          label.htmlFor = inputId;
+        }
+      }
+
       EntraUserAutocomplete.init(newItem);
     };
 
