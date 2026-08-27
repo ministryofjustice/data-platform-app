@@ -1,10 +1,12 @@
 @use "node_modules/govuk-frontend/dist/govuk" as * with (
-  $govuk-assets-path: "/static/assets/"
+  $govuk-assets-path: "/static/assets/",
+  $govuk-page-width: 1280px
 );
 
 // Share config with MOJ Frontend
 @forward "node_modules/@ministryofjustice/frontend/moj/all" with (
-  $moj-assets-path: $govuk-assets-path
+  $moj-assets-path: $govuk-assets-path,
+  $moj-page-width: $govuk-page-width
 );
 @use "node_modules/@x-govuk/govuk-prototype-components/src/x-govuk";
 @use "components/copy-button/copy-button";
