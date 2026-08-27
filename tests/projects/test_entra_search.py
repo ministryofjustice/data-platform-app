@@ -75,6 +75,19 @@ class TestEntraUserSearchView:
 
         assert response.json()["results"][0]["email"] == "mixed.case@justice.gov.uk"
 
+    def test_excludes_users_without_an_email(self, client, user, graph):
+        _, graph_client = graph
+        graph_client.search_users.return_value = [
+            {"id": "id-5", "displayName": "No Mail", "mail": None},
+            {"id": "id-6", "displayName": "Has Mail", "mail": "has.mail@justice.gov.uk"},
+        ]
+        client.force_login(user)
+
+        response = client.get(search_url(), {"q": "mail"})
+
+        results = response.json()["results"]
+        assert [result["id"] for result in results] == ["id-6"]
+
     def test_does_not_leak_extra_graph_fields(self, client, user, graph):
         _, graph_client = graph
         graph_client.search_users.return_value = [

@@ -74,7 +74,9 @@ class EntraUserSearchView(LoginRequiredMixin, View):
             sentry_sdk.capture_exception(error)
             return JsonResponse({"error": "search_failed"}, status=502)
 
-        results = [self._serialise(user) for user in users]
+        # Members are identified by email throughout the flow, so drop any
+        # directory results that have none.
+        results = [serialised for user in users if (serialised := self._serialise(user))["email"]]
         return JsonResponse({"results": results})
 
     def _serialise(self, user: dict) -> dict:
