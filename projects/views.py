@@ -1,8 +1,5 @@
-import httpx
 import sentry_sdk
-from azure_auth.handlers import AuthHandler
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db import transaction
 from django.db.models import Prefetch
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -11,7 +8,6 @@ from django.views.generic.base import View
 from django.views.generic.detail import DetailView
 from django.views.generic.edit import DeleteView, FormView
 from django.views.generic.list import ListView
-from simple_history.utils import bulk_create_with_history
 
 from ai_gateway.exceptions import AIGatewayError
 from ai_gateway.models import Team
@@ -20,6 +16,12 @@ from projects.forms import (
     ProjectCreateAddUsersDecisionForm,
     ProjectCreateForm,
     build_project_add_member_formset,
+)
+from projects.graph import (
+    EntraAuthenticationError,
+    EntraDirectoryError,
+    EntraRequestError,
+    MicrosoftGraphClient,
 )
 from projects.mixins import (
     ADD_USER_SESSION_KEY,
@@ -32,7 +34,7 @@ from projects.mixins import (
     UUIDObjectMixin,
 )
 from projects.models import BusinessUnit, Project, ProjectUserPermissions
-from users.models import User
+from projects.services import ProjectService
 
 
 def clear_project_create_session(request):
@@ -53,11 +55,9 @@ class EntraUserSearchView(LoginRequiredMixin, View):
     receives raw Microsoft Graph objects or the delegated bearer token.
     """
 
-    GRAPH_USERS_ENDPOINT = "https://graph.microsoft.com/v1.0/users"
     MIN_QUERY_LENGTH = 3
     MAX_QUERY_LENGTH = 256
     RESULT_LIMIT = 10
-    GRAPH_TIMEOUT_SECONDS = 5.0
 
     def get(self, request, *args, **kwargs):
         query = request.GET.get("q", "").strip()
@@ -65,39 +65,19 @@ class EntraUserSearchView(LoginRequiredMixin, View):
             return JsonResponse({"results": []})
         query = query[: self.MAX_QUERY_LENGTH]
 
-        token = AuthHandler(request).get_token_from_cache()
-        access_token = token.get("access_token") if token else None
-        if not access_token:
-            return JsonResponse({"error": "authentication_required"}, status=401)
-
-        # Double single quotes to escape the OData string literal.
-        escaped_query = query.replace("'", "''")
         try:
-            response = httpx.get(
-                self.GRAPH_USERS_ENDPOINT,
-                params={
-                    "$filter": f"startsWith(mail,'{escaped_query}')",
-                    "$select": "id,displayName,mail",
-                    "$top": str(self.RESULT_LIMIT),
-                    "$count": "true",
-                },
-                # ConsistencyLevel lets Graph evaluate the startsWith filter.
-                headers={
-                    "Authorization": f"Bearer {access_token}",
-                    "ConsistencyLevel": "eventual",
-                },
-                timeout=self.GRAPH_TIMEOUT_SECONDS,
-            )
-            response.raise_for_status()
-        except httpx.HTTPError as error:
+            with MicrosoftGraphClient.from_request(request) as client:
+                users = client.search_users_by_email(query, limit=self.RESULT_LIMIT)
+        except EntraAuthenticationError:
+            return JsonResponse({"error": "authentication_required"}, status=401)
+        except EntraRequestError as error:
             sentry_sdk.capture_exception(error)
             return JsonResponse({"error": "search_failed"}, status=502)
 
-        results = [self._serialise(user) for user in response.json().get("value", [])]
+        results = [self._serialise(user) for user in users]
         return JsonResponse({"results": results})
 
-    @staticmethod
-    def _serialise(user: dict) -> dict:
+    def _serialise(self, user: dict) -> dict:
         return {
             "id": user.get("id"),
             "display_name": user.get("displayName", ""),
@@ -175,22 +155,25 @@ class ProjectUserSelectionFormView(ProjectUserSelectionSessionMixin, FormView):
     def get_success_url(self):
         raise NotImplementedError
 
+    def get_initial(self):
+        return [
+            {
+                "oid": member["oid"],
+                "email": member.get("email", ""),
+                "display_name": member.get("display_name", ""),
+            }
+            for member in self.get_selected_members()
+        ]
+
     def get_form(self, form_class=None):
         data = self.request.POST if self.request.method == "POST" else None
-        initial = None
-        extra = 1
-
-        if self.request.method == "GET":
-            selected_user_ids = self.get_selected_user_ids()
-            if selected_user_ids:
-                initial = [{"user": user_id} for user_id in selected_user_ids]
-                extra = 0
+        initial = self.get_initial() if self.request.method == "GET" else None
 
         return build_project_add_member_formset(
             project=self.get_project(),
             data=data,
             initial=initial,
-            extra=extra,
+            extra=0 if initial else 1,
         )
 
     def get_context_data(self, **kwargs):
@@ -200,7 +183,7 @@ class ProjectUserSelectionFormView(ProjectUserSelectionSessionMixin, FormView):
         return context
 
     def form_valid(self, form):
-        self.set_selected_user_ids(form.selected_user_ids)
+        self.set_selected_members(form.selected_members)
         return redirect(self.get_success_url())
 
 
@@ -222,16 +205,23 @@ class ProjectCreateAddUsersView(ProjectUserSelectionFormView):
     def get_decision_form(self):
         data = self.request.POST if self.request.method == "POST" else None
         initial = None
-        if self.request.method == "GET" and self.get_selected_user_ids():
+        if self.request.method == "GET" and self.get_selected_members():
             initial = {"add_user": "yes"}
         return ProjectCreateAddUsersDecisionForm(data=data, initial=initial)
 
     def get_unbound_formset(self):
         initial = None
         extra = 1
-        selected_user_ids = self.get_selected_user_ids()
-        if selected_user_ids:
-            initial = [{"user": user_id} for user_id in selected_user_ids]
+        selected_members = self.get_selected_members()
+        if selected_members:
+            initial = [
+                {
+                    "oid": member["oid"],
+                    "email": member.get("email", ""),
+                    "display_name": member.get("display_name", ""),
+                }
+                for member in selected_members
+            ]
             extra = 0
 
         return build_project_add_member_formset(
@@ -257,14 +247,16 @@ class ProjectCreateAddUsersView(ProjectUserSelectionFormView):
             )
 
         if decision_form.cleaned_data["add_user"] == "no":
-            self.clear_selected_user_ids()
+            self.clear_selected_members()
             return redirect("projects:project_create_confirm")
 
         return super().post(request, *args, **kwargs)
 
 
 class ProjectCreateConfirmView(
-    ProjectMembershipNotificationMixin, ProjectUserSelectionSessionMixin, View
+    ProjectMembershipNotificationMixin,
+    ProjectUserSelectionSessionMixin,
+    View,
 ):
     template_name = "projects/create_confirm.html"
 
@@ -272,8 +264,7 @@ class ProjectCreateConfirmView(
         return USER_BUCKET_SESSION_KEY
 
     def get_selected_users(self):
-        selected_user_ids = self.get_selected_user_ids()
-        return User.objects.filter(id__in=selected_user_ids).order_by("email")
+        return self.get_selected_members()
 
     def validate_project_create_session(self, session_data):
 
@@ -313,43 +304,26 @@ class ProjectCreateConfirmView(
         is_valid = self.validate_project_create_session(project_data)
         if not is_valid:
             return redirect("projects:project_create")
-        with transaction.atomic():
-            project = Project.objects.create(
-                name=project_data["name"],
-                description=project_data["description"],
-                business_unit_id=project_data["business_unit_id"],
-                created_by=self.request.user,
-            )
-            selected_user_ids = self.get_selected_user_ids()
 
-            # ensure the owner is included
-            owner_user_id = self.request.user.id
-            if owner_user_id not in selected_user_ids:
-                selected_user_ids.append(owner_user_id)
-
-            created_members = list(User.objects.filter(id__in=selected_user_ids).order_by("email"))
-
-            bulk_create_with_history(
-                [
-                    ProjectUserPermissions(
-                        project=project,
-                        user_id=user_id,
-                        role="admin",
-                    )
-                    for user_id in selected_user_ids
-                ],
-                ProjectUserPermissions,
-                ignore_conflicts=True,
-                default_user=self.request.user,
-            )
-
-            transaction.on_commit(
-                lambda: self.send_member_added_notifications(
-                    project=project,
-                    members=created_members,
-                    added_by=self.request.user,
+        try:
+            with ProjectService.from_request(request) as service:
+                project, members = service.create_project(
+                    name=project_data["name"],
+                    description=project_data["description"],
+                    business_unit_id=project_data["business_unit_id"],
+                    created_by=request.user,
+                    selected_members=self.get_selected_members(),
                 )
+        except EntraDirectoryError as error:
+            sentry_sdk.capture_exception(error)
+            request.session["error_message"] = (
+                "Sorry, there was a problem adding one or more members. Please try again."
             )
+            return redirect("projects:project_create_add_users")
+
+        self.send_member_added_notifications(
+            project=project, members=members, added_by=request.user
+        )
 
         clear_project_create_session(self.request)
         request.session["success_message"] = {
@@ -448,8 +422,7 @@ class ProjectAddUsersConfirmView(
     template_name = "projects/user_add_confirm.html"
 
     def get_selected_users(self):
-        selected_user_ids = self.get_selected_user_ids()
-        return User.objects.filter(id__in=selected_user_ids).order_by("email")
+        return self.get_selected_members()
 
     def get(self, request, *args, **kwargs):
         project = self.get_project()
@@ -462,46 +435,30 @@ class ProjectAddUsersConfirmView(
 
     def post(self, request, *args, **kwargs):
         project = self.get_project()
-        selected_user_ids = self.get_selected_user_ids()
+        selections = self.get_selected_members()
 
-        if not selected_user_ids:
+        if not selections:
             return redirect("projects:project_users_add", uuid=project.uuid)
 
-        existing_user_ids = set(
-            ProjectUserPermissions.objects.filter(
-                project=project,
-                user_id__in=selected_user_ids,
-            ).values_list("user_id", flat=True)
-        )
-        create_for_user_ids = [
-            user_id for user_id in selected_user_ids if user_id not in existing_user_ids
-        ]
-        created_members = list(User.objects.filter(id__in=create_for_user_ids).order_by("email"))
-
-        with transaction.atomic():
-            bulk_create_with_history(
-                [
-                    ProjectUserPermissions(
-                        project=project,
-                        user_id=user_id,
-                        role="admin",
-                    )
-                    for user_id in create_for_user_ids
-                ],
-                ProjectUserPermissions,
-                ignore_conflicts=True,
-                default_user=request.user,
-            )
-
-            transaction.on_commit(
-                lambda: self.send_member_added_notifications(
+        try:
+            with ProjectService.from_request(request) as service:
+                members_to_add = service.add_members(
                     project=project,
-                    members=created_members,
+                    selections=selections,
                     added_by=request.user,
                 )
+        except EntraDirectoryError as error:
+            sentry_sdk.capture_exception(error)
+            request.session["error_message"] = (
+                "Sorry, there was a problem adding one or more members. Please try again."
             )
+            return redirect("projects:project_users_add", uuid=project.uuid)
 
-        self.clear_selected_user_ids()
+        self.send_member_added_notifications(
+            project=project, members=members_to_add, added_by=request.user
+        )
+
+        self.clear_selected_members()
         request.session["success_message"] = {
             "heading": "Project member added",
         }

@@ -1,23 +1,20 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
-import httpx
 import pytest
 from django.urls import reverse
 
-
-def graph_response(value, status=200):
-    """Build an ``httpx.Response`` mimicking a Microsoft Graph ``/users`` reply."""
-    request = httpx.Request("GET", "https://graph.microsoft.com/v1.0/users")
-    body = {"value": value} if status == 200 else {"error": {"code": "Error"}}
-    return httpx.Response(status, json=body, request=request)
+from projects.graph import EntraAuthenticationError, EntraRequestError
 
 
 @pytest.fixture
-def token():
-    """Patch the delegated token lookup to return a usable access token."""
-    with patch("projects.views.AuthHandler") as mock_auth:
-        mock_auth.return_value.get_token_from_cache.return_value = {"access_token": "tok"}
-        yield mock_auth
+def graph():
+    """Patch the Graph client the view builds, yielding (from_request, client)."""
+    with patch("projects.views.MicrosoftGraphClient.from_request") as from_request:
+        client = MagicMock()
+        client.__enter__.return_value = client
+        client.__exit__.return_value = False
+        from_request.return_value = client
+        yield from_request, client
 
 
 def search_url():
@@ -32,19 +29,19 @@ class TestEntraUserSearchView:
 
         assert response.status_code == 302
 
-    def test_short_query_returns_empty_without_calling_graph(self, client, user, token):
+    def test_short_query_returns_empty_without_calling_graph(self, client, user, graph):
+        from_request, _ = graph
         client.force_login(user)
 
-        with patch("projects.views.httpx.get") as mock_get:
-            response = client.get(search_url(), {"q": "mi"})
+        response = client.get(search_url(), {"q": "mi"})
 
         assert response.status_code == 200
         assert response.json() == {"results": []}
-        mock_get.assert_not_called()
+        from_request.assert_not_called()
 
-    def test_returns_serialised_matches(self, client, user, token):
-        client.force_login(user)
-        value = [
+    def test_returns_serialised_matches(self, client, user, graph):
+        _, graph_client = graph
+        graph_client.search_users_by_email.return_value = [
             {
                 "id": "id-1",
                 "displayName": "Michael Example",
@@ -52,9 +49,9 @@ class TestEntraUserSearchView:
                 "userPrincipalName": "michael.upn@justice.gov.uk",
             }
         ]
+        client.force_login(user)
 
-        with patch("projects.views.httpx.get", return_value=graph_response(value)):
-            response = client.get(search_url(), {"q": "mic"})
+        response = client.get(search_url(), {"q": "mic"})
 
         assert response.status_code == 200
         assert response.json() == {
@@ -67,99 +64,62 @@ class TestEntraUserSearchView:
             ]
         }
 
-    def test_email_comes_from_mail(self, client, user, token):
-        client.force_login(user)
-        value = [
-            {
-                "id": "id-2",
-                "displayName": "Mila Match",
-                "mail": "mila.match@justice.gov.uk",
-            }
+    def test_email_comes_from_mail(self, client, user, graph):
+        _, graph_client = graph
+        graph_client.search_users_by_email.return_value = [
+            {"id": "id-2", "displayName": "Mila Match", "mail": "mila.match@justice.gov.uk"}
         ]
+        client.force_login(user)
 
-        with patch("projects.views.httpx.get", return_value=graph_response(value)):
-            response = client.get(search_url(), {"q": "mila"})
+        response = client.get(search_url(), {"q": "mila"})
 
         assert response.json()["results"][0]["email"] == "mila.match@justice.gov.uk"
 
-    def test_does_not_leak_extra_graph_fields(self, client, user, token):
-        client.force_login(user)
-        value = [
+    def test_does_not_leak_extra_graph_fields(self, client, user, graph):
+        _, graph_client = graph
+        graph_client.search_users_by_email.return_value = [
             {
                 "id": "id-3",
                 "displayName": "Jane Doe",
                 "mail": "jane@justice.gov.uk",
-                "userPrincipalName": "jane@justice.gov.uk",
                 "jobTitle": "Secret",
                 "officeLocation": "HQ",
             }
         ]
+        client.force_login(user)
 
-        with patch("projects.views.httpx.get", return_value=graph_response(value)):
-            response = client.get(search_url(), {"q": "jan"})
+        response = client.get(search_url(), {"q": "jan"})
 
         assert set(response.json()["results"][0].keys()) == {"id", "display_name", "email"}
 
-    def test_requests_expected_select_and_top(self, client, user, token):
+    def test_caps_query_length_before_searching(self, client, user, graph):
+        _, graph_client = graph
+        graph_client.search_users_by_email.return_value = []
         client.force_login(user)
 
-        with patch("projects.views.httpx.get", return_value=graph_response([])) as mock_get:
-            client.get(search_url(), {"q": "mic"})
+        client.get(search_url(), {"q": "a" * 500})
 
-        params = mock_get.call_args.kwargs["params"]
-        assert params["$select"] == "id,displayName,mail"
-        assert params["$top"] == "10"
-        assert params["$filter"] == "startsWith(mail,'mic')"
+        sent_query = graph_client.search_users_by_email.call_args.args[0]
+        assert len(sent_query) == 256
 
-    def test_escapes_single_quotes_in_query(self, client, user, token):
+    def test_missing_cached_token_returns_401(self, client, user, graph):
+        from_request, _ = graph
+        from_request.side_effect = EntraAuthenticationError("no token")
         client.force_login(user)
 
-        with patch("projects.views.httpx.get", return_value=graph_response([])) as mock_get:
-            client.get(search_url(), {"q": "O'Brien"})
-
-        assert "O''Brien" in mock_get.call_args.kwargs["params"]["$filter"]
-
-    def test_does_not_send_bearer_token_to_browser(self, client, user, token):
-        client.force_login(user)
-
-        with patch("projects.views.httpx.get", return_value=graph_response([])):
-            response = client.get(search_url(), {"q": "mic"})
-
-        assert "tok" not in response.content.decode()
-
-    def test_missing_cached_token_returns_401(self, client, user):
-        client.force_login(user)
-
-        with patch("projects.views.AuthHandler") as mock_auth:
-            mock_auth.return_value.get_token_from_cache.return_value = None
-            response = client.get(search_url(), {"q": "mic"})
+        response = client.get(search_url(), {"q": "mic"})
 
         assert response.status_code == 401
         assert response.json() == {"error": "authentication_required"}
 
-    def test_token_without_access_token_returns_401(self, client, user):
+    def test_graph_error_returns_502(self, client, user, graph):
+        _, graph_client = graph
+        graph_client.search_users_by_email.side_effect = EntraRequestError("boom")
         client.force_login(user)
 
-        with patch("projects.views.AuthHandler") as mock_auth:
-            mock_auth.return_value.get_token_from_cache.return_value = {}
-            response = client.get(search_url(), {"q": "mic"})
-
-        assert response.status_code == 401
-
-    @pytest.mark.parametrize("status", [401, 403, 429, 500, 503])
-    def test_graph_error_returns_502(self, client, user, token, status):
-        client.force_login(user)
-
-        with patch("projects.views.httpx.get", return_value=graph_response([], status=status)):
+        with patch("projects.views.sentry_sdk.capture_exception") as capture_exception:
             response = client.get(search_url(), {"q": "mic"})
 
         assert response.status_code == 502
         assert response.json() == {"error": "search_failed"}
-
-    def test_graph_timeout_returns_502(self, client, user, token):
-        client.force_login(user)
-
-        with patch("projects.views.httpx.get", side_effect=httpx.TimeoutException("timed out")):
-            response = client.get(search_url(), {"q": "mic"})
-
-        assert response.status_code == 502
+        capture_exception.assert_called_once()

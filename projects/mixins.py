@@ -16,16 +16,16 @@ class ProjectUserSelectionSessionMixin:
     def get_user_bucket_key(self):
         raise NotImplementedError
 
-    def get_selected_user_ids(self):
+    def get_selected_members(self):
         session_map = self.request.session.get(ADD_USER_SESSION_KEY, {})
-        return [int(user_id) for user_id in session_map.get(self.get_user_bucket_key(), [])]
+        return list(session_map.get(self.get_user_bucket_key(), []))
 
-    def set_selected_user_ids(self, user_ids):
+    def set_selected_members(self, members):
         session_map = self.request.session.get(ADD_USER_SESSION_KEY, {})
-        session_map[self.get_user_bucket_key()] = list(user_ids)
+        session_map[self.get_user_bucket_key()] = list(members)
         self.request.session[ADD_USER_SESSION_KEY] = session_map
 
-    def clear_selected_user_ids(self):
+    def clear_selected_members(self):
         session_map = self.request.session.get(ADD_USER_SESSION_KEY, {})
         session_map.pop(self.get_user_bucket_key(), None)
         self.request.session[ADD_USER_SESSION_KEY] = session_map
