@@ -6,10 +6,14 @@ from model_bakery import baker
 from notifications_python_client.errors import HTTPError
 
 from data_platform_app.services import GovUKNotificationError, GovUKNotificationsService
+from projects.graph import EntraAuthenticationError, EntraRequestError
+from projects.models import ProjectUserPermissions
 from projects.services import (
     ProjectMembershipNotificationService,
     ProjectNotificationError,
+    ProjectService,
 )
+from users.models import User
 
 
 class TestGovUKNotificationsService:
@@ -184,3 +188,143 @@ class TestProjectMembershipNotificationService:
 
         with pytest.raises(ProjectNotificationError):
             service.send_member_added_email(project=project, member=member, added_by=actor)
+
+
+def _graph_payload(oid, *, mail="new.hire@example.com"):
+    return {
+        "id": oid,
+        "mail": mail,
+        "givenName": "New",
+        "surname": "Hire",
+        "displayName": "New Hire",
+    }
+
+
+@pytest.mark.django_db
+class TestProjectService:
+    def test_add_members_reuses_existing_users_without_graph_calls(
+        self, project, user, non_project_user
+    ):
+        graph_client = Mock()
+        service = ProjectService(graph_client=graph_client)
+
+        added = service.add_members(
+            project=project,
+            selections=[{"oid": str(non_project_user.oid)}],
+            added_by=user,
+        )
+
+        graph_client.get_user.assert_not_called()
+        assert [member.oid for member in added] == [non_project_user.oid]
+        assert ProjectUserPermissions.objects.filter(
+            project=project, user=non_project_user
+        ).exists()
+
+    def test_add_members_is_idempotent_for_existing_membership(
+        self, project, user, non_project_user
+    ):
+        service = ProjectService(graph_client=Mock())
+
+        service.add_members(
+            project=project,
+            selections=[{"oid": str(user.oid)}],
+            added_by=non_project_user,
+        )
+
+        assert ProjectUserPermissions.objects.filter(project=project, user=user).count() == 1
+
+    def test_add_members_creates_stub_for_unknown_oid(self, project, user):
+        new_oid = str(baker.make("users.User").oid)
+        User.objects.filter(oid=new_oid).delete()
+        graph_client = Mock()
+        graph_client.get_user.return_value = _graph_payload(new_oid)
+        service = ProjectService(graph_client=graph_client)
+
+        added = service.add_members(
+            project=project,
+            selections=[{"oid": new_oid}],
+            added_by=user,
+        )
+
+        graph_client.get_user.assert_called_once_with(new_oid)
+        created = User.objects.get(oid=new_oid)
+        assert created.email == "new.hire@example.com"
+        assert created.first_name == "New"
+        assert created.last_name == "Hire"
+        assert [str(member.oid) for member in added] == [new_oid]
+        assert ProjectUserPermissions.objects.filter(project=project, user=created).exists()
+
+    def test_add_members_propagates_graph_errors(self, project, user):
+        new_oid = str(baker.make("users.User").oid)
+        User.objects.filter(oid=new_oid).delete()
+        graph_client = Mock()
+        graph_client.get_user.side_effect = EntraRequestError("boom")
+        service = ProjectService(graph_client=graph_client)
+
+        with pytest.raises(EntraRequestError):
+            service.add_members(
+                project=project,
+                selections=[{"oid": new_oid}],
+                added_by=user,
+            )
+
+    def test_from_request_propagates_authentication_error(self, project, user):
+        new_oid = str(baker.make("users.User").oid)
+        User.objects.filter(oid=new_oid).delete()
+        service = ProjectService.from_request(request=object())
+
+        with (
+            patch(
+                "projects.services.MicrosoftGraphClient.from_request",
+                side_effect=EntraAuthenticationError("no token"),
+            ),
+            pytest.raises(EntraAuthenticationError),
+        ):
+            service.add_members(
+                project=project,
+                selections=[{"oid": new_oid}],
+                added_by=user,
+            )
+
+    def test_create_project_adds_owner_and_selected_members(self, user, non_project_user):
+        business_unit = baker.make("projects.BusinessUnit")
+        service = ProjectService(graph_client=Mock())
+
+        project, members = service.create_project(
+            name="My Project",
+            description="A description",
+            business_unit_id=business_unit.id,
+            created_by=user,
+            selected_members=[{"oid": str(non_project_user.oid)}],
+        )
+
+        assert project.name == "My Project"
+        assert project.created_by == user
+        assert {member.oid for member in members} == {user.oid, non_project_user.oid}
+        assert ProjectUserPermissions.objects.filter(project=project, user=user).exists()
+        assert ProjectUserPermissions.objects.filter(
+            project=project, user=non_project_user
+        ).exists()
+
+    def test_create_project_includes_owner_when_no_members_selected(self, user):
+        business_unit = baker.make("projects.BusinessUnit")
+        service = ProjectService(graph_client=Mock())
+
+        project, members = service.create_project(
+            name="Solo Project",
+            description="A description",
+            business_unit_id=business_unit.id,
+            created_by=user,
+            selected_members=[],
+        )
+
+        assert [member.oid for member in members] == [user.oid]
+        assert ProjectUserPermissions.objects.filter(project=project, user=user).exists()
+
+    def test_close_closes_graph_client(self):
+        graph_client = Mock()
+        service = ProjectService(graph_client=graph_client)
+
+        service.close()
+
+        graph_client.close.assert_called_once_with()

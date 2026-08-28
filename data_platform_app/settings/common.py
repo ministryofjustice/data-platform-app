@@ -175,7 +175,7 @@ AZURE_AUTH = {
     "CLIENT_ID": os.environ.get("AZURE_CLIENT_ID"),
     "CLIENT_SECRET": os.environ.get("AZURE_CLIENT_SECRET"),
     "REDIRECT_URI": get_azure_redirect_uri(APP_ENV),
-    "SCOPES": ["User.Read"],
+    "SCOPES": ["User.Read", "User.ReadBasic.All"],
     "AUTHORITY": os.environ.get("AZURE_AUTHORITY"),
     "USERNAME_ATTRIBUTE": "oid",
     "USER_MAPPING_FN": "users.auth.user_mapping_fn",

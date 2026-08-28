@@ -1,3 +1,4 @@
+import uuid
 from unittest.mock import patch
 
 from django.core.exceptions import ImproperlyConfigured
@@ -6,8 +7,19 @@ from model_bakery import baker
 from pytest_django.asserts import assertContains, assertInHTML
 
 from ai_gateway.exceptions import AIGatewayAPIError
+from projects.graph import EntraAuthenticationError, EntraRequestError
 from projects.models import Project, ProjectUserPermissions
 from projects.services import ProjectNotificationError
+from users.models import User
+
+
+def member_selection(user):
+    """Build a session/POST selection payload for ``user``'s Entra identity."""
+    return {
+        "oid": str(user.oid),
+        "email": user.email,
+        "display_name": user.full_name,
+    }
 
 
 class TestDetailView:
@@ -250,7 +262,10 @@ class TestProjectAddUsersFlow:
 
         session = client.session
         session["project_user_add_selection"] = {
-            f"project:{project.id}": [selected_user_one.id, selected_user_two.id]
+            f"project:{project.id}": [
+                member_selection(selected_user_one),
+                member_selection(selected_user_two),
+            ]
         }
         session.save()
 
@@ -259,8 +274,8 @@ class TestProjectAddUsersFlow:
         assert response.status_code == 200
         formset = response.context["formset"]
         assert formset.total_form_count() == 2
-        assert formset.forms[0].initial["user"] == selected_user_one.id
-        assert formset.forms[1].initial["user"] == selected_user_two.id
+        assert formset.forms[0].initial["oid"] == str(selected_user_one.oid)
+        assert formset.forms[1].initial["oid"] == str(selected_user_two.oid)
 
     def test_add_users_page_submits_and_redirects_to_confirm(self, client, user, project):
 
@@ -274,33 +289,14 @@ class TestProjectAddUsersFlow:
                 "members-INITIAL_FORMS": "0",
                 "members-MIN_NUM_FORMS": "0",
                 "members-MAX_NUM_FORMS": "1000",
-                "members-0-user": str(user_to_add.id),
+                "members-0-oid": str(user_to_add.oid),
             },
         )
 
         assert response.status_code == 302
         assert response.url == reverse("projects:project_users_add_confirm", args=[project.uuid])
 
-    def test_add_users_page_excludes_existing_members_from_options(self, client, user, project):
-
-        existing_member = baker.make("users.User", email="already.member@example.com")
-        baker.make("users.User", email="new.member@example.com")
-        baker.make(
-            "projects.ProjectUserPermissions",
-            project=project,
-            user=existing_member,
-            role="member",
-        )
-
-        client.force_login(user)
-        response = client.get(reverse("projects:project_users_add", args=[project.uuid]))
-
-        content = response.content.decode()
-        assert response.status_code == 200
-        assert "new.member@example.com" in content
-        assert "already.member@example.com" not in content
-
-    def test_add_users_page_rejects_duplicate_user_submission(self, client, user, project):
+    def test_add_users_page_deduplicates_repeated_user_submission(self, client, user, project):
 
         user_to_add = baker.make("users.User", email="member.two@example.com")
         client.force_login(user)
@@ -312,20 +308,22 @@ class TestProjectAddUsersFlow:
                 "members-INITIAL_FORMS": "0",
                 "members-MIN_NUM_FORMS": "0",
                 "members-MAX_NUM_FORMS": "1000",
-                "members-0-user": str(user_to_add.id),
-                "members-1-user": str(user_to_add.id),
+                "members-0-oid": str(user_to_add.oid),
+                "members-1-oid": str(user_to_add.oid),
             },
         )
 
-        assert response.status_code == 200
-        assert "You cannot add the same user more than once." in response.content.decode()
+        assert response.status_code == 302
+        assert response.url == reverse("projects:project_users_add_confirm", args=[project.uuid])
 
     def test_confirm_page_renders_selected_users(self, client, user, project):
 
         selected_user = baker.make("users.User", email="member.three@example.com")
         client.force_login(user)
         session = client.session
-        session["project_user_add_selection"] = {f"project:{project.id}": [selected_user.id]}
+        session["project_user_add_selection"] = {
+            f"project:{project.id}": [member_selection(selected_user)]
+        }
         session.save()
 
         response = client.get(reverse("projects:project_users_add_confirm", args=[project.uuid]))
@@ -346,7 +344,9 @@ class TestProjectAddUsersFlow:
         selected_user = baker.make("users.User", email="member.four@example.com")
         client.force_login(user)
         session = client.session
-        session["project_user_add_selection"] = {f"project:{project.id}": [selected_user.id]}
+        session["project_user_add_selection"] = {
+            f"project:{project.id}": [member_selection(selected_user)]
+        }
         session.save()
 
         with django_capture_on_commit_callbacks(execute=True):
@@ -382,7 +382,9 @@ class TestProjectAddUsersFlow:
         )
         client.force_login(user)
         session = client.session
-        session["project_user_add_selection"] = {f"project:{project.id}": [selected_user.id]}
+        session["project_user_add_selection"] = {
+            f"project:{project.id}": [member_selection(selected_user)]
+        }
         session.save()
 
         with (
@@ -413,7 +415,9 @@ class TestProjectAddUsersFlow:
         selected_user = baker.make("users.User", email="member.config.fail@example.com")
         client.force_login(user)
         session = client.session
-        session["project_user_add_selection"] = {f"project:{project.id}": [selected_user.id]}
+        session["project_user_add_selection"] = {
+            f"project:{project.id}": [member_selection(selected_user)]
+        }
         session.save()
 
         with (
@@ -442,7 +446,9 @@ class TestProjectAddUsersFlow:
         selected_user = baker.make("users.User", email="history.add@example.com")
         client.force_login(user)
         session = client.session
-        session["project_user_add_selection"] = {f"project:{project.id}": [selected_user.id]}
+        session["project_user_add_selection"] = {
+            f"project:{project.id}": [member_selection(selected_user)]
+        }
         session.save()
 
         client.post(reverse("projects:project_users_add_confirm", args=[project.uuid]))
@@ -451,6 +457,104 @@ class TestProjectAddUsersFlow:
         historical = membership.history.filter(history_type="+")
         assert historical.exists()
         assert historical.first().history_user == user
+
+    def test_confirm_adds_new_entra_user_creates_stub_account(
+        self,
+        client,
+        django_capture_on_commit_callbacks,
+        user,
+        project,
+        project_membership_notification_service,
+    ):
+        new_oid = str(uuid.uuid4())
+        client.force_login(user)
+        session = client.session
+        session["project_user_add_selection"] = {
+            f"project:{project.id}": [
+                {
+                    "oid": new_oid,
+                    "email": "new.hire@example.com",
+                    "display_name": "New Hire",
+                }
+            ]
+        }
+        session.save()
+
+        graph_user = {
+            "id": new_oid,
+            "mail": "new.hire@example.com",
+            "givenName": "New",
+            "surname": "Hire",
+            "displayName": "New Hire",
+        }
+
+        with (
+            patch("projects.services.MicrosoftGraphClient.from_request") as from_request,
+            django_capture_on_commit_callbacks(execute=True),
+        ):
+            from_request.return_value.get_user.return_value = graph_user
+            response = client.post(
+                reverse("projects:project_users_add_confirm", args=[project.uuid])
+            )
+
+        assert response.status_code == 302
+        from_request.return_value.get_user.assert_called_once_with(new_oid)
+        created_user = User.objects.get(oid=new_oid)
+        assert created_user.email == "new.hire@example.com"
+        assert created_user.first_name == "New"
+        assert created_user.last_name == "Hire"
+        assert ProjectUserPermissions.objects.filter(
+            project=project,
+            user=created_user,
+            role="admin",
+        ).exists()
+
+    def test_confirm_add_redirects_when_entra_auth_missing(self, client, user, project):
+        new_oid = str(uuid.uuid4())
+        client.force_login(user)
+        session = client.session
+        session["project_user_add_selection"] = {
+            f"project:{project.id}": [
+                {"oid": new_oid, "email": "x@example.com", "display_name": "X"}
+            ]
+        }
+        session.save()
+
+        with patch("projects.services.MicrosoftGraphClient.from_request") as from_request:
+            from_request.side_effect = EntraAuthenticationError("no token")
+            response = client.post(
+                reverse("projects:project_users_add_confirm", args=[project.uuid])
+            )
+
+        assert response.status_code == 302
+        assert response.url == reverse("projects:project_users_add", args=[project.uuid])
+        assert not User.objects.filter(oid=new_oid).exists()
+        assert "error_message" in client.session
+
+    def test_confirm_add_redirects_when_entra_lookup_fails(self, client, user, project):
+        new_oid = str(uuid.uuid4())
+        client.force_login(user)
+        session = client.session
+        session["project_user_add_selection"] = {
+            f"project:{project.id}": [
+                {"oid": new_oid, "email": "x@example.com", "display_name": "X"}
+            ]
+        }
+        session.save()
+
+        with (
+            patch("projects.services.MicrosoftGraphClient.from_request") as from_request,
+            patch("projects.views.sentry_sdk.capture_exception") as capture_exception,
+        ):
+            from_request.return_value.get_user.side_effect = EntraRequestError("boom")
+            response = client.post(
+                reverse("projects:project_users_add_confirm", args=[project.uuid])
+            )
+
+        assert response.status_code == 302
+        assert response.url == reverse("projects:project_users_add", args=[project.uuid])
+        assert not User.objects.filter(oid=new_oid).exists()
+        capture_exception.assert_called_once()
 
 
 class TestProjectsListView:
@@ -547,7 +651,9 @@ class TestProjectCreateFlow:
         client.force_login(user)
 
         session = client.session
-        session["project_user_add_selection"] = {"project_create_user_add": [selected_user.id]}
+        session["project_user_add_selection"] = {
+            "project_create_user_add": [member_selection(selected_user)]
+        }
         session.save()
 
         response = client.post(
@@ -573,7 +679,9 @@ class TestProjectCreateFlow:
                 "members-INITIAL_FORMS": "0",
                 "members-MIN_NUM_FORMS": "0",
                 "members-MAX_NUM_FORMS": "1000",
-                "members-0-user": str(selected_user.id),
+                "members-0-oid": str(selected_user.oid),
+                "members-0-email": selected_user.email,
+                "members-0-display_name": selected_user.full_name,
             },
         )
 
@@ -582,7 +690,7 @@ class TestProjectCreateFlow:
 
         session = client.session
         assert session["project_user_add_selection"]["project_create_user_add"] == [
-            selected_user.id
+            member_selection(selected_user)
         ]
 
     def test_create_add_users_prefills_yes_when_selection_exists(self, client, user):
@@ -590,7 +698,9 @@ class TestProjectCreateFlow:
         client.force_login(user)
 
         session = client.session
-        session["project_user_add_selection"] = {"project_create_user_add": [selected_user.id]}
+        session["project_user_add_selection"] = {
+            "project_create_user_add": [member_selection(selected_user)]
+        }
         session.save()
 
         response = client.get(reverse("projects:project_create_add_users"))
@@ -610,7 +720,9 @@ class TestProjectCreateFlow:
             "description": "Confirm description",
             "business_unit_id": business_unit.id,
         }
-        session["project_user_add_selection"] = {"project_create_user_add": [selected_user.id]}
+        session["project_user_add_selection"] = {
+            "project_create_user_add": [member_selection(selected_user)]
+        }
         session.save()
 
         response = client.get(reverse("projects:project_create_confirm"))
@@ -632,7 +744,9 @@ class TestProjectCreateFlow:
             "description": "Final description",
             "business_unit_id": business_unit.id,
         }
-        session["project_user_add_selection"] = {"project_create_user_add": [selected_user.id]}
+        session["project_user_add_selection"] = {
+            "project_create_user_add": [member_selection(selected_user)]
+        }
         session.save()
 
         response = client.post(reverse("projects:project_create_confirm"))
@@ -660,7 +774,9 @@ class TestProjectCreateFlow:
             "description": "desc",
             "business_unit_id": business_unit.id,
         }
-        session["project_user_add_selection"] = {"project_create_user_add": [selected_user.id]}
+        session["project_user_add_selection"] = {
+            "project_create_user_add": [member_selection(selected_user)]
+        }
         session.save()
 
         client.post(reverse("projects:project_create_confirm"))

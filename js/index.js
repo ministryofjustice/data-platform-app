@@ -5,6 +5,7 @@ import htmx from "htmx.org";
 import AddAnotherAutocomplete from "./components/add-another-autocomplete/add-another-autocomplete.js";
 import AutoSubmitSelect from "./components/auto-submit-select/auto-submit-select.js";
 import CopyButton from "./components/copy-button/copy-button.js";
+import EntraUserAutocomplete from "./components/entra-user-autocomplete/entra-user-autocomplete.js";
 import UsageChart from "./components/usage-chart/usage-chart.js";
 import ViewToggle from "./components/view-toggle/view-toggle.js";
 
@@ -21,6 +22,7 @@ window.htmx = htmx;
 function reinitialiseSwappedContent(scope) {
   initGovuk(scope);
   initMoj(scope);
+  EntraUserAutocomplete.init(scope);
 }
 
 let initialised = false;
@@ -40,6 +42,7 @@ const App = {
     AddAnotherAutocomplete.init();
     AutoSubmitSelect.init();
     CopyButton.init();
+    EntraUserAutocomplete.init();
     UsageChart.init();
     ViewToggle.init();
 

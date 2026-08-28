@@ -1,7 +1,8 @@
 import { initAll as initXGovuk } from "@x-govuk/govuk-prototype-components";
+import EntraUserAutocomplete from "../entra-user-autocomplete/entra-user-autocomplete.js";
 
 const AddAnotherAutocomplete = {
-  init: function () {
+  init: function (scope = document) {
     const syncFormsetCount = function (container) {
       const form = container.closest("form");
       if (!form) {
@@ -19,7 +20,81 @@ const AddAnotherAutocomplete = {
       totalFormsField.value = String(itemCount);
     };
 
-    const addAnotherContainers = document.querySelectorAll(
+    const resetValidation = function (newItem) {
+      newItem.querySelectorAll(".govuk-error-message").forEach((element) => {
+        element.remove();
+      });
+      newItem
+        .querySelectorAll(".govuk-form-group--error")
+        .forEach((element) => {
+          element.classList.remove("govuk-form-group--error");
+        });
+    };
+
+    const resetSelectAutocomplete = function (newItem) {
+      const select = newItem.querySelector(
+        'select[data-module="autocomplete"]',
+      );
+      if (!select) {
+        return;
+      }
+
+      // Remove cloned autocomplete UI so the new row starts empty.
+      newItem
+        .querySelectorAll(
+          ".autocomplete__wrapper, .autocomplete__hint, .autocomplete__status",
+        )
+        .forEach((element) => element.remove());
+
+      select.value = "";
+      select.selectedIndex = 0;
+      select.removeAttribute("aria-invalid");
+
+      initXGovuk({ scope: newItem });
+    };
+
+    const resetEntraAutocomplete = function (newItem) {
+      const mount = newItem.querySelector(
+        '[data-module="entra-user-autocomplete"]',
+      );
+      if (!mount) {
+        return;
+      }
+
+      // Drop cloned enhancement so init() can rebuild it from scratch.
+      mount
+        .querySelectorAll(
+          ".autocomplete__wrapper, .autocomplete__hint, .autocomplete__status",
+        )
+        .forEach((element) => element.remove());
+      delete mount.dataset.initialised;
+
+      newItem
+        .querySelectorAll(
+          'input[type="hidden"][data-entra-user-id], input[type="hidden"][data-entra-user-email], input[type="hidden"][data-entra-user-name]',
+        )
+        .forEach((hidden) => {
+          hidden.value = "";
+        });
+
+      // MOJ renumbers the hidden fields but not the mount, so derive a unique
+      // input id from the (already renumbered) oid field and realign the label.
+      const oidField = newItem.querySelector(
+        'input[type="hidden"][data-entra-user-id]',
+      );
+      if (oidField) {
+        const inputId = `${oidField.id}-autocomplete`;
+        mount.dataset.inputId = inputId;
+        const label = newItem.querySelector("label");
+        if (label) {
+          label.htmlFor = inputId;
+        }
+      }
+
+      EntraUserAutocomplete.init(newItem);
+    };
+
+    const addAnotherContainers = scope.querySelectorAll(
       '.moj-add-another[data-module="moj-add-another"]',
     );
 
@@ -50,37 +125,9 @@ const AddAnotherAutocomplete = {
             return;
           }
 
-          const select = newItem.querySelector(
-            'select[data-module="autocomplete"]',
-          );
-          if (!select) {
-            return;
-          }
-
-          // Remove cloned autocomplete UI so the new row starts empty.
-          newItem
-            .querySelectorAll(
-              ".autocomplete__wrapper, .autocomplete__hint, .autocomplete__status",
-            )
-            .forEach((element) => element.remove());
-
-          // Remove copied validation state from cloned rows.
-          newItem
-            .querySelectorAll(".govuk-error-message")
-            .forEach((element) => {
-              element.remove();
-            });
-          newItem
-            .querySelectorAll(".govuk-form-group--error")
-            .forEach((element) => {
-              element.classList.remove("govuk-form-group--error");
-            });
-
-          select.value = "";
-          select.selectedIndex = 0;
-          select.removeAttribute("aria-invalid");
-
-          initXGovuk({ scope: newItem });
+          resetValidation(newItem);
+          resetSelectAutocomplete(newItem);
+          resetEntraAutocomplete(newItem);
         });
       });
     });
