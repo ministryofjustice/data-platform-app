@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-08-26T10:11:06.257263+00:00'
+generated_at: '2026-08-28T14:12:13.917752+00:00'
 apm_version: 0.28.0
 dependencies:
 - repo_url: ministryofjustice/ai-toolkit
