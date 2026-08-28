@@ -194,3 +194,69 @@ class TestUsageServiceGetUsage:
             result = service.get_usage(date(2026, 8, 1))
 
         assert result["overview_data"] == {"has_usage": False}
+
+    def test_excludes_keys_and_models_with_zero_total_spend(self, team, gateway_client, key):
+        gateway_client.team_info.return_value = {
+            "team_info": {
+                "created_at": "2026-01-15T10:00:00.000000Z",
+                "max_budget": 100,
+            }
+        }
+        gateway_client.team_daily_activity.side_effect = [
+            {
+                "results": [
+                    {
+                        "date": "2026-08-10",
+                        "metrics": {"spend": 10},
+                        "breakdown": {
+                            "api_keys": {
+                                key.litellm_token: {
+                                    "metrics": {"spend": 10},
+                                    "metadata": {"key_alias": key.litellm_alias},
+                                },
+                                "zero-key-token": {
+                                    "metrics": {"spend": 0},
+                                    "metadata": {"key_alias": "zero-key"},
+                                },
+                                "cancelling-token": {
+                                    "metrics": {"spend": 5},
+                                    "metadata": {"key_alias": "cancelling-key"},
+                                },
+                            },
+                            "models": {
+                                "gpt-4": {"metrics": {"spend": 10}},
+                                "unused-model": {"metrics": {"spend": 0}},
+                            },
+                        },
+                    },
+                    {
+                        "date": "2026-08-11",
+                        "metrics": {"spend": -5},
+                        "breakdown": {
+                            "api_keys": {
+                                "cancelling-token": {
+                                    "metrics": {"spend": -5},
+                                    "metadata": {"key_alias": "cancelling-key"},
+                                },
+                            },
+                            "models": {},
+                        },
+                    },
+                ]
+            },
+            {"results": []},
+        ]
+
+        with UsageService(gateway_client, team) as service:
+            result = service.get_usage(date(2026, 8, 1))
+
+        assert result["key_data"]["rows"] == [
+            {
+                "label": "primary-key",
+                "url": reverse(
+                    "ai_gateway:key_detail", kwargs={"uuid": team.project.uuid, "pk": key.pk}
+                ),
+                "spend": 10,
+            }
+        ]
+        assert result["model_data"]["rows"] == [{"label": "gpt-4", "spend": 10}]
