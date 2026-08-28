@@ -1,27 +1,27 @@
 lockfile_version: '1'
-generated_at: '2026-08-20T08:32:26.515348+00:00'
+generated_at: '2026-08-26T10:11:06.257263+00:00'
 apm_version: 0.28.0
 dependencies:
-- repo_url: ministryofjustice/data-platform-ai-toolkit
-  name: software-engineering
+- repo_url: ministryofjustice/ai-toolkit
+  name: data-platform-software-engineering
   host: github.com
-  resolved_commit: 208a806c71988322cf112ad2c0b33964793112c2
+  resolved_commit: 69e66f8ce36ead7125ab5d93840a8a16aa87d883
   resolved_ref: main
   version: 1.0.0
-  virtual_path: toolkits/software-engineering
+  virtual_path: toolkits/data-platform/software-engineering
   is_virtual: true
   package_type: apm_package
   deployed_files:
   - .github/instructions/django.instructions.md
   - .github/instructions/python.instructions.md
   deployed_file_hashes:
-    .github/instructions/django.instructions.md: sha256:786b141416df971f0a7b919a22e182e77cea0e92e5c0390e2fbd3c841b716767
-    .github/instructions/python.instructions.md: sha256:7b482b4927af78e71dc7e94b28597260fdb8b328463e34ced9f1db06a6796b41
-  content_hash: sha256:88fd3129213f0edce7527c5b4b4156f73744cd985243178e9a9463e9c758ff80
-- repo_url: ministryofjustice/data-platform-ai-toolkit
+    .github/instructions/django.instructions.md: sha256:491282539794b155bf8b00f553235793c17aba930ba9da77d9355aa97117d904
+    .github/instructions/python.instructions.md: sha256:7202baabd0358b76e17a0f8a6841c29ee825d0635def27545c34b0daa43b9e07
+  content_hash: sha256:f1f807f78a59222e28016f04a68fbc2d2b9a36d8688e0301950889abbe93b977
+- repo_url: ministryofjustice/ai-toolkit
   name: universal
   host: github.com
-  resolved_commit: 208a806c71988322cf112ad2c0b33964793112c2
+  resolved_commit: 69e66f8ce36ead7125ab5d93840a8a16aa87d883
   resolved_ref: main
   version: 1.0.0
   virtual_path: toolkits/universal
@@ -31,9 +31,9 @@ dependencies:
   - .github/instructions/language.instructions.md
   - .github/instructions/ministryofjustice.instructions.md
   deployed_file_hashes:
-    .github/instructions/language.instructions.md: sha256:70e9d0f220f2ceec1cf5b8088c9e199259670f9baa383b330ff3ba9e4107e655
-    .github/instructions/ministryofjustice.instructions.md: sha256:470dc2fbec601f32b14b73f6665a17dd7e3427c0bcdc5c8197c5e3905d30dfcc
-  content_hash: sha256:d375ca1db8fc999bc92d31994eba9aa81611fb48d0750d557e4d27ab1249f68e
+    .github/instructions/language.instructions.md: sha256:dbbd7951e0cfcdff32b237f1b35ab62ce9f30ceb6c3674f8f1d028a2b7c7c9be
+    .github/instructions/ministryofjustice.instructions.md: sha256:e5f98f5dae901db79b6a869826fb40fcc051fe1ddd057e5fd4dc8d7822e1e652
+  content_hash: sha256:f503de05a01685575188eee0610cafd4ac2ed0688bf4848d16f5f5e0c41ab435
 deployments:
 - kind: project-relative
   target: copilot
@@ -41,36 +41,45 @@ deployments:
   runtime: null
   scope: project
   owners:
-  - ministryofjustice/data-platform-ai-toolkit/toolkits/software-engineering
-  active_owner: ministryofjustice/data-platform-ai-toolkit/toolkits/software-engineering
-  content_hash: sha256:786b141416df971f0a7b919a22e182e77cea0e92e5c0390e2fbd3c841b716767
+  - ministryofjustice/ai-toolkit/toolkits/data-platform/software-engineering
+  active_owner: ministryofjustice/ai-toolkit/toolkits/data-platform/software-engineering
+  content_hash: sha256:491282539794b155bf8b00f553235793c17aba930ba9da77d9355aa97117d904
 - kind: project-relative
   target: copilot
   value: .github/instructions/language.instructions.md
   runtime: null
   scope: project
   owners:
-  - ministryofjustice/data-platform-ai-toolkit/toolkits/universal
-  active_owner: ministryofjustice/data-platform-ai-toolkit/toolkits/universal
-  content_hash: sha256:70e9d0f220f2ceec1cf5b8088c9e199259670f9baa383b330ff3ba9e4107e655
+  - ministryofjustice/ai-toolkit/toolkits/universal
+  active_owner: ministryofjustice/ai-toolkit/toolkits/universal
+  content_hash: sha256:dbbd7951e0cfcdff32b237f1b35ab62ce9f30ceb6c3674f8f1d028a2b7c7c9be
 - kind: project-relative
   target: copilot
   value: .github/instructions/ministryofjustice.instructions.md
   runtime: null
   scope: project
   owners:
-  - ministryofjustice/data-platform-ai-toolkit/toolkits/universal
-  active_owner: ministryofjustice/data-platform-ai-toolkit/toolkits/universal
-  content_hash: sha256:470dc2fbec601f32b14b73f6665a17dd7e3427c0bcdc5c8197c5e3905d30dfcc
+  - ministryofjustice/ai-toolkit/toolkits/universal
+  active_owner: ministryofjustice/ai-toolkit/toolkits/universal
+  content_hash: sha256:e5f98f5dae901db79b6a869826fb40fcc051fe1ddd057e5fd4dc8d7822e1e652
 - kind: project-relative
   target: copilot
   value: .github/instructions/python.instructions.md
   runtime: null
   scope: project
   owners:
-  - ministryofjustice/data-platform-ai-toolkit/toolkits/software-engineering
-  active_owner: ministryofjustice/data-platform-ai-toolkit/toolkits/software-engineering
-  content_hash: sha256:7b482b4927af78e71dc7e94b28597260fdb8b328463e34ced9f1db06a6796b41
+  - ministryofjustice/ai-toolkit/toolkits/data-platform/software-engineering
+  active_owner: ministryofjustice/ai-toolkit/toolkits/data-platform/software-engineering
+  content_hash: sha256:7202baabd0358b76e17a0f8a6841c29ee825d0635def27545c34b0daa43b9e07
+- kind: uri
+  target: mcp
+  value: github
+  runtime: vscode
+  scope: project
+  owners:
+  - .
+  active_owner: .
+  content_hash: null
 mcp_servers:
 - github
 mcp_configs:
@@ -79,5 +88,8 @@ mcp_configs:
     transport: http
     registry: false
     url: https://api.githubcopilot.com/mcp/
+mcp_target_servers:
+  vscode:
+  - github
 mcp_config_provenance:
   github: universal
