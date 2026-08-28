@@ -284,7 +284,7 @@ class UsageService:
                 if dimension == "api_keys":
                     _id = item_data["metadata"]["key_alias"]
                 totals[_id] = totals.get(_id, 0) + spend
-        return totals
+        return {_id: spend for _id, spend in totals.items() if round(spend, 2) != 0}
 
 
 class KeyService:
