@@ -55,7 +55,8 @@ class UsageView(FeatureRequiredMixin, ProjectScopedMixin, ProjectLayoutContextMi
     def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         context = self.get_context_data(**kwargs)
         overview_data = context.get("overview_data", {})
-        context["has_keys"] = self.project.ai_gateway_keys.exists()
+        # Check if a key has existed against the project at any point
+        context["has_keys"] = Key.history.filter(project_id=self.project.pk).exists()
         if request.htmx and request.GET.get("daily") == "all" and overview_data.get("has_usage"):
             return render(
                 request,
