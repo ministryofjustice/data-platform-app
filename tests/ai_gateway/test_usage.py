@@ -1,5 +1,5 @@
 from datetime import date
-from unittest.mock import create_autospec
+from unittest.mock import create_autospec, patch
 
 import pytest
 from django.urls import reverse
@@ -7,6 +7,14 @@ from django.urls import reverse
 from ai_gateway.client import AIGatewayClient
 from ai_gateway.forms import UsageMonthForm
 from ai_gateway.services import UsageService
+
+
+class FrozenDate(date):
+    """A ``date`` subclass whose ``today()`` is fixed, so tests don't drift month to month."""
+
+    @classmethod
+    def today(cls):
+        return cls(2026, 8, 20)
 
 
 @pytest.fixture
@@ -54,7 +62,10 @@ class TestUsageServiceMonthChoices:
             "team_info": {"created_at": "2025-12-20T14:57:21.001000Z"}
         }
 
-        with UsageService(gateway_client, team) as service:
+        with (
+            patch("ai_gateway.services.date", FrozenDate),
+            UsageService(gateway_client, team) as service,
+        ):
             choices = service.get_usage_month_choices()
 
         assert choices == [

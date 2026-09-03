@@ -972,6 +972,16 @@ class TestUsageView:
         }
         return service
 
+    def test_show_no_usage(self, client, user, team_without_key):
+        service = self._mock_service_with_daily_spend()
+        with patch("ai_gateway.services.UsageService.from_settings", return_value=service):
+            client.force_login(user)
+            response = client.get(
+                reverse("ai_gateway:usage", args=[team_without_key.project.uuid])
+            )
+
+        assertContains(response, "This project has no recorded AI Gateway spend")
+
     def test_daily_table_shows_truncation_note_by_default(self, client, user, team):
         service = self._mock_service_with_daily_spend()
         with patch("ai_gateway.services.UsageService.from_settings", return_value=service):
