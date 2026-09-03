@@ -10,7 +10,7 @@
   {% include "includes/ai_gateway/_usage_intro.html" %}
   {% if usage_error %}
     {% include "includes/error_message.html" with heading="Could not load usage data" message=usage_error only %}
-  {% elif not overview_data.has_usage %}
+  {% elif not has_keys %}
     {% include "includes/ai_gateway/_usage_empty_state.html" %}
   {% else %}
     <p class="govuk-body">See the AI spend for this project, including spend per API key and spend per model.</p>
@@ -29,22 +29,26 @@
         </li>
       </ul>
       <div class="govuk-tabs__panel" id="overview">
+        <div class="govuk-grid-row govuk-!-margin-bottom-4">
+          <div class="govuk-grid-column-two-thirds">
+            <h3 class="govuk-heading-m govuk-!-margin-bottom-1">Project spend overview</h3>
+          </div>
+        </div>
+        <div class="govuk-grid-row govuk-!-margin-bottom-4">
+          <div class="govuk-grid-column-one-third govuk-!-padding-top-2">
+            <p class="govuk-body govuk-!-margin-bottom-0">Spend for {{ selected_month|date:"F Y" }}</p>
+          </div>
+          <div class="govuk-grid-column-two-thirds govuk-!-text-align-right">
+            {% include "includes/ai_gateway/_usage_month_select.html" %}
+          </div>
+        </div>
         {% if not overview_data.has_usage %}
-          {% include "includes/ai_gateway/_usage_empty_state.html" %}
+          <div class="govuk-grid-row govuk-!-margin-bottom-4">
+            <div class="govuk-grid-column-one-half">
+              <p class="govuk-body">No usage recorded for this month.</p>
+            </div>
+          </div>
         {% else %}
-          <div class="govuk-grid-row govuk-!-margin-bottom-4">
-            <div class="govuk-grid-column-two-thirds">
-              <h3 class="govuk-heading-m govuk-!-margin-bottom-1">Project spend overview</h3>
-            </div>
-          </div>
-          <div class="govuk-grid-row govuk-!-margin-bottom-4">
-            <div class="govuk-grid-column-one-third govuk-!-padding-top-2">
-              <p class="govuk-body govuk-!-margin-bottom-0">Spend for {{ selected_month|date:"F Y" }}</p>
-            </div>
-            <div class="govuk-grid-column-two-thirds govuk-!-text-align-right">
-              {% include "includes/ai_gateway/_usage_month_select.html" %}
-            </div>
-          </div>
           <div class="govuk-grid-row govuk-!-margin-bottom-4">
             <div class="govuk-grid-column-one-half">
               <div class="info-panel">
