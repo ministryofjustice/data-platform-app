@@ -69,4 +69,5 @@ ignore:
   - vulnerability: CVE-2026-54371
     package:
       type: deb
+      name: libattr1
     expires: 2026-09-28
