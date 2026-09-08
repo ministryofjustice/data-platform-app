@@ -64,6 +64,17 @@ class UsageService:
         """
         return datetime.fromisoformat(self.team_info.get("created_at")).date().replace(day=1)
 
+    @cached_property
+    def model_names_by_deployment(self) -> dict[str, str]:
+        """Return public model names keyed by their configured deployment model."""
+        model_names = {}
+        for model_info in self._client.list_models_v1_info():
+            model_name = model_info.get("model_name")
+            deployment_model = model_info.get("litellm_params", {}).get("model")
+            if model_name and deployment_model:
+                model_names[deployment_model] = model_name
+        return model_names
+
     def get_usage_month_choices(self) -> list[date]:
         """Return months from the team's creation month to the current month."""
         choices = []
@@ -209,7 +220,11 @@ class UsageService:
     def _build_model_usage(self, daily_results: list[dict[str, Any]]) -> dict[str, Any]:
         totals = self._breakdown_totals(daily_results, "models")
         rows = [
-            {"label": model_name, "spend": round(spend, 2)} for model_name, spend in totals.items()
+            {
+                "label": self.model_names_by_deployment.get(model_name, model_name),
+                "spend": round(spend, 2),
+            }
+            for model_name, spend in totals.items()
         ]
         rows.sort(key=lambda row: row["spend"], reverse=True)
         chart_data = self._create_chart_data(
