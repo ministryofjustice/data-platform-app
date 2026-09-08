@@ -159,6 +159,28 @@ class TestUsageServiceGetUsage:
         assert gateway_client.team_daily_activity.call_count == 2
         gateway_client.team_info.assert_called_once_with("team-xyz")
 
+    def test_model_usage_uses_public_model_name(self, team, gateway_client):
+        gateway_client.list_models_v1_info.return_value = [
+            {
+                "model_name": "public-sonnet",
+                "litellm_params": {"model": "bedrock/eu.anthropic.claude-sonnet-5"},
+            }
+        ]
+
+        result = UsageService(gateway_client, team)._build_model_usage(
+            [
+                {
+                    "breakdown": {
+                        "models": {
+                            "bedrock/eu.anthropic.claude-sonnet-5": {"metrics": {"spend": 10}}
+                        }
+                    }
+                }
+            ]
+        )
+
+        assert result["rows"] == [{"label": "public-sonnet", "spend": 10}]
+
     def test_daily_and_monthly_charts_use_line_type_beyond_min_points(self, team, gateway_client):
         gateway_client.team_info.return_value = {
             "team_info": {
