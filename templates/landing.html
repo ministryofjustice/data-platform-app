@@ -4,10 +4,10 @@
   Landing - Justice Data Platform | Ministry of Justice
 {% endblock title %}
 {% block content %}
-  <div class="govuk-grid-row">
+  <div class="govuk-grid-row govuk-!-margin-bottom-7">
     <div class="govuk-grid-column-two-thirds">
       <h2 class="govuk-heading-l">Justice Data Platform</h2>
-      <p class="govuk-body">
+      <p class="govuk-body govuk-!-width-three-quarters">
         Keep your data and models secure, reproducible, and scalable. You can also transfer data and manage access, all in one place.
       </p>
     </div>
@@ -15,10 +15,35 @@
       <div class="info-panel">
         <h4 class="govuk-heading-m">Projects</h4>
         <p class="govuk-body">
-          Access a wide range of large language models and AI tools from within a project, using the AI Gateway API.
+          Access a wide range of large language models and AI tools from within a project, using the Justice AI Gateway.
         </p>
         <a class="govuk-button moj-button govuk-!-margin-bottom-1"
            href="{% url 'projects:projects_list' %}">Go to projects</a>
+      </div>
+    </div>
+  </div>
+  <div class="govuk-grid-row app-equal-height-panels govuk-!-margin-bottom-8">
+    <div class="govuk-grid-column-one-half">
+      <div class="info-panel">
+        <h4 class="govuk-heading-m">AI usage cost calculator</h4>
+        <p class="govuk-body">
+          Estimate the cost of different models available through the Justice AI Gateway, based on expected token usage and request volume.
+        </p>
+        <a class="govuk-link" href="{% url 'ai_cost_usage_calculator' %}">
+          {% include "includes/_icon_arrow_right.html" %}
+          Estimate costs
+        </a>
+      </div>
+    </div>
+    <div class="govuk-grid-column-one-half">
+      <div class="info-panel">
+        <h4 class="govuk-heading-m">Find data</h4>
+        <p class="govuk-body">Find justice data assets and see how to request access.</p>
+        <a class="govuk-link"
+           href="https://find-moj-data.service.justice.gov.uk/">
+          {% include "includes/_icon_arrow_right.html" %}
+          Find data
+        </a>
       </div>
     </div>
   </div>

@@ -33,6 +33,56 @@ def previous_month(value: date) -> date:
     return date(year=value.year, month=value.month - 1, day=1)
 
 
+def estimate_costs(
+    *,
+    usage_period: str,
+    model_rows: list[dict[str, Any]],
+    available_models: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Estimate spend for each model row and the overall total.
+
+    ``model_rows`` are cleaned_data dicts from ModelUsageRateForm; ``usage_period``
+    is "daily" or "monthly" from UsagePeriodForm (does not impact calculation).
+    """
+    models_by_name = {model["model_name"]: model for model in available_models}
+
+    rows = []
+    total_per_request = 0.0
+    total_cost = 0.0
+
+    for row in model_rows:
+        model = models_by_name.get(row["model"])
+        if not model:
+            continue
+
+        input_cost = (model.get("input_cost_per_million") or 0) * row["input_tokens"] / 1_000_000
+        output_cost = (
+            (model.get("output_cost_per_million") or 0) * row["output_tokens"] / 1_000_000
+        )
+
+        per_request_cost = input_cost + output_cost
+        row_cost = per_request_cost * row["requests_per_period"]
+
+        total_per_request += per_request_cost
+        total_cost += row_cost
+
+        rows.append(
+            {
+                "model_name": model["display_name"],
+                "provider": model["provider"],
+                "per_request_cost": round(per_request_cost, 3),
+                "cost": round(row_cost, 2),
+            }
+        )
+
+    return {
+        "usage_period": usage_period,
+        "rows": rows,
+        "total_per_request": round(total_per_request, 3),
+        "total_cost": round(total_cost, 2),
+    }
+
+
 class UsageService:
     """Coordinates AI Gateway usage reporting for a team."""
 
@@ -330,6 +380,14 @@ class KeyService:
             for model in self._client.list_models_v1_info()
             if model.get("model_name") in allowed
         ]
+
+    def list_all_models(self) -> list[dict[str, Any]]:
+        """Return every model on the gateway, regardless of project access.
+
+        The app-level cost estimator is not scoped to a project, so it shows
+        the same gateway model catalogue to every authenticated user.
+        """
+        return [self._enrich_model(model) for model in self._client.list_models_v1_info()]
 
     def _allowed_model_names(self, project: Project) -> set[str]:
         """Return every model name ``project`` may currently use.

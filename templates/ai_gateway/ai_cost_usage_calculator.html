@@ -1,0 +1,218 @@
+{% extends "base/base.html" %}
+{% block title %}
+  AI usage cost calculator - Justice Data Platform | Ministry of Justice
+{% endblock title %}
+{% block back_link %}
+  <a href="{% url 'landing' %}" class="govuk-back-link">Back</a>
+{% endblock back_link %}
+{% block content %}
+  <div>
+    <div class="govuk-grid-row govuk-!-margin-bottom-2">
+      <div class="govuk-grid-column-two-thirds">
+        <h1 class="govuk-heading-l">AI usage cost calculator</h1>
+        <p class="govuk-body govuk-!-width-three-quarters">
+          Estimate the cost of using models available through the Justice AI Gateway.
+        </p>
+      </div>
+    </div>
+    <div>
+      {% if error_summary_items %}
+        <div class="govuk-error-summary" data-module="govuk-error-summary">
+          <div role="alert">
+            <h2 class="govuk-error-summary__title">There is a problem</h2>
+            <div class="govuk-error-summary__body">
+              <ul class="govuk-list govuk-error-summary__list">
+                {% for item in error_summary_items %}
+                  <li>
+                    <a href="{{ item.href }}">{{ item.message }}</a>
+                  </li>
+                {% endfor %}
+              </ul>
+            </div>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+    <div class="govuk-grid-row govuk-!-margin-bottom-8">
+      <div class="govuk-grid-column-full">
+        <div class="info-panel">
+          <form method="post">
+            {% csrf_token %}
+            <h4 class="govuk-heading-m">Usage period</h4>
+            <div class="govuk-form-group{% if usage_period_form.usage_period.errors %} govuk-form-group--error{% endif %}">
+              <fieldset class="govuk-fieldset">
+                <legend class="govuk-visually-hidden">Usage period</legend>
+                {% if usage_period_form.usage_period.errors %}
+                  {% for error in usage_period_form.usage_period.errors %}
+                    <p class="govuk-error-message">
+                      <span class="govuk-visually-hidden">Error:</span>
+                      {{ error }}
+                    </p>
+                  {% endfor %}
+                {% endif %}
+                <div class="govuk-radios govuk-radios--inline" data-module="govuk-radios">
+                  {% for value, label in usage_period_form.usage_period.field.choices %}
+                    <div class="govuk-radios__item">
+                      <input class="govuk-radios__input"
+                             id="usage_period-{{ value }}"
+                             name="{{ usage_period_form.usage_period.html_name }}"
+                             type="radio"
+                             value="{{ value }}"
+                             {% if usage_period_form.usage_period.value == value %}checked{% endif %}>
+                      <label class="govuk-label govuk-radios__label"
+                             for="usage_period-{{ value }}">{{ label }}</label>
+                    </div>
+                  {% endfor %}
+                </div>
+              </fieldset>
+            </div>
+            <hr class="govuk-section-break govuk-section-break--m govuk-section-break--visible">
+            <div class="moj-add-another app-model-usage-rows"
+                 data-module="moj-add-another">
+              <div class="govuk-form-group{% if formset_has_errors %} govuk-form-group--error{% endif %}"
+                   id="models-usage-rates">
+                <h4 class="govuk-heading-m">Models and usage rates</h4>
+                {% if formset_has_errors %}
+                  <p class="govuk-error-message">
+                    <span class="govuk-visually-hidden">Error:</span> Complete model and usage details
+                  </p>
+                {% endif %}
+                {{ formset.management_form }}
+                <div class="app-model-usage-header">
+                  <p class="govuk-body govuk-!-font-weight-bold govuk-!-margin-bottom-1">Provider</p>
+                  <p class="govuk-body govuk-!-font-weight-bold govuk-!-margin-bottom-1">Model</p>
+                  <p class="govuk-body govuk-!-font-weight-bold govuk-!-margin-bottom-1">Input tokens</p>
+                  <p class="govuk-body govuk-!-font-weight-bold govuk-!-margin-bottom-1">Output tokens</p>
+                  <p class="govuk-body govuk-!-font-weight-bold govuk-!-margin-bottom-1">Requests</p>
+                </div>
+                {% for form in formset %}
+                  <div class="moj-add-another__item">
+                    <div class="govuk-form-group{% if form.provider.errors %} govuk-form-group--error{% endif %}">
+                      <select class="govuk-select govuk-!-width-full"
+                              id="{{ form.provider.id_for_label }}"
+                              name="{{ form.provider.html_name }}"
+                              aria-label="Provider"
+                              data-name="{{ form.prefix }}-%index%-provider"
+                              data-id="id_{{ form.prefix }}-%index%-provider">
+                        <option value="">Select a provider</option>
+                        {% for value, label in form.provider.field.choices %}
+                          <option value="{{ value }}"
+                                  {% if form.provider.value == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                    <div class="govuk-form-group{% if form.model.errors %} govuk-form-group--error{% endif %}">
+                      <select class="govuk-select govuk-!-width-full"
+                              id="{{ form.model.id_for_label }}"
+                              name="{{ form.model.html_name }}"
+                              aria-label="Model"
+                              data-name="{{ form.prefix }}-%index%-model"
+                              data-id="id_{{ form.prefix }}-%index%-model">
+                        <option value="">Select a model</option>
+                        {% for value, label in form.model.field.choices %}
+                          <option value="{{ value }}"
+                                  {% if form.model.value == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                    <div class="govuk-form-group{% if form.input_tokens.errors %} govuk-form-group--error{% endif %}">
+                      <input class="govuk-input govuk-!-width-full{% if form.input_tokens.errors %} govuk-input--error{% endif %}"
+                             id="{{ form.input_tokens.id_for_label }}"
+                             name="{{ form.input_tokens.html_name }}"
+                             aria-label="Input tokens"
+                             type="text"
+                             inputmode="numeric"
+                             value="{{ form.input_tokens.value|default:'' }}"
+                             data-name="{{ form.prefix }}-%index%-input_tokens"
+                             data-id="id_{{ form.prefix }}-%index%-input_tokens">
+                    </div>
+                    <div class="govuk-form-group{% if form.output_tokens.errors %} govuk-form-group--error{% endif %}">
+                      <input class="govuk-input govuk-!-width-full{% if form.output_tokens.errors %} govuk-input--error{% endif %}"
+                             id="{{ form.output_tokens.id_for_label }}"
+                             name="{{ form.output_tokens.html_name }}"
+                             aria-label="Output tokens"
+                             type="text"
+                             inputmode="numeric"
+                             value="{{ form.output_tokens.value|default:'' }}"
+                             data-name="{{ form.prefix }}-%index%-output_tokens"
+                             data-id="id_{{ form.prefix }}-%index%-output_tokens">
+                    </div>
+                    <div class="govuk-form-group{% if form.requests_per_period.errors %} govuk-form-group--error{% endif %}">
+                      <input class="govuk-input govuk-!-width-full{% if form.requests_per_period.errors %} govuk-input--error{% endif %}"
+                             id="{{ form.requests_per_period.id_for_label }}"
+                             name="{{ form.requests_per_period.html_name }}"
+                             aria-label="Requests"
+                             type="text"
+                             inputmode="numeric"
+                             value="{{ form.requests_per_period.value|default:'' }}"
+                             data-name="{{ form.prefix }}-%index%-requests_per_period"
+                             data-id="id_{{ form.prefix }}-%index%-requests_per_period">
+                    </div>
+                    {% if formset.total_form_count > 1 %}
+                      <button type="button"
+                              class="govuk-button govuk-button--secondary moj-add-another__remove-button">
+                        Remove
+                      </button>
+                    {% endif %}
+                  </div>
+                {% endfor %}
+              </div>
+              <button type="button"
+                      class="govuk-button govuk-button--secondary moj-add-another__add-button">
+                Add another model
+              </button>
+            </div>
+            <hr class="govuk-section-break govuk-section-break--m govuk-section-break--visible">
+            <button type="submit" class="govuk-button" data-module="govuk-button">Estimate cost</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% if estimate_result %}
+      <div id="estimate-result" class="govuk-grid-row">
+        <div class="govuk-grid-column-full">
+          <div class="app-cost-estimate-panel">
+            <h4 class="govuk-heading-l">Estimated cost</h4>
+            <p class="govuk-body">Estimated figures are subject to change.</p>
+            <div class="app-cost-estimate-summary">
+              <div class="app-cost-estimate-summary__item">
+                <h3 class="govuk-heading-s">Per request</h3>
+                <p class="app-cost-estimate-summary__value">${{ estimate_result.total_per_request }}</p>
+              </div>
+              <div class="app-cost-estimate-summary__item">
+                <h3 class="govuk-heading-s">{{ estimate_result.usage_period|capfirst }}</h3>
+                <p class="app-cost-estimate-summary__value">${{ estimate_result.total_cost }}</p>
+              </div>
+            </div>
+            <table class="govuk-table app-cost-estimate-table">
+              <thead class="govuk-table__head">
+                <tr class="govuk-table__row">
+                  <th scope="col" class="govuk-table__header">Provider</th>
+                  <th scope="col" class="govuk-table__header">Model</th>
+                  <th scope="col" class="govuk-table__header govuk-table__header--numeric">Per request</th>
+                  <th scope="col" class="govuk-table__header govuk-table__header--numeric">{{ estimate_result.usage_period|capfirst }}</th>
+                </tr>
+              </thead>
+              <tbody class="govuk-table__body">
+                {% for row in estimate_result.rows %}
+                  <tr class="govuk-table__row">
+                    <td class="govuk-table__cell">{{ row.provider }}</td>
+                    <td class="govuk-table__cell">{{ row.model_name }}</td>
+                    <td class="govuk-table__cell govuk-table__cell--numeric">${{ row.per_request_cost }}</td>
+                    <td class="govuk-table__cell govuk-table__cell--numeric">${{ row.cost }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <script>
+          document.getElementById('estimate-result').scrollIntoView({
+              behavior: 'smooth',
+              block: 'start'
+          });
+      </script>
+    {% endif %}
+  </div>
+{% endblock content %}

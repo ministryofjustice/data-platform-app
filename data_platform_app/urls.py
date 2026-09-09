@@ -22,6 +22,7 @@ from django.contrib.auth.decorators import login_not_required
 from django.urls import path
 from django.urls.conf import include
 
+from ai_gateway.views import AICostUsageCalculatorView
 from data_platform_app.views import (
     AccessibilityStatementView,
     DataFactoriesView,
@@ -43,6 +44,11 @@ urlpatterns = [
         name="accessibility_statement",
     ),
     path("app/", LandingView.as_view(), name="landing"),
+    path(
+        "app/ai-cost-usage-calculator/",
+        AICostUsageCalculatorView.as_view(),
+        name="ai_cost_usage_calculator",
+    ),
     path("admin/", admin.site.urls),
     path("healthcheck/", healthcheck, name="healthcheck"),
     path("login/", login_not_required(azure_auth_login), name="login"),

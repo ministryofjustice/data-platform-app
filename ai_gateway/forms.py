@@ -2,6 +2,7 @@ from datetime import date, datetime
 from typing import Any
 
 from django import forms
+from django.forms import BaseFormSet, formset_factory
 
 from ai_gateway.models import Key
 from projects.models import Project
@@ -28,7 +29,7 @@ class KeyCreateForm(forms.ModelForm):
     models = forms.MultipleChoiceField(
         label="AI Model",
         help_text="Add models for this project",
-        error_messages={"required": "Select at least one AI model to continue"},
+        error_messages={"required": "Select a model"},
     )
     name = forms.CharField(
         max_length=255,
@@ -90,3 +91,90 @@ class KeyModelChangeForm(forms.Form):
             raise forms.ValidationError("Make changes to continue")
 
         return selected_models
+
+
+class UsagePeriodForm(forms.Form):
+    """The Daily/Monthly choice for the AI usage cost calculator."""
+
+    PERIOD_CHOICES = [("daily", "Daily"), ("monthly", "Monthly")]
+
+    usage_period = forms.ChoiceField(
+        choices=PERIOD_CHOICES,
+        widget=forms.RadioSelect,
+        initial="monthly",
+        error_messages={"required": "Select a usage period"},
+    )
+
+
+class ModelUsageRateForm(forms.Form):
+    """One model row in the AI usage cost calculator: a model plus its expected usage."""
+
+    provider = forms.ChoiceField(
+        error_messages={"required": "Select a provider"},
+    )
+    model = forms.ChoiceField(
+        error_messages={"required": "Select a model"},
+    )
+    input_tokens = forms.IntegerField(
+        label="Input tokens",
+        min_value=0,
+        max_value=1000000,
+        error_messages={"required": "Enter the number of input tokens"},
+    )
+    output_tokens = forms.IntegerField(
+        label="Output tokens",
+        min_value=0,
+        max_value=1000000,
+        error_messages={"required": "Enter the number of output tokens"},
+    )
+    requests_per_period = forms.IntegerField(
+        label="Requests",
+        min_value=0,
+        max_value=1000000,
+        error_messages={"required": "Enter the number of requests"},
+    )
+
+    def __init__(self, *args, available_models: list[dict[str, Any]], **kwargs):
+        super().__init__(*args, **kwargs)
+        self.available_models = available_models
+        self.fields["provider"].choices = sorted(
+            {(model["provider"], model["provider"]) for model in available_models}
+        )
+        self.fields["model"].choices = [
+            (model["model_name"], model["display_name"]) for model in available_models
+        ]
+
+
+class BaseModelUsageRateFormSet(BaseFormSet):
+    def __init__(self, *args, available_models: list[dict[str, Any]], **kwargs):
+        self.available_models = available_models
+        super().__init__(*args, **kwargs)
+
+    def get_form_kwargs(self, index):
+        kwargs = super().get_form_kwargs(index)
+        kwargs["available_models"] = self.available_models
+        return kwargs
+
+    def clean(self):
+        super().clean()
+
+        if any(self.errors):
+            return
+
+        if not any(form.has_changed() for form in self.forms):
+            raise forms.ValidationError("Add at least one model")
+
+
+def build_model_usage_rate_formset(*, available_models, data=None, initial=None, extra=1):
+    formset_class = formset_factory(
+        ModelUsageRateForm,
+        formset=BaseModelUsageRateFormSet,
+        extra=extra,
+    )
+
+    return formset_class(
+        data=data,
+        initial=initial,
+        prefix="models",
+        available_models=available_models,
+    )
