@@ -18,12 +18,12 @@ from ai_gateway.forms import KeyCreateForm, KeyModelChangeForm, UsageMonthForm
 from ai_gateway.models import Key, Team
 from ai_gateway.services import KeyService, UsageService
 from data_platform_app.mixins import FeatureRequiredMixin
-from projects.mixins import ProjectLayoutContextMixin
+from projects.mixins import ProjectAccessMixin, ProjectLayoutContextMixin
 from projects.models import Project
 
 
-class ProjectScopedMixin:
-    """Resolves the project from the URL, limited to the requesting user's projects."""
+class ProjectScopedMixin(ProjectAccessMixin):
+    """Resolve an accessible project from the URL."""
 
     request: HttpRequest
     kwargs: dict
@@ -31,7 +31,7 @@ class ProjectScopedMixin:
     @cached_property
     def project(self) -> Project:
         return get_object_or_404(
-            Project.objects.filter(user_permissions__user=self.request.user).distinct(),
+            self.get_accessible_projects(),
             uuid=self.kwargs["uuid"],
         )
 

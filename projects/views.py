@@ -28,6 +28,7 @@ from projects.mixins import (
     PROJECT_CREATE_SESSION_KEY,
     USER_BUCKET_SESSION_KEY,
     ExistingProjectMixin,
+    ProjectAccessMixin,
     ProjectLayoutContextMixin,
     ProjectMembershipNotificationMixin,
     ProjectUserSelectionSessionMixin,
@@ -106,18 +107,19 @@ class ProjectListView(ListView):
         return context
 
 
-class ProjectDetailView(ProjectLayoutContextMixin, UUIDObjectMixin, DetailView):
+class ProjectDetailView(
+    ProjectAccessMixin, ProjectLayoutContextMixin, UUIDObjectMixin, DetailView
+):
     template_name = "projects/detail.html"
     context_object_name = "project"
     model = Project
     active_project_section = "overview"
 
     def get_queryset(self):
-        return (
-            Project.objects.filter(user_permissions__user=self.request.user)
-            .select_related("business_unit", "created_by")
-            .prefetch_related("users", "user_permissions__user")
-            .distinct()
+        return self.get_accessible_projects(
+            Project.objects.select_related("business_unit", "created_by").prefetch_related(
+                "users", "user_permissions__user"
+            )
         )
 
     def get_context_data(self, **kwargs):
@@ -338,22 +340,22 @@ class ProjectCreateConfirmView(
         return redirect("projects:project_detail", uuid=project.uuid)
 
 
-class ProjectUsersDetailView(ProjectLayoutContextMixin, UUIDObjectMixin, DetailView):
+class ProjectUsersDetailView(
+    ProjectAccessMixin, ProjectLayoutContextMixin, UUIDObjectMixin, DetailView
+):
     template_name = "projects/user_list.html"
     context_object_name = "project"
     model = Project
     active_project_section = "members"
 
     def get_queryset(self):
-        return (
-            Project.objects.filter(user_permissions__user=self.request.user)
-            .prefetch_related(
+        return self.get_accessible_projects(
+            Project.objects.prefetch_related(
                 Prefetch(
                     "user_permissions",
                     queryset=ProjectUserPermissions.objects.select_related("user"),
                 )
             )
-            .distinct()
         )
 
     def get_context_data(self, **kwargs):
@@ -361,7 +363,7 @@ class ProjectUsersDetailView(ProjectLayoutContextMixin, UUIDObjectMixin, DetailV
         return super().get_context_data(**kwargs)
 
 
-class ProjectDeleteView(UUIDObjectMixin, DeleteView):
+class ProjectDeleteView(ProjectAccessMixin, UUIDObjectMixin, DeleteView):
     """
     Will need additional checks for user permissions to ensure
     the user has access to delete the project.
@@ -373,10 +375,7 @@ class ProjectDeleteView(UUIDObjectMixin, DeleteView):
     success_url = reverse_lazy("projects:projects_list")
 
     def get_queryset(self):
-        return Project.objects.filter(
-            user_permissions__user=self.request.user,
-            user_permissions__role="admin",
-        ).distinct()
+        return self.get_accessible_projects(role="admin")
 
     def form_valid(self, form):
         project = self.object
@@ -471,7 +470,7 @@ class ProjectAddUsersConfirmView(
         return redirect("projects:project_users", uuid=project.uuid)
 
 
-class ProjectRemoveUserView(ProjectMembershipNotificationMixin, DeleteView):
+class ProjectRemoveUserView(ProjectAccessMixin, ProjectMembershipNotificationMixin, DeleteView):
     """
     Will need additional checks for user permissions to ensure
     the user can remove users from the project.
@@ -483,9 +482,9 @@ class ProjectRemoveUserView(ProjectMembershipNotificationMixin, DeleteView):
 
     def get_object(self, queryset=None):
         return get_object_or_404(
-            ProjectUserPermissions.objects.select_related("project", "user")
-            .filter(project__user_permissions__user=self.request.user)
-            .distinct(),
+            ProjectUserPermissions.objects.select_related("project", "user").filter(
+                project__in=self.get_accessible_projects()
+            ),
             project__uuid=self.kwargs["uuid"],
             user_id=self.kwargs["user_id"],
         )

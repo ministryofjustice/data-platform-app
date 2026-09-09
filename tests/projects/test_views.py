@@ -4,7 +4,7 @@ from unittest.mock import patch
 from django.core.exceptions import ImproperlyConfigured
 from django.urls import reverse
 from model_bakery import baker
-from pytest_django.asserts import assertContains, assertInHTML
+from pytest_django.asserts import assertContains, assertInHTML, assertNotContains
 
 from ai_gateway.exceptions import AIGatewayAPIError
 from projects.graph import EntraAuthenticationError, EntraRequestError
@@ -43,6 +43,13 @@ class TestDetailView:
         response = client.get(reverse("projects:project_detail", args=[project.uuid]))
 
         assert response.status_code == 404
+
+    def test_superuser_can_view_project_without_membership(self, client, superuser, project):
+        client.force_login(superuser)
+
+        response = client.get(reverse("projects:project_detail", args=[project.uuid]))
+
+        assert response.status_code == 200
 
 
 class TestProjectUsersDetailView:
@@ -572,6 +579,14 @@ class TestProjectsListView:
         response = client.get(reverse("projects:projects_list"))
 
         assert response.status_code == 200
+
+    def test_does_not_list_projects_without_membership(self, client, superuser, project):
+        client.force_login(superuser)
+
+        response = client.get(reverse("projects:projects_list"))
+
+        assert response.status_code == 200
+        assertNotContains(response, project.name)
 
 
 class TestProjectCreateFlow:
