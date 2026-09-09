@@ -68,6 +68,13 @@ class TestProjectUsersDetailView:
         assertContains(response, 'aria-current="location"', count=1)
         assertInHTML(current_members_link, response.content.decode())
 
+    def test_superuser_can_view_members_without_membership(self, client, superuser, project):
+        client.force_login(superuser)
+
+        response = client.get(reverse("projects:project_users", args=[project.uuid]))
+
+        assert response.status_code == 200
+
 
 class TestProjectDeleteView:
     """Tests for the ProjectDeleteView at '/projects/<uuid>/delete'."""
