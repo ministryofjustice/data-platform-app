@@ -177,6 +177,27 @@ class TestProjectRemoveUserView:
 
         assert response.status_code == 404
 
+    def test_project_member_cannot_remove_another_user(self, client, non_project_user, project):
+        ProjectUserPermissions.objects.create(
+            project=project,
+            user=non_project_user,
+            role="member",
+        )
+        other_user = baker.make("users.User")
+        membership = ProjectUserPermissions.objects.create(
+            project=project,
+            user=other_user,
+            role="member",
+        )
+        client.force_login(non_project_user)
+
+        response = client.post(
+            reverse("projects:project_user_remove", args=[project.uuid, other_user.id])
+        )
+
+        assert response.status_code == 404
+        assert ProjectUserPermissions.objects.filter(pk=membership.pk).exists()
+
     def test_remove_other_user_redirects_to_project_users(
         self, client, user, project, project_membership_notification_service
     ):

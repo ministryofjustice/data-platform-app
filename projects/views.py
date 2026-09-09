@@ -483,7 +483,7 @@ class ProjectRemoveUserView(ProjectAccessMixin, ProjectMembershipNotificationMix
     def get_object(self, queryset=None):
         return get_object_or_404(
             ProjectUserPermissions.objects.select_related("project", "user").filter(
-                project__in=self.get_accessible_projects()
+                project__in=self.get_accessible_projects(role="admin")
             ),
             project__uuid=self.kwargs["uuid"],
             user_id=self.kwargs["user_id"],
