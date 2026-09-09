@@ -56,6 +56,13 @@ class TestKeyListView:
 
         assert response.status_code == 404
 
+    def test_superuser_can_view_keys_without_membership(self, client, superuser, project):
+        client.force_login(superuser)
+
+        response = client.get(reverse("ai_gateway:key_list", args=[project.uuid]))
+
+        assert response.status_code == 200
+
 
 class TestKeyCreateView:
     def test_get_renders_form(self, client, user, project, key_service):
@@ -953,6 +960,13 @@ class TestUsageView:
         response = client.get(reverse("ai_gateway:usage", args=[project.uuid]))
 
         assert response.status_code == 404
+
+    def test_superuser_can_view_usage_without_membership(self, client, superuser, project):
+        client.force_login(superuser)
+
+        response = client.get(reverse("ai_gateway:usage", args=[project.uuid]))
+
+        assert response.status_code == 200
 
     def _mock_service_with_no_spend(self):
         service = create_autospec(UsageService, instance=True)

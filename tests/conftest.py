@@ -23,6 +23,13 @@ def user(db):
 
 
 @pytest.fixture
+def superuser(db):
+    """A superuser who is not a member of any project."""
+
+    return baker.make("users.User", is_staff=True, is_superuser=True)
+
+
+@pytest.fixture
 def project(db, user):
     """A project with the test user as an admin member."""
     project = baker.make("projects.Project", name="Example Project", created_by=user)
