@@ -14,12 +14,89 @@ from django.views.generic.detail import SingleObjectMixin
 
 from ai_gateway.exceptions import AIGatewayError
 from ai_gateway.filtering import VISIBLE_LIMIT, filter_models
-from ai_gateway.forms import KeyCreateForm, KeyModelChangeForm, UsageMonthForm
+from ai_gateway.forms import (
+    KeyCreateForm,
+    KeyModelChangeForm,
+    UsageMonthForm,
+    UsagePeriodForm,
+    build_model_usage_rate_formset,
+)
 from ai_gateway.models import Key, Team
-from ai_gateway.services import KeyService, UsageService
+from ai_gateway.services import KeyService, UsageService, estimate_costs
 from data_platform_app.mixins import FeatureRequiredMixin
 from projects.mixins import ProjectLayoutContextMixin
 from projects.models import Project
+
+
+class AICostUsageCalculatorView(TemplateView):
+    """Estimate AI Gateway usage costs across providers and models."""
+
+    template_name = "ai_gateway/ai_cost_usage_calculator.html"
+
+    @cached_property
+    def available_models(self) -> list[dict[str, Any]]:
+        with KeyService.from_settings() as service:
+            return service.list_all_models()
+
+    def post(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
+        usage_period_form = UsagePeriodForm(request.POST)
+        formset = build_model_usage_rate_formset(
+            available_models=self.available_models, data=request.POST
+        )
+
+        context = self.get_context_data(usage_period_form=usage_period_form, formset=formset)
+
+        if usage_period_form.is_valid() and formset.is_valid():
+            context["estimate_result"] = estimate_costs(
+                usage_period=usage_period_form.cleaned_data["usage_period"],
+                model_rows=[row for row in formset.cleaned_data if row],
+                available_models=self.available_models,
+            )
+
+        return self.render_to_response(context)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.setdefault("usage_period_form", UsagePeriodForm())
+        context.setdefault(
+            "formset",
+            build_model_usage_rate_formset(available_models=self.available_models),
+        )
+        formset = context["formset"]
+        context["error_summary_items"] = self._error_summary_items(
+            context["usage_period_form"], formset
+        )
+        context["formset_has_errors"] = bool(formset.non_form_errors()) or any(
+            form.errors for form in formset
+        )
+        return context
+
+    def _error_summary_items(self, usage_period_form, formset) -> list[dict[str, str]]:
+        """Flatten every field/non-field error into deduplicated GOV.UK error summary items."""
+        items = [
+            {"href": f"#{field.id_for_label}", "message": error}
+            for field in usage_period_form
+            for error in field.errors
+        ]
+        items += [
+            {"href": "#models-usage-rates", "message": error}
+            for error in formset.non_form_errors()
+        ]
+        items += [
+            {"href": f"#{field.id_for_label}", "message": error}
+            for form in formset
+            for field in form
+            for error in field.errors
+        ]
+
+        seen_messages: set[str] = set()
+        deduplicated_items = []
+        for item in items:
+            if item["message"] in seen_messages:
+                continue
+            seen_messages.add(item["message"])
+            deduplicated_items.append(item)
+        return deduplicated_items
 
 
 class ProjectScopedMixin:
