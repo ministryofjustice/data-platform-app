@@ -954,6 +954,28 @@ class TestUsageView:
 
         assert response.status_code == 404
 
+    def _mock_service_with_no_spend(self):
+        service = create_autospec(UsageService, instance=True)
+        service.__enter__.return_value = service
+        service.__exit__.return_value = False
+        service.get_usage_month_choices.return_value = [date(2026, 1, 1)]
+        service.get_usage.return_value = {
+            "overview_data": {"has_usage": False},
+            "key_data": {"has_usage": False},
+            "model_data": {"has_usage": False},
+        }
+        return service
+
+    def test_show_no_usage(self, client, user, team_without_key):
+        service = self._mock_service_with_no_spend()
+        with patch("ai_gateway.services.UsageService.from_settings", return_value=service):
+            client.force_login(user)
+            response = client.get(
+                reverse("ai_gateway:usage", args=[team_without_key.project.uuid])
+            )
+
+        assertContains(response, "This project has no recorded AI Gateway spend")
+
     def _mock_service_with_daily_spend(self):
         daily = [{"label": str(day), "spend": 1.0} for day in range(1, 14)]
         service = create_autospec(UsageService, instance=True)

@@ -1,5 +1,5 @@
 from datetime import date
-from unittest.mock import create_autospec
+from unittest.mock import create_autospec, patch
 
 import pytest
 from django.urls import reverse
@@ -7,6 +7,14 @@ from django.urls import reverse
 from ai_gateway.client import AIGatewayClient
 from ai_gateway.forms import UsageMonthForm
 from ai_gateway.services import UsageService
+
+
+class FrozenDate(date):
+    """A ``date`` subclass whose ``today()`` is fixed, so tests don't drift month to month."""
+
+    @classmethod
+    def today(cls):
+        return cls(2026, 8, 20)
 
 
 @pytest.fixture
@@ -54,7 +62,10 @@ class TestUsageServiceMonthChoices:
             "team_info": {"created_at": "2025-12-20T14:57:21.001000Z"}
         }
 
-        with UsageService(gateway_client, team) as service:
+        with (
+            patch("ai_gateway.services.date", FrozenDate),
+            UsageService(gateway_client, team) as service,
+        ):
             choices = service.get_usage_month_choices()
 
         assert choices == [
@@ -147,6 +158,28 @@ class TestUsageServiceGetUsage:
         }
         assert gateway_client.team_daily_activity.call_count == 2
         gateway_client.team_info.assert_called_once_with("team-xyz")
+
+    def test_model_usage_uses_public_model_name(self, team, gateway_client):
+        gateway_client.list_models_v1_info.return_value = [
+            {
+                "model_name": "public-sonnet",
+                "litellm_params": {"model": "bedrock/eu.anthropic.claude-sonnet-5"},
+            }
+        ]
+
+        result = UsageService(gateway_client, team)._build_model_usage(
+            [
+                {
+                    "breakdown": {
+                        "models": {
+                            "bedrock/eu.anthropic.claude-sonnet-5": {"metrics": {"spend": 10}}
+                        }
+                    }
+                }
+            ]
+        )
+
+        assert result["rows"] == [{"label": "public-sonnet", "spend": 10}]
 
     def test_daily_and_monthly_charts_use_line_type_beyond_min_points(self, team, gateway_client):
         gateway_client.team_info.return_value = {

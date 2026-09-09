@@ -10,8 +10,8 @@ RUN <<EOF
 apt-get update --quiet --yes
 apt-get install --quiet --yes \
     --no-install-recommends \
-    ca-certificates=20260601~26.04.1 \
-    python3.14-dev=3.14.4-1ubuntu0.1
+    ca-certificates \
+    python3.14-dev
 EOF
 
 # Install uv
@@ -98,8 +98,8 @@ apt-get update --quiet --yes
 
 apt-get install --quiet --yes \
     --no-install-recommends \
-    ca-certificates=20260601~26.04.1 \
-    python3.14=3.14.4-1ubuntu0.1
+    ca-certificates \
+    python3.14
 
 apt-get clean --yes
 

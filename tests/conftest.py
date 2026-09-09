@@ -31,9 +31,26 @@ def project(db, user):
 
 
 @pytest.fixture
-def team(db, project):
+def key(db, project, user):
+    """An AI Gateway key belonging to the project."""
+    return baker.make(
+        "ai_gateway.Key",
+        project=project,
+        litellm_alias="team-xyz-key",
+        created_by=user,
+    )
+
+
+@pytest.fixture
+def team(db, project, key):
     """A gateway team whose only allowed model is gpt-4."""
     return baker.make("ai_gateway.Team", project=project, litellm_team_id="team-xyz")
+
+
+@pytest.fixture
+def team_without_key(db, project):
+    """A gateway team whose only allowed model is gpt-4."""
+    return baker.make("ai_gateway.Team", project=project, litellm_team_id="team-abc")
 
 
 @pytest.fixture
