@@ -13,10 +13,10 @@ class ProjectMembership(TimeStampedModel):
         "Project", on_delete=models.CASCADE, related_name="user_permissions"
     )
     user = models.ForeignKey("users.User", on_delete=models.CASCADE)
-    history = HistoricalRecords(table_name="user_permissions_history")
+    history = HistoricalRecords(table_name="project_membership_history")
 
     class Meta:
-        db_table = "project_user_permissions"
+        db_table = "project_membership"
         verbose_name_plural = "project user permissions"
         constraints = [
             models.UniqueConstraint(
