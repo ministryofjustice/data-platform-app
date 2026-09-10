@@ -298,6 +298,7 @@ class TestProjectService:
 
         assert project.name == "My Project"
         assert project.created_by == user
+        assert project.owner == user
         assert {member.oid for member in members} == {user.oid, non_project_user.oid}
         assert ProjectMembership.objects.filter(project=project, user=user).exists()
         assert ProjectMembership.objects.filter(project=project, user=non_project_user).exists()
@@ -316,6 +317,7 @@ class TestProjectService:
 
         assert [member.oid for member in members] == [user.oid]
         assert ProjectMembership.objects.filter(project=project, user=user).exists()
+        assert project.owner == user
 
     def test_close_closes_graph_client(self):
         graph_client = Mock()

@@ -146,6 +146,7 @@ class ProjectService:
                 description=description,
                 business_unit_id=business_unit_id,
                 created_by=created_by,
+                owner=created_by,
             )
             self._add_memberships(project, members, added_by=created_by)
 

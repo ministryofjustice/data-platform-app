@@ -83,6 +83,12 @@ class Project(TimeStampedModel):
         on_delete=models.SET_NULL,
         null=True,
     )
+    owner = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="owned_projects",
+    )
 
     history = HistoricalRecords(table_name="project_history")
 
