@@ -14,7 +14,7 @@
     <a class="govuk-button govuk-button--secondary"
        href="{% url 'projects:project_users_add' project.uuid %}">Add a member</a>
   </div>
-  {% if project.user_permissions.all %}
+  {% if project.memberships.all %}
     <table class="govuk-table">
       <thead class="govuk-table__head">
         <tr class="govuk-table__row">
@@ -25,7 +25,7 @@
         </tr>
       </thead>
       <tbody class="govuk-table__body">
-        {% for permission in project.user_permissions.all %}
+        {% for permission in project.memberships.all %}
           <tr class="govuk-table__row">
             <td class="govuk-table__cell govuk-!-font-weight-bold">{{ permission.user.full_name }}</td>
             <td class="govuk-table__cell govuk-!-text-align-right">

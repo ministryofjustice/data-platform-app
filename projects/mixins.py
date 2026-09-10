@@ -21,7 +21,7 @@ class ProjectAccessMixin:
         if self.request.user.is_superuser:
             return queryset
 
-        filters = {"user_permissions__user": self.request.user}
+        filters = {"memberships__user": self.request.user}
         return queryset.filter(**filters).distinct()
 
 

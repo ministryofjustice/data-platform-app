@@ -37,9 +37,7 @@ class ProjectMembershipPermission(TimeStampedModel):
 
 
 class ProjectMembership(TimeStampedModel):
-    project = models.ForeignKey(
-        "Project", on_delete=models.CASCADE, related_name="user_permissions"
-    )
+    project = models.ForeignKey("Project", on_delete=models.CASCADE, related_name="memberships")
     user = models.ForeignKey("users.User", on_delete=models.CASCADE)
     history = HistoricalRecords(table_name="project_membership_history")
 

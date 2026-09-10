@@ -118,7 +118,7 @@ class ProjectDetailView(
     def get_queryset(self):
         return self.get_accessible_projects(
             Project.objects.select_related("business_unit", "created_by").prefetch_related(
-                "users", "user_permissions__user"
+                "users", "memberships__user"
             )
         )
 
@@ -352,7 +352,7 @@ class ProjectUsersDetailView(
         return self.get_accessible_projects(
             Project.objects.prefetch_related(
                 Prefetch(
-                    "user_permissions",
+                    "memberships",
                     queryset=ProjectMembership.objects.select_related("user"),
                 )
             )
