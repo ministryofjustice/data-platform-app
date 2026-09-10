@@ -164,7 +164,10 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 
 # Authentication
 INSTALLED_APPS += ["azure_auth"]
-AUTHENTICATION_BACKENDS = ["azure_auth.backends.AzureBackend"]
+AUTHENTICATION_BACKENDS = [
+    "azure_auth.backends.AzureBackend",
+    "projects.backends.ProjectPermissionBackend",
+]
 
 LOGIN_URL = reverse_lazy("login")
 LOGIN_REDIRECT_URL = reverse_lazy("landing")
