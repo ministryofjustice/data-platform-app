@@ -975,6 +975,7 @@ class TestUsageView:
             )
 
         assertContains(response, "This project has no recorded AI Gateway spend")
+        assertContains(response, f'href="{reverse("ai_cost_usage_calculator")}"')
 
     def _mock_service_with_daily_spend(self):
         daily = [{"label": str(day), "spend": 1.0} for day in range(1, 14)]
