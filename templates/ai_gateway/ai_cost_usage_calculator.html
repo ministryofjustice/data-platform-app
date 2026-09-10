@@ -1,4 +1,5 @@
 {% extends "base/base.html" %}
+{% load usage_extras %}
 {% block title %}
   AI usage cost calculator - Justice Data Platform | Ministry of Justice
 {% endblock title %}
@@ -92,8 +93,8 @@
                               id="{{ form.provider.id_for_label }}"
                               name="{{ form.provider.html_name }}"
                               aria-label="Provider"
-                              data-name="{{ form.prefix }}-%index%-provider"
-                              data-id="id_{{ form.prefix }}-%index%-provider">
+                            data-name="{{ formset.prefix }}-%index%-provider"
+                            data-id="id_{{ formset.prefix }}-%index%-provider">
                         <option value="">Select a provider</option>
                         {% for value, label in form.provider.field.choices %}
                           <option value="{{ value }}"
@@ -106,8 +107,8 @@
                               id="{{ form.model.id_for_label }}"
                               name="{{ form.model.html_name }}"
                               aria-label="Model"
-                              data-name="{{ form.prefix }}-%index%-model"
-                              data-id="id_{{ form.prefix }}-%index%-model">
+                            data-name="{{ formset.prefix }}-%index%-model"
+                            data-id="id_{{ formset.prefix }}-%index%-model">
                         <option value="">Select a model</option>
                         {% for value, label in form.model.field.choices %}
                           <option value="{{ value }}"
@@ -123,8 +124,8 @@
                              type="text"
                              inputmode="numeric"
                              value="{{ form.input_tokens.value|default:'' }}"
-                             data-name="{{ form.prefix }}-%index%-input_tokens"
-                             data-id="id_{{ form.prefix }}-%index%-input_tokens">
+                             data-name="{{ formset.prefix }}-%index%-input_tokens"
+                             data-id="id_{{ formset.prefix }}-%index%-input_tokens">
                     </div>
                     <div class="govuk-form-group{% if form.output_tokens.errors %} govuk-form-group--error{% endif %}">
                       <input class="govuk-input govuk-!-width-full{% if form.output_tokens.errors %} govuk-input--error{% endif %}"
@@ -134,8 +135,8 @@
                              type="text"
                              inputmode="numeric"
                              value="{{ form.output_tokens.value|default:'' }}"
-                             data-name="{{ form.prefix }}-%index%-output_tokens"
-                             data-id="id_{{ form.prefix }}-%index%-output_tokens">
+                             data-name="{{ formset.prefix }}-%index%-output_tokens"
+                             data-id="id_{{ formset.prefix }}-%index%-output_tokens">
                     </div>
                     <div class="govuk-form-group{% if form.requests_per_period.errors %} govuk-form-group--error{% endif %}">
                       <input class="govuk-input govuk-!-width-full{% if form.requests_per_period.errors %} govuk-input--error{% endif %}"
@@ -145,8 +146,8 @@
                              type="text"
                              inputmode="numeric"
                              value="{{ form.requests_per_period.value|default:'' }}"
-                             data-name="{{ form.prefix }}-%index%-requests_per_period"
-                             data-id="id_{{ form.prefix }}-%index%-requests_per_period">
+                             data-name="{{ formset.prefix }}-%index%-requests_per_period"
+                             data-id="id_{{ formset.prefix }}-%index%-requests_per_period">
                     </div>
                     {% if formset.total_form_count > 1 %}
                       <button type="button"
@@ -177,11 +178,11 @@
             <div class="app-cost-estimate-summary">
               <div class="app-cost-estimate-summary__item">
                 <h3 class="govuk-heading-s">Per request</h3>
-                <p class="app-cost-estimate-summary__value">${{ estimate_result.total_per_request }}</p>
+                <p class="app-cost-estimate-summary__value">{{ estimate_result.total_per_request|usd }}</p>
               </div>
               <div class="app-cost-estimate-summary__item">
                 <h3 class="govuk-heading-s">{{ estimate_result.usage_period|capfirst }}</h3>
-                <p class="app-cost-estimate-summary__value">${{ estimate_result.total_cost }}</p>
+                <p class="app-cost-estimate-summary__value">{{ estimate_result.total_cost|usd }}</p>
               </div>
             </div>
             <table class="govuk-table app-cost-estimate-table">
@@ -198,8 +199,8 @@
                   <tr class="govuk-table__row">
                     <td class="govuk-table__cell">{{ row.provider }}</td>
                     <td class="govuk-table__cell">{{ row.model_name }}</td>
-                    <td class="govuk-table__cell govuk-table__cell--numeric">${{ row.per_request_cost }}</td>
-                    <td class="govuk-table__cell govuk-table__cell--numeric">${{ row.cost }}</td>
+                    <td class="govuk-table__cell govuk-table__cell--numeric">{{ row.per_request_cost|usd }}</td>
+                    <td class="govuk-table__cell govuk-table__cell--numeric">{{ row.cost|usd }}</td>
                   </tr>
                 {% endfor %}
               </tbody>

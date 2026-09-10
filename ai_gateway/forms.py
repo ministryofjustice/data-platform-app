@@ -29,7 +29,7 @@ class KeyCreateForm(forms.ModelForm):
     models = forms.MultipleChoiceField(
         label="AI Model",
         help_text="Add models for this project",
-        error_messages={"required": "Select a model"},
+        error_messages={"required": "Select at least one AI model to continue"},
     )
     name = forms.CharField(
         max_length=255,
