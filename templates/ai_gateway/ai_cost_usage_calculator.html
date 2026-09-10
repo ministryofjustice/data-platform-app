@@ -93,8 +93,8 @@
                               id="{{ form.provider.id_for_label }}"
                               name="{{ form.provider.html_name }}"
                               aria-label="Provider"
-                            data-name="{{ formset.prefix }}-%index%-provider"
-                            data-id="id_{{ formset.prefix }}-%index%-provider">
+                              data-name="{{ formset.prefix }}-%index%-provider"
+                              data-id="id_{{ formset.prefix }}-%index%-provider">
                         <option value="">Select a provider</option>
                         {% for value, label in form.provider.field.choices %}
                           <option value="{{ value }}"
@@ -107,8 +107,8 @@
                               id="{{ form.model.id_for_label }}"
                               name="{{ form.model.html_name }}"
                               aria-label="Model"
-                            data-name="{{ formset.prefix }}-%index%-model"
-                            data-id="id_{{ formset.prefix }}-%index%-model">
+                              data-name="{{ formset.prefix }}-%index%-model"
+                              data-id="id_{{ formset.prefix }}-%index%-model">
                         <option value="">Select a model</option>
                         {% for value, label in form.model.field.choices %}
                           <option value="{{ value }}"
