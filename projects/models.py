@@ -5,7 +5,35 @@ from django.urls import reverse
 from django_extensions.db.models import TimeStampedModel
 from simple_history.models import HistoricalRecords
 
-# Create your models here.
+
+class ProjectPermission(models.TextChoices):
+    MANAGE_API_KEYS = "manage_api_keys", "Manage API Keys"
+    MANAGE_MEMBERS = "manage_members", "Manage Members"
+
+
+class ProjectMembershipPermission(TimeStampedModel):
+    membership = models.ForeignKey(
+        "ProjectMembership", on_delete=models.CASCADE, related_name="permissions"
+    )
+    permission = models.CharField(
+        max_length=50,
+        choices=ProjectPermission.choices,
+    )
+    granted_by = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="granted_project_permissions",
+    )
+    history = HistoricalRecords(table_name="project_membership_permission_history")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["membership", "permission"],
+                name="uniq_project_membership_permission",
+            )
+        ]
 
 
 class ProjectMembership(TimeStampedModel):
