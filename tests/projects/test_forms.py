@@ -101,7 +101,6 @@ class TestProjectAddMemberFormSet:
             "projects.ProjectMembership",
             project=project,
             user=existing_member,
-            role="member",
         )
         data = management_form(1) | {
             "members-0-oid": str(existing_member.oid),

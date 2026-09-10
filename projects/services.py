@@ -168,7 +168,7 @@ class ProjectService:
 
     def _add_memberships(self, project: Project, members: list[User], *, added_by: User) -> None:
         bulk_create_with_history(
-            [ProjectMembership(project=project, user=member, role="admin") for member in members],
+            [ProjectMembership(project=project, user=member) for member in members],
             ProjectMembership,
             ignore_conflicts=True,
             default_user=added_by,

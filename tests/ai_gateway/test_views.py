@@ -589,7 +589,6 @@ class TestKeyModelChangeView:
             "projects.ProjectMembership",
             project=other_project,
             user=user,
-            role="admin",
         )
         other_key = baker.make(
             "ai_gateway.Key",
@@ -771,7 +770,6 @@ class TestKeyDetailView:
             "projects.ProjectMembership",
             project=other_project,
             user=user,
-            role="admin",
         )
         other_key = baker.make(
             "ai_gateway.Key",
@@ -888,7 +886,6 @@ class TestKeyRevokeView:
             "projects.ProjectMembership",
             project=other_project,
             user=user,
-            role="admin",
         )
         other_key = baker.make(
             "ai_gateway.Key",

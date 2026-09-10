@@ -15,12 +15,12 @@ class ProjectMembershipInline(admin.TabularInline):
     model = ProjectMembership
     extra = 0
     autocomplete_fields = ("user",)
-    fields = ("user", "role")
+    fields = ("user",)
 
 
 class ProjectMembershipAdmin(SimpleHistoryAdmin):
-    list_display = ("project", "user", "role", "created")
-    list_filter = ("project", "role")
+    list_display = ("project", "user", "created")
+    list_filter = ("project",)
     search_fields = ("project__name", "user__email")
     readonly_fields = ("project", "user", "created", "modified")
 
@@ -43,7 +43,6 @@ class ProjectMembershipAuditAdmin(admin.ModelAdmin):
     list_display = (
         "project",
         "user",
-        "role",
         "history_type_display",
         "history_date",
         "history_user",

@@ -375,7 +375,7 @@ class ProjectDeleteView(ProjectAccessMixin, UUIDObjectMixin, DeleteView):
     success_url = reverse_lazy("projects:projects_list")
 
     def get_queryset(self):
-        return self.get_accessible_projects(role="admin")
+        return self.get_accessible_projects()
 
     def form_valid(self, form):
         project = self.object
@@ -483,7 +483,7 @@ class ProjectRemoveUserView(ProjectAccessMixin, ProjectMembershipNotificationMix
     def get_object(self, queryset=None):
         return get_object_or_404(
             ProjectMembership.objects.select_related("project", "user").filter(
-                project__in=self.get_accessible_projects(role="admin")
+                project__in=self.get_accessible_projects()
             ),
             project__uuid=self.kwargs["uuid"],
             user_id=self.kwargs["user_id"],

@@ -177,27 +177,6 @@ class TestProjectRemoveUserView:
 
         assert response.status_code == 404
 
-    def test_project_member_cannot_remove_another_user(self, client, non_project_user, project):
-        ProjectMembership.objects.create(
-            project=project,
-            user=non_project_user,
-            role="member",
-        )
-        other_user = baker.make("users.User")
-        membership = ProjectMembership.objects.create(
-            project=project,
-            user=other_user,
-            role="member",
-        )
-        client.force_login(non_project_user)
-
-        response = client.post(
-            reverse("projects:project_user_remove", args=[project.uuid, other_user.id])
-        )
-
-        assert response.status_code == 404
-        assert ProjectMembership.objects.filter(pk=membership.pk).exists()
-
     def test_remove_other_user_redirects_to_project_users(
         self, client, user, project, project_membership_notification_service
     ):
@@ -206,7 +185,6 @@ class TestProjectRemoveUserView:
             "projects.ProjectMembership",
             project=project,
             user=other_user,
-            role="member",
         )
         client.force_login(user)
 
@@ -394,7 +372,6 @@ class TestProjectAddUsersFlow:
         assert ProjectMembership.objects.filter(
             project=project,
             user=selected_user,
-            role="admin",
         ).exists()
         project_membership_notification_service.send_member_added_email.assert_called_once_with(
             project=project,
@@ -435,7 +412,6 @@ class TestProjectAddUsersFlow:
         assert ProjectMembership.objects.filter(
             project=project,
             user=selected_user,
-            role="admin",
         ).exists()
         capture_exception.assert_called_once()
 
@@ -472,7 +448,6 @@ class TestProjectAddUsersFlow:
         assert ProjectMembership.objects.filter(
             project=project,
             user=selected_user,
-            role="admin",
         ).exists()
         capture_exception.assert_called_once()
 
@@ -541,7 +516,6 @@ class TestProjectAddUsersFlow:
         assert ProjectMembership.objects.filter(
             project=project,
             user=created_user,
-            role="admin",
         ).exists()
 
     def test_confirm_add_redirects_when_entra_auth_missing(self, client, user, project):
@@ -800,7 +774,6 @@ class TestProjectCreateFlow:
         assert ProjectMembership.objects.filter(
             project=project,
             user=selected_user,
-            role="admin",
         ).exists()
         assert "project_create" not in client.session
         assert "project_user_add_selection" not in client.session

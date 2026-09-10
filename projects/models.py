@@ -13,7 +13,6 @@ class ProjectMembership(TimeStampedModel):
         "Project", on_delete=models.CASCADE, related_name="user_permissions"
     )
     user = models.ForeignKey("users.User", on_delete=models.CASCADE)
-    role = models.CharField(max_length=30)
     history = HistoricalRecords(table_name="user_permissions_history")
 
     class Meta:
