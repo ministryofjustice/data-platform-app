@@ -2,7 +2,7 @@ from django.contrib import admin
 from simple_history.admin import SimpleHistoryAdmin
 
 from ai_gateway.admin import AIGatewayTeamInline
-from projects.models import BusinessUnit, Project, ProjectUserPermissions
+from projects.models import BusinessUnit, Project, ProjectMembership
 
 
 class BusinessUnitAdmin(admin.ModelAdmin):
@@ -11,14 +11,14 @@ class BusinessUnitAdmin(admin.ModelAdmin):
     readonly_fields = ("created", "modified")
 
 
-class ProjectUserPermissionsInline(admin.TabularInline):
-    model = ProjectUserPermissions
+class ProjectMembershipInline(admin.TabularInline):
+    model = ProjectMembership
     extra = 0
     autocomplete_fields = ("user",)
     fields = ("user", "role")
 
 
-class ProjectUserPermissionsAdmin(SimpleHistoryAdmin):
+class ProjectMembershipAdmin(SimpleHistoryAdmin):
     list_display = ("project", "user", "role", "created")
     list_filter = ("project", "role")
     search_fields = ("project__name", "user__email")
@@ -30,7 +30,7 @@ class ProjectAdmin(SimpleHistoryAdmin):
     list_filter = ("business_unit",)
     search_fields = ("name",)
     readonly_fields = ("uuid", "created_by", "created", "modified")
-    inlines = (ProjectUserPermissionsInline, AIGatewayTeamInline)
+    inlines = (ProjectMembershipInline, AIGatewayTeamInline)
 
 
 HISTORY_TYPE_LABELS = {"+": "Added", "~": "Changed", "-": "Removed"}
@@ -68,5 +68,5 @@ class ProjectMembershipAuditAdmin(admin.ModelAdmin):
 
 admin.site.register(BusinessUnit, BusinessUnitAdmin)
 admin.site.register(Project, ProjectAdmin)
-admin.site.register(ProjectUserPermissions, ProjectUserPermissionsAdmin)
-admin.site.register(ProjectUserPermissions.history.model, ProjectMembershipAuditAdmin)
+admin.site.register(ProjectMembership, ProjectMembershipAdmin)
+admin.site.register(ProjectMembership.history.model, ProjectMembershipAuditAdmin)

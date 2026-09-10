@@ -8,7 +8,7 @@ from simple_history.models import HistoricalRecords
 # Create your models here.
 
 
-class ProjectUserPermissions(TimeStampedModel):
+class ProjectMembership(TimeStampedModel):
     project = models.ForeignKey(
         "Project", on_delete=models.CASCADE, related_name="user_permissions"
     )
@@ -45,7 +45,7 @@ class Project(TimeStampedModel):
     users = models.ManyToManyField(
         "users.User",
         related_name="projects",
-        through=ProjectUserPermissions,
+        through=ProjectMembership,
         through_fields=("project", "user"),
     )
     business_unit = models.ForeignKey(

@@ -98,7 +98,7 @@ class TestProjectAddMemberFormSet:
     def test_existing_member_is_rejected(self, project):
         existing_member = baker.make("users.User", email="already.member@example.com")
         baker.make(
-            "projects.ProjectUserPermissions",
+            "projects.ProjectMembership",
             project=project,
             user=existing_member,
             role="member",

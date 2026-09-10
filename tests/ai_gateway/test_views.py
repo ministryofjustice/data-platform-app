@@ -586,7 +586,7 @@ class TestKeyModelChangeView:
     def test_key_from_another_project_gets_404(self, client, user, project, key_service):
         other_project = baker.make("projects.Project", created_by=user)
         baker.make(
-            "projects.ProjectUserPermissions",
+            "projects.ProjectMembership",
             project=other_project,
             user=user,
             role="admin",
@@ -768,7 +768,7 @@ class TestKeyDetailView:
     def test_key_from_another_project_gets_404(self, client, user, project):
         other_project = baker.make("projects.Project", created_by=user)
         baker.make(
-            "projects.ProjectUserPermissions",
+            "projects.ProjectMembership",
             project=other_project,
             user=user,
             role="admin",
@@ -885,7 +885,7 @@ class TestKeyRevokeView:
     def test_key_from_another_project_gets_404(self, client, user, project, key_service):
         other_project = baker.make("projects.Project", created_by=user)
         baker.make(
-            "projects.ProjectUserPermissions",
+            "projects.ProjectMembership",
             project=other_project,
             user=user,
             role="admin",

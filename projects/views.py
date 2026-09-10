@@ -34,7 +34,7 @@ from projects.mixins import (
     ProjectUserSelectionSessionMixin,
     UUIDObjectMixin,
 )
-from projects.models import BusinessUnit, Project, ProjectUserPermissions
+from projects.models import BusinessUnit, Project, ProjectMembership
 from projects.services import ProjectService
 
 
@@ -353,7 +353,7 @@ class ProjectUsersDetailView(
             Project.objects.prefetch_related(
                 Prefetch(
                     "user_permissions",
-                    queryset=ProjectUserPermissions.objects.select_related("user"),
+                    queryset=ProjectMembership.objects.select_related("user"),
                 )
             )
         )
@@ -478,11 +478,11 @@ class ProjectRemoveUserView(ProjectAccessMixin, ProjectMembershipNotificationMix
 
     template_name = "projects/user_remove_confirm.html"
     context_object_name = "membership"
-    model = ProjectUserPermissions
+    model = ProjectMembership
 
     def get_object(self, queryset=None):
         return get_object_or_404(
-            ProjectUserPermissions.objects.select_related("project", "user").filter(
+            ProjectMembership.objects.select_related("project", "user").filter(
                 project__in=self.get_accessible_projects(role="admin")
             ),
             project__uuid=self.kwargs["uuid"],
