@@ -1,7 +1,9 @@
+from django.contrib.auth.backends import BaseBackend
+
 from projects.models import Project, ProjectMembershipPermission
 
 
-class ProjectPermissionBackend:
+class ProjectPermissionBackend(BaseBackend):
     """
     Checks if a user has the given permission for a project
     """

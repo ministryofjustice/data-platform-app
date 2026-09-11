@@ -10,27 +10,35 @@ def grant_existing_members_all_permissions(apps, schema_editor):
         "ProjectMembershipPermission",
     )
     Permission = apps.get_model("auth", "Permission")
+    ContentType = apps.get_model("contenttypes", "ContentType")
 
-    permissions = Permission.objects.filter(
-        content_type__app_label="projects",
-        content_type__model="project",
-        codename__in=[
-            "manage_api_keys",
-            "manage_members",
-        ],
+    content_type, _ = ContentType.objects.get_or_create(
+        app_label="projects",
+        model="project",
     )
 
-    assignments = []
+    permissions = []
 
-    for membership in ProjectMembership.objects.all():
-        for permission in permissions:
-            assignments.append(
-                ProjectMembershipPermission(
-                    membership=membership,
-                    permission=permission,
-                    granted_by=None,
-                )
-            )
+    for codename, name in [
+        ("manage_api_keys", "Manage API Keys"),
+        ("manage_members", "Manage Members"),
+    ]:
+        permission, _ = Permission.objects.get_or_create(
+            content_type=content_type,
+            codename=codename,
+            defaults={"name": name},
+        )
+        permissions.append(permission)
+
+    assignments = [
+        ProjectMembershipPermission(
+            membership=membership,
+            permission=permission,
+            granted_by=None,
+        )
+        for membership in ProjectMembership.objects.all()
+        for permission in permissions
+    ]
 
     ProjectMembershipPermission.objects.bulk_create(
         assignments,
