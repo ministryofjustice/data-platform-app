@@ -73,14 +73,18 @@ class ProjectMembershipAuditAdmin(admin.ModelAdmin):
     verbose_name = "Project membership audit log"
     list_display = (
         "project",
+        "project_id",
         "user",
+        "user_id",
         "history_type_display",
         "history_date",
         "history_user",
+        "history_user_id",
     )
     list_filter = ("history_type",)
-    search_fields = ("project__name", "user__email")
+    search_fields = ("project_id", "project__name", "user__email")
     ordering = ("-history_date",)
+    readonly_fields = ("project_id", "user_id", "history_user_id")
 
     @admin.display(description="Action")
     def history_type_display(self, obj):
@@ -99,20 +103,25 @@ class ProjectMembershipAuditAdmin(admin.ModelAdmin):
 class ProjectMembershipPermissionAuditAdmin(admin.ModelAdmin):
     list_display = (
         "membership",
+        "membership_id",
         "permission",
         "granted_by",
+        "granted_by_id",
         "history_type_display",
         "history_date",
         "history_user",
+        "history_user_id",
     )
     list_filter = ("history_type", "permission")
     search_fields = (
+        "membership_id",
         "membership__project__name",
         "membership__user__email",
         "permission__codename",
     )
     ordering = ("-history_date",)
     list_select_related = ("membership", "permission", "granted_by", "history_user")
+    readonly_fields = ("membership_id", "granted_by_id", "history_user_id")
 
     @admin.display(description="Action")
     def history_type_display(self, obj):
