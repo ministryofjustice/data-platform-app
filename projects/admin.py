@@ -22,15 +22,15 @@ class ProjectMembershipInline(admin.TabularInline):
     readonly_fields = ("permission_list",)
     show_change_link = True
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related("permissions__permission")
+
     @admin.display(description="Permissions")
     def permission_list(self, obj):
         if not obj.pk:
             return ""
 
-        return ", ".join(
-            assignment.permission.name
-            for assignment in obj.permissions.select_related("permission")
-        )
+        return ", ".join(assignment.permission.name for assignment in obj.permissions.all())
 
 
 class ProjectMembershipPermissionInline(admin.TabularInline):
