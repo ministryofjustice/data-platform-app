@@ -96,6 +96,9 @@ EOF
 RUN <<EOF
 apt-get update --quiet --yes
 
+# Pick up security updates published since the base image was built
+apt-get upgrade --quiet --yes
+
 apt-get install --quiet --yes \
     --no-install-recommends \
     ca-certificates \
