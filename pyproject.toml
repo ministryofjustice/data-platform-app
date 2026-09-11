@@ -5,7 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
-    "django==6.1",
+    "django==6.1.1",
     "django-azure-auth==2.6.0",
     "django-extensions==4.1",
     "django-simple-history==3.13.0",
@@ -25,11 +25,11 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "djlint==1.44.2",
+    "djlint==1.45.0",
     "django-debug-toolbar==8.0.0",
     "pre-commit==4.6.2",
     "pytest==9.1.1",
-    "ruff==0.16.5",
+    "ruff==0.16.6",
 ]
 
 [tool.ruff]
