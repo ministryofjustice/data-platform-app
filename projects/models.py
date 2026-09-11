@@ -61,7 +61,7 @@ class ProjectMembership(TimeStampedModel):
         ]
 
     def __str__(self):
-        return f"{self.user} in {self.project}"
+        return f"{self.project}: {self.user}"
 
     def __repr__(self):
         return f"<ProjectMembership user={self.user} project={self.project}>"

@@ -96,7 +96,45 @@ class ProjectMembershipAuditAdmin(admin.ModelAdmin):
         return False
 
 
+class ProjectMembershipPermissionAuditAdmin(admin.ModelAdmin):
+    list_display = (
+        "membership",
+        "permission",
+        "granted_by",
+        "history_type_display",
+        "history_date",
+        "history_user",
+    )
+    list_filter = ("history_type", "permission")
+    search_fields = (
+        "membership__project__name",
+        "membership__user__email",
+        "permission__codename",
+    )
+    ordering = ("-history_date",)
+    list_select_related = ("membership", "permission", "granted_by", "history_user")
+
+    @admin.display(description="Action")
+    def history_type_display(self, obj):
+        return HISTORY_TYPE_LABELS.get(
+            obj.history_type,
+            obj.history_type,
+        )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
 admin.site.register(BusinessUnit, BusinessUnitAdmin)
 admin.site.register(Project, ProjectAdmin)
 admin.site.register(ProjectMembership, ProjectMembershipAdmin)
 admin.site.register(ProjectMembership.history.model, ProjectMembershipAuditAdmin)
+admin.site.register(
+    ProjectMembershipPermission.history.model, ProjectMembershipPermissionAuditAdmin
+)
