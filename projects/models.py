@@ -1,30 +1,70 @@
 import uuid
 
+from django.contrib.auth.models import Permission
 from django.db import models
 from django.urls import reverse
 from django_extensions.db.models import TimeStampedModel
 from simple_history.models import HistoricalRecords
 
-# Create your models here.
+
+class ProjectPermission(models.TextChoices):
+    MANAGE_API_KEYS = "manage_api_keys", "Manage API Keys"
+    MANAGE_MEMBERS = "manage_members", "Manage Members"
 
 
-class ProjectUserPermissions(TimeStampedModel):
-    project = models.ForeignKey(
-        "Project", on_delete=models.CASCADE, related_name="user_permissions"
+class ProjectMembershipPermission(TimeStampedModel):
+    membership = models.ForeignKey(
+        "ProjectMembership", on_delete=models.CASCADE, related_name="permissions"
     )
-    user = models.ForeignKey("users.User", on_delete=models.CASCADE)
-    role = models.CharField(max_length=30)
-    history = HistoricalRecords(table_name="user_permissions_history")
+    permission = models.ForeignKey(
+        Permission,
+        on_delete=models.PROTECT,
+        related_name="project_membership_permissions",
+        limit_choices_to={
+            "content_type__app_label": "projects",
+            "content_type__model": "project",
+            "codename__in": ProjectPermission.values,
+        },
+    )
+    granted_by = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="granted_project_permissions",
+    )
+    history = HistoricalRecords(table_name="project_membership_permission_history")
 
     class Meta:
-        db_table = "project_user_permissions"
-        verbose_name_plural = "project user permissions"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["membership", "permission"],
+                name="uniq_project_membership_permission",
+            )
+        ]
+
+
+class ProjectMembership(TimeStampedModel):
+    project = models.ForeignKey("Project", on_delete=models.CASCADE, related_name="memberships")
+    user = models.ForeignKey(
+        "users.User", on_delete=models.CASCADE, related_name="project_memberships"
+    )
+    history = HistoricalRecords(table_name="project_membership_history")
+
+    class Meta:
+        db_table = "project_membership"
+        verbose_name_plural = "Project members"
         constraints = [
             models.UniqueConstraint(
                 fields=["project", "user"],
                 name="uniq_project_user_membership",
             )
         ]
+
+    def __str__(self):
+        return f"{self.project}: {self.user}"
+
+    def __repr__(self):
+        return f"<ProjectMembership user={self.user} project={self.project}>"
 
 
 class BusinessUnit(TimeStampedModel):
@@ -45,7 +85,7 @@ class Project(TimeStampedModel):
     users = models.ManyToManyField(
         "users.User",
         related_name="projects",
-        through=ProjectUserPermissions,
+        through=ProjectMembership,
         through_fields=("project", "user"),
     )
     business_unit = models.ForeignKey(
@@ -56,8 +96,17 @@ class Project(TimeStampedModel):
         on_delete=models.SET_NULL,
         null=True,
     )
+    owner = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="owned_projects",
+    )
 
     history = HistoricalRecords(table_name="project_history")
+
+    class Meta:
+        permissions = [(permission.value, permission.label) for permission in ProjectPermission]
 
     def __str__(self):
         return self.name

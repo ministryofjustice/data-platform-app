@@ -34,7 +34,7 @@ from projects.mixins import (
     ProjectUserSelectionSessionMixin,
     UUIDObjectMixin,
 )
-from projects.models import BusinessUnit, Project, ProjectUserPermissions
+from projects.models import BusinessUnit, Project, ProjectMembership
 from projects.services import ProjectService
 
 
@@ -118,7 +118,7 @@ class ProjectDetailView(
     def get_queryset(self):
         return self.get_accessible_projects(
             Project.objects.select_related("business_unit", "created_by").prefetch_related(
-                "users", "user_permissions__user"
+                "users", "memberships__user"
             )
         )
 
@@ -352,8 +352,8 @@ class ProjectUsersDetailView(
         return self.get_accessible_projects(
             Project.objects.prefetch_related(
                 Prefetch(
-                    "user_permissions",
-                    queryset=ProjectUserPermissions.objects.select_related("user"),
+                    "memberships",
+                    queryset=ProjectMembership.objects.select_related("user"),
                 )
             )
         )
@@ -375,7 +375,7 @@ class ProjectDeleteView(ProjectAccessMixin, UUIDObjectMixin, DeleteView):
     success_url = reverse_lazy("projects:projects_list")
 
     def get_queryset(self):
-        return self.get_accessible_projects(role="admin")
+        return self.get_accessible_projects()
 
     def form_valid(self, form):
         project = self.object
@@ -478,12 +478,12 @@ class ProjectRemoveUserView(ProjectAccessMixin, ProjectMembershipNotificationMix
 
     template_name = "projects/user_remove_confirm.html"
     context_object_name = "membership"
-    model = ProjectUserPermissions
+    model = ProjectMembership
 
     def get_object(self, queryset=None):
         return get_object_or_404(
-            ProjectUserPermissions.objects.select_related("project", "user").filter(
-                project__in=self.get_accessible_projects(role="admin")
+            ProjectMembership.objects.select_related("project", "user").filter(
+                project__in=self.get_accessible_projects()
             ),
             project__uuid=self.kwargs["uuid"],
             user_id=self.kwargs["user_id"],

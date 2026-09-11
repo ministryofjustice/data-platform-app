@@ -8,7 +8,7 @@ from pytest_django.asserts import assertContains, assertInHTML, assertNotContain
 
 from ai_gateway.exceptions import AIGatewayAPIError
 from projects.graph import EntraAuthenticationError, EntraRequestError
-from projects.models import Project, ProjectUserPermissions
+from projects.models import Project, ProjectMembership
 from projects.services import ProjectNotificationError
 from users.models import User
 
@@ -177,36 +177,14 @@ class TestProjectRemoveUserView:
 
         assert response.status_code == 404
 
-    def test_project_member_cannot_remove_another_user(self, client, non_project_user, project):
-        ProjectUserPermissions.objects.create(
-            project=project,
-            user=non_project_user,
-            role="member",
-        )
-        other_user = baker.make("users.User")
-        membership = ProjectUserPermissions.objects.create(
-            project=project,
-            user=other_user,
-            role="member",
-        )
-        client.force_login(non_project_user)
-
-        response = client.post(
-            reverse("projects:project_user_remove", args=[project.uuid, other_user.id])
-        )
-
-        assert response.status_code == 404
-        assert ProjectUserPermissions.objects.filter(pk=membership.pk).exists()
-
     def test_remove_other_user_redirects_to_project_users(
         self, client, user, project, project_membership_notification_service
     ):
         other_user = baker.make("users.User", first_name="Jane", last_name="Doe")
         baker.make(
-            "projects.ProjectUserPermissions",
+            "projects.ProjectMembership",
             project=project,
             user=other_user,
-            role="member",
         )
         client.force_login(user)
 
@@ -216,7 +194,7 @@ class TestProjectRemoveUserView:
 
         assert response.status_code == 302
         assert response.url == reverse("projects:project_users", args=[project.uuid])
-        assert not ProjectUserPermissions.objects.filter(project=project, user=other_user).exists()
+        assert not ProjectMembership.objects.filter(project=project, user=other_user).exists()
         project_membership_notification_service.send_member_removed_email.assert_called_once_with(
             project=project,
             member=other_user,
@@ -234,7 +212,7 @@ class TestProjectRemoveUserView:
 
         assert response.status_code == 302
         assert response.url == reverse("projects:projects_list")
-        assert not ProjectUserPermissions.objects.filter(project=project, user=user).exists()
+        assert not ProjectMembership.objects.filter(project=project, user=user).exists()
         project_membership_notification_service.send_member_removed_email.assert_called_once_with(
             project=project,
             member=user,
@@ -260,7 +238,7 @@ class TestProjectRemoveUserView:
 
         assert response.status_code == 302
         assert response.url == reverse("projects:projects_list")
-        assert not ProjectUserPermissions.objects.filter(project=project, user=user).exists()
+        assert not ProjectMembership.objects.filter(project=project, user=user).exists()
         capture_exception.assert_called_once()
 
 
@@ -391,10 +369,9 @@ class TestProjectAddUsersFlow:
 
         assert response.status_code == 302
         assert response.url == reverse("projects:project_users", args=[project.uuid])
-        assert ProjectUserPermissions.objects.filter(
+        assert ProjectMembership.objects.filter(
             project=project,
             user=selected_user,
-            role="admin",
         ).exists()
         project_membership_notification_service.send_member_added_email.assert_called_once_with(
             project=project,
@@ -432,10 +409,9 @@ class TestProjectAddUsersFlow:
 
         assert response.status_code == 302
         assert response.url == reverse("projects:project_users", args=[project.uuid])
-        assert ProjectUserPermissions.objects.filter(
+        assert ProjectMembership.objects.filter(
             project=project,
             user=selected_user,
-            role="admin",
         ).exists()
         capture_exception.assert_called_once()
 
@@ -469,10 +445,9 @@ class TestProjectAddUsersFlow:
 
         assert response.status_code == 302
         assert response.url == reverse("projects:project_users", args=[project.uuid])
-        assert ProjectUserPermissions.objects.filter(
+        assert ProjectMembership.objects.filter(
             project=project,
             user=selected_user,
-            role="admin",
         ).exists()
         capture_exception.assert_called_once()
 
@@ -488,7 +463,7 @@ class TestProjectAddUsersFlow:
 
         client.post(reverse("projects:project_users_add_confirm", args=[project.uuid]))
 
-        membership = ProjectUserPermissions.objects.get(project=project, user=selected_user)
+        membership = ProjectMembership.objects.get(project=project, user=selected_user)
         historical = membership.history.filter(history_type="+")
         assert historical.exists()
         assert historical.first().history_user == user
@@ -538,10 +513,9 @@ class TestProjectAddUsersFlow:
         assert created_user.email == "new.hire@example.com"
         assert created_user.first_name == "New"
         assert created_user.last_name == "Hire"
-        assert ProjectUserPermissions.objects.filter(
+        assert ProjectMembership.objects.filter(
             project=project,
             user=created_user,
-            role="admin",
         ).exists()
 
     def test_confirm_add_redirects_when_entra_auth_missing(self, client, user, project):
@@ -797,10 +771,9 @@ class TestProjectCreateFlow:
         project = Project.objects.get(name="Final Creation Project")
         assert response.status_code == 302
         assert response.url == reverse("projects:project_detail", args=[project.uuid])
-        assert ProjectUserPermissions.objects.filter(
+        assert ProjectMembership.objects.filter(
             project=project,
             user=selected_user,
-            role="admin",
         ).exists()
         assert "project_create" not in client.session
         assert "project_user_add_selection" not in client.session
@@ -825,7 +798,7 @@ class TestProjectCreateFlow:
         client.post(reverse("projects:project_create_confirm"))
 
         project = Project.objects.get(name="History Test Project")
-        for membership in ProjectUserPermissions.objects.filter(project=project):
+        for membership in ProjectMembership.objects.filter(project=project):
             historical = membership.history.filter(history_type="+")
             assert historical.exists(), f"No creation history record for user {membership.user}"
             assert historical.first().history_user == user

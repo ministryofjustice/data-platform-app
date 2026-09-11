@@ -33,7 +33,7 @@ def superuser(db):
 def project(db, user):
     """A project with the test user as an admin member."""
     project = baker.make("projects.Project", name="Example Project", created_by=user)
-    baker.make("projects.ProjectUserPermissions", project=project, user=user, role="admin")
+    baker.make("projects.ProjectMembership", project=project, user=user)
     return project
 
 
