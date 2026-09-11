@@ -7,12 +7,24 @@ from django_extensions.db.models import TimeStampedModel
 from simple_history.models import HistoricalRecords
 
 
+class ProjectPermission(models.TextChoices):
+    MANAGE_API_KEYS = "manage_api_keys", "Manage API Keys"
+    MANAGE_MEMBERS = "manage_members", "Manage Members"
+
+
 class ProjectMembershipPermission(TimeStampedModel):
     membership = models.ForeignKey(
         "ProjectMembership", on_delete=models.CASCADE, related_name="permissions"
     )
     permission = models.ForeignKey(
-        Permission, on_delete=models.PROTECT, related_name="project_membership_permissions"
+        Permission,
+        on_delete=models.PROTECT,
+        related_name="project_membership_permissions",
+        limit_choices_to={
+            "content_type__app_label": "projects",
+            "content_type__model": "project",
+            "codename__in": ProjectPermission.values,
+        },
     )
     granted_by = models.ForeignKey(
         "users.User",
@@ -40,7 +52,7 @@ class ProjectMembership(TimeStampedModel):
 
     class Meta:
         db_table = "project_membership"
-        verbose_name_plural = "project user permissions"
+        verbose_name_plural = "Project members"
         constraints = [
             models.UniqueConstraint(
                 fields=["project", "user"],
@@ -64,11 +76,6 @@ class BusinessUnit(TimeStampedModel):
 
     class Meta:
         ordering = ["name"]
-
-
-class ProjectPermission(models.TextChoices):
-    MANAGE_API_KEYS = "manage_api_keys", "Manage API Keys"
-    MANAGE_MEMBERS = "manage_members", "Manage Members"
 
 
 class Project(TimeStampedModel):

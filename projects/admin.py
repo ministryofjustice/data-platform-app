@@ -2,7 +2,7 @@ from django.contrib import admin
 from simple_history.admin import SimpleHistoryAdmin
 
 from ai_gateway.admin import AIGatewayTeamInline
-from projects.models import BusinessUnit, Project, ProjectMembership
+from projects.models import BusinessUnit, Project, ProjectMembership, ProjectMembershipPermission
 
 
 class BusinessUnitAdmin(admin.ModelAdmin):
@@ -15,10 +15,35 @@ class ProjectMembershipInline(admin.TabularInline):
     model = ProjectMembership
     extra = 0
     autocomplete_fields = ("user",)
-    fields = ("user",)
+    fields = (
+        "user",
+        "permission_list",
+    )
+    readonly_fields = ("permission_list",)
+    show_change_link = True
+
+    @admin.display(description="Permissions")
+    def permission_list(self, obj):
+        if not obj.pk:
+            return ""
+
+        return ", ".join(
+            assignment.permission.name
+            for assignment in obj.permissions.select_related("permission")
+        )
+
+
+class ProjectMembershipPermissionInline(admin.TabularInline):
+    model = ProjectMembershipPermission
+    extra = 0
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related("project", "user")
+        return (
+            super()
+            .get_queryset(request)
+            .prefetch_related("permission")
+            .select_related("granted_by", "membership__project", "membership__user")
+        )
 
 
 class ProjectMembershipAdmin(SimpleHistoryAdmin):
@@ -26,6 +51,7 @@ class ProjectMembershipAdmin(SimpleHistoryAdmin):
     list_filter = ("project",)
     search_fields = ("project__name", "user__email")
     readonly_fields = ("project", "user", "created", "modified")
+    inlines = (ProjectMembershipPermissionInline,)
 
 
 class ProjectAdmin(SimpleHistoryAdmin):
