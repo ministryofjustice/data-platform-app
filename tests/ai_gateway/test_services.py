@@ -551,36 +551,36 @@ class TestKeyServiceAccessGroups:
 
 class TestEstimateCosts:
     AVAILABLE_MODELS = [
-            {
-                "model_name": "gpt-4",
-                "display_name": "GPT-4",
-                "provider": "OpenAI",
-                "input_cost_per_million": 30.0,
-                "output_cost_per_million": 60.0,
-            },
-            {
-                "model_name": "claude-3",
-                "display_name": "Claude 3",
-                "provider": "Anthropic",
-                "input_cost_per_million": 15.0,
-                "output_cost_per_million": 75.0,
-            }
-        ]
+        {
+            "model_name": "gpt-4",
+            "display_name": "GPT-4",
+            "provider": "OpenAI",
+            "input_cost_per_million": 30.0,
+            "output_cost_per_million": 60.0,
+        },
+        {
+            "model_name": "claude-3",
+            "display_name": "Claude 3",
+            "provider": "Anthropic",
+            "input_cost_per_million": 15.0,
+            "output_cost_per_million": 75.0,
+        },
+    ]
 
     MODEL_ROWS = [
-            {
-                "model": "gpt-4",
-                "input_tokens": 1_000,
-                "output_tokens": 500,
-                "requests_per_period": 100,
-            },
-            {
-                "model": "claude-3",
-                "input_tokens": 2_000,
-                "output_tokens": 1_000,
-                "requests_per_period": 10,
-            }
-        ]
+        {
+            "model": "gpt-4",
+            "input_tokens": 1_000,
+            "output_tokens": 500,
+            "requests_per_period": 100,
+        },
+        {
+            "model": "claude-3",
+            "input_tokens": 2_000,
+            "output_tokens": 1_000,
+            "requests_per_period": 10,
+        },
+    ]
 
     def test_single_row(self):
         result = estimate_costs(
@@ -642,10 +642,13 @@ class TestEstimateCosts:
         assert result["rows"][1]["cost"] == pytest.approx(1.05)
 
     def test_returns_zero_cost_when_pricing_is_missing(self):
-        models = [{**self.AVAILABLE_MODELS[0],
-        "input_cost_per_million": None,
-        "output_cost_per_million": None,
-        }]
+        models = [
+            {
+                **self.AVAILABLE_MODELS[0],
+                "input_cost_per_million": None,
+                "output_cost_per_million": None,
+            }
+        ]
 
         result = estimate_costs(
             usage_period="monthly",

@@ -1043,7 +1043,6 @@ class TestUsageView:
 
 
 class TestAICostUsageCalculatorView:
-
     CALCULATOR_MODELS = [
         {
             "model_name": "gpt-4",
@@ -1103,7 +1102,7 @@ class TestAICostUsageCalculatorView:
                 "provider": "Anthropic",
                 "input_cost_per_million": 15.0,
                 "output_cost_per_million": 75.0,
-            }
+            },
         ]
         client.force_login(user)
 
