@@ -1,6 +1,6 @@
 ##### BUILD PYTHON
 
-FROM docker.io/library/ubuntu:26.04@sha256:2260313b31c8c011cd2eebe728008efac1b3982be73eb71348ea2648d2c0e09b AS build-python
+FROM docker.io/library/ubuntu:26.04@sha256:513c074113a871b51a8d16ab445c88779d6452d937a164fb5cc479f32668a41d AS build-python
 
 SHELL ["/bin/bash", "-e", "-u", "-o", "pipefail", "-c"]
 
@@ -57,7 +57,7 @@ EOF
 
 ##### FINAL
 
-FROM docker.io/library/ubuntu:26.04@sha256:2260313b31c8c011cd2eebe728008efac1b3982be73eb71348ea2648d2c0e09b AS final
+FROM docker.io/library/ubuntu:26.04@sha256:513c074113a871b51a8d16ab445c88779d6452d937a164fb5cc479f32668a41d AS final
 
 ARG VERSION="unknown"
 ARG COMMIT_SHA="unknown"
