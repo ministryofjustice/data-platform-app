@@ -17,6 +17,9 @@ class ProjectMembershipInline(admin.TabularInline):
     autocomplete_fields = ("user",)
     fields = ("user",)
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("project", "user")
+
 
 class ProjectMembershipAdmin(SimpleHistoryAdmin):
     list_display = ("project", "user", "created")

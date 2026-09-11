@@ -22,7 +22,7 @@ class UserAdmin(BaseUserAdmin):
                     "is_staff",
                     "is_superuser",
                     "groups",
-                    "memberships",
+                    "user_permissions",
                 )
             },
         ),
