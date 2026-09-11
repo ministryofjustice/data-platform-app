@@ -1,4 +1,5 @@
 import pytest
+from django.contrib.auth.models import Permission
 
 from projects.backends import ProjectPermissionBackend
 from projects.models import ProjectMembership, ProjectMembershipPermission, ProjectPermission
@@ -6,12 +7,14 @@ from projects.models import ProjectMembership, ProjectMembershipPermission, Proj
 
 class TestUserHasPerm:
     def add_perm(self, project, user, perm):
-        # Get the membership object for the user in the project
+        """Helper for creating project members with specific permissions"""
         membership = ProjectMembership.objects.get(project=project, user=user)
-
+        permission = Permission.objects.get(
+            codename=perm.value, content_type__app_label="projects", content_type__model="project"
+        )
         ProjectMembershipPermission.objects.get_or_create(
             membership=membership,
-            permission=perm,
+            permission=permission,
             defaults={
                 "granted_by": user,
             },

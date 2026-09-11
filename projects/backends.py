@@ -10,7 +10,7 @@ class ProjectPermissionBackend:
         if not user_obj.is_authenticated:
             return False
 
-        if obj is None or not isinstance(obj, Project):
+        if not isinstance(obj, Project):
             return False
 
         app_label, _, codename = perm.partition(".")
@@ -21,5 +21,7 @@ class ProjectPermissionBackend:
         return ProjectMembershipPermission.objects.filter(
             membership__user=user_obj,
             membership__project=obj,
-            permission=codename,
+            permission__content_type__app_label=app_label,
+            permission__content_type__model="project",
+            permission__codename=codename,
         ).exists()

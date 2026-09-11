@@ -1,23 +1,18 @@
 import uuid
 
+from django.contrib.auth.models import Permission
 from django.db import models
 from django.urls import reverse
 from django_extensions.db.models import TimeStampedModel
 from simple_history.models import HistoricalRecords
 
 
-class ProjectPermission(models.TextChoices):
-    MANAGE_API_KEYS = "manage_api_keys", "Manage API Keys"
-    MANAGE_MEMBERS = "manage_members", "Manage Members"
-
-
 class ProjectMembershipPermission(TimeStampedModel):
     membership = models.ForeignKey(
         "ProjectMembership", on_delete=models.CASCADE, related_name="permissions"
     )
-    permission = models.CharField(
-        max_length=50,
-        choices=ProjectPermission.choices,
+    permission = models.ForeignKey(
+        Permission, on_delete=models.PROTECT, related_name="project_membership_permissions"
     )
     granted_by = models.ForeignKey(
         "users.User",
@@ -63,6 +58,11 @@ class BusinessUnit(TimeStampedModel):
         ordering = ["name"]
 
 
+class ProjectPermission(models.TextChoices):
+    MANAGE_API_KEYS = "manage_api_keys", "Manage API Keys"
+    MANAGE_MEMBERS = "manage_members", "Manage Members"
+
+
 class Project(TimeStampedModel):
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField()
@@ -89,6 +89,9 @@ class Project(TimeStampedModel):
     )
 
     history = HistoricalRecords(table_name="project_history")
+
+    class Meta:
+        permissions = [(permission.value, permission.label) for permission in ProjectPermission]
 
     def __str__(self):
         return self.name
