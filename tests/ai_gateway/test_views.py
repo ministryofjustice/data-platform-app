@@ -1040,3 +1040,119 @@ class TestUsageView:
 
         assert response.status_code == 200
         assertContains(response, "Could not load usage data")
+
+
+class TestAICostUsageCalculatorView:
+
+    CALCULATOR_MODELS = [
+        {
+            "model_name": "gpt-4",
+            "display_name": "GPT-4",
+            "provider": "OpenAI",
+            "input_cost_per_million": 30.0,
+            "output_cost_per_million": 60.0,
+        },
+    ]
+
+    def test_calculator_view_renders(self, client, user, key_service):
+        key_service.list_all_models.return_value = self.CALCULATOR_MODELS
+        client.force_login(user)
+
+        response = client.get(reverse("ai_cost_usage_calculator"))
+
+        assert response.status_code == 200
+        assertTemplateUsed(response, "ai_gateway/ai_cost_usage_calculator.html")
+
+    def test_valid_post_renders_estimate(self, client, user, key_service):
+        key_service.list_all_models.return_value = self.CALCULATOR_MODELS
+        client.force_login(user)
+
+        response = client.post(
+            reverse("ai_cost_usage_calculator"),
+            data={
+                "usage_period": "monthly",
+                "models-TOTAL_FORMS": "1",
+                "models-INITIAL_FORMS": "0",
+                "models-MIN_NUM_FORMS": "0",
+                "models-MAX_NUM_FORMS": "1000",
+                "models-0-provider": "OpenAI",
+                "models-0-model": "gpt-4",
+                "models-0-input_tokens": "1000",
+                "models-0-output_tokens": "500",
+                "models-0-requests_per_period": "100",
+            },
+        )
+
+        assert response.status_code == 200
+        assertContains(response, "Estimated cost")
+        assertContains(response, "GPT-4")
+        assertContains(response, "6.00")
+
+    def test_multi_row_post_renders_both_models(self, client, user, key_service):
+        key_service.list_all_models.return_value = [
+            {
+                "model_name": "gpt-4",
+                "display_name": "GPT-4",
+                "provider": "OpenAI",
+                "input_cost_per_million": 30.0,
+                "output_cost_per_million": 60.0,
+            },
+            {
+                "model_name": "claude-3",
+                "display_name": "Claude 3",
+                "provider": "Anthropic",
+                "input_cost_per_million": 15.0,
+                "output_cost_per_million": 75.0,
+            }
+        ]
+        client.force_login(user)
+
+        response = client.post(
+            reverse("ai_cost_usage_calculator"),
+            data={
+                "usage_period": "monthly",
+                "models-TOTAL_FORMS": "2",
+                "models-INITIAL_FORMS": "0",
+                "models-MIN_NUM_FORMS": "0",
+                "models-MAX_NUM_FORMS": "1000",
+                "models-0-provider": "OpenAI",
+                "models-0-model": "gpt-4",
+                "models-0-input_tokens": "1000",
+                "models-0-output_tokens": "500",
+                "models-0-requests_per_period": "100",
+                "models-1-provider": "Anthropic",
+                "models-1-model": "claude-3",
+                "models-1-input_tokens": "2000",
+                "models-1-output_tokens": "1000",
+                "models-1-requests_per_period": "10",
+            },
+        )
+
+        assert response.status_code == 200
+        assertContains(response, "Estimated cost")
+        assertContains(response, "GPT-4")
+        assertContains(response, "Claude 3")
+        assertContains(response, "7.05")
+
+    def test_invalid_post_renders_errors(self, client, user, key_service):
+        client.force_login(user)
+
+        response = client.post(
+            reverse("ai_cost_usage_calculator"),
+            data={
+                "usage_period": "monthly",
+                "models-TOTAL_FORMS": "1",
+                "models-INITIAL_FORMS": "0",
+                "models-MIN_NUM_FORMS": "0",
+                "models-MAX_NUM_FORMS": "1000",
+                "models-0-provider": "OpenAI",
+                "models-0-model": "",
+                "models-0-input_tokens": "1000",
+                "models-0-output_tokens": "500",
+                "models-0-requests_per_period": "100",
+            },
+        )
+
+        assert response.status_code == 200
+        assertContains(response, "Select a model")
+        assertContains(response, "There is a problem")

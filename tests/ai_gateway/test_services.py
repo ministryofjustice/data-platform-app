@@ -7,7 +7,7 @@ from django.core.cache import cache
 from ai_gateway.client import AIGatewayClient
 from ai_gateway.exceptions import AIGatewayAPIError
 from ai_gateway.models import Key, Team
-from ai_gateway.services import KeyService
+from ai_gateway.services import KeyService, estimate_costs
 
 PLAINTEXT_KEY = "sk-plaintext-key-value-123456"
 
@@ -547,3 +547,125 @@ class TestKeyServiceAccessGroups:
         gateway_client.update_key_models.assert_called_once_with("hash-1", ["gpt-4"])
         assert updated == ["alias-1"]
         assert failed == []
+
+
+class TestEstimateCosts:
+    AVAILABLE_MODELS = [
+            {
+                "model_name": "gpt-4",
+                "display_name": "GPT-4",
+                "provider": "OpenAI",
+                "input_cost_per_million": 30.0,
+                "output_cost_per_million": 60.0,
+            },
+            {
+                "model_name": "claude-3",
+                "display_name": "Claude 3",
+                "provider": "Anthropic",
+                "input_cost_per_million": 15.0,
+                "output_cost_per_million": 75.0,
+            }
+        ]
+
+    MODEL_ROWS = [
+            {
+                "model": "gpt-4",
+                "input_tokens": 1_000,
+                "output_tokens": 500,
+                "requests_per_period": 100,
+            },
+            {
+                "model": "claude-3",
+                "input_tokens": 2_000,
+                "output_tokens": 1_000,
+                "requests_per_period": 10,
+            }
+        ]
+
+    def test_single_row(self):
+        result = estimate_costs(
+            usage_period="monthly",
+            model_rows=[self.MODEL_ROWS[0]],
+            available_models=self.AVAILABLE_MODELS,
+        )
+
+        # GPT-4:
+        # Input:  30 / 1,000,000 × 1,000 = $0.030
+        # Output: 60 / 1,000,000 ×   500 = $0.030
+        # Per request = $0.060
+        # 100 requests = $6.00
+
+        assert result["rows"][0]["model_name"] == "GPT-4"
+        assert result["rows"][0]["provider"] == "OpenAI"
+        assert result["rows"][0]["per_request_cost"] == pytest.approx(0.06)
+        assert result["rows"][0]["cost"] == pytest.approx(6.0)
+
+        assert result["usage_period"] == "monthly"
+        assert result["total_per_request"] == pytest.approx(0.060)
+        assert result["total_cost"] == pytest.approx(6.00)
+
+    def test_sums_each_model_row(self):
+        result = estimate_costs(
+            usage_period="monthly",
+            model_rows=self.MODEL_ROWS,
+            available_models=self.AVAILABLE_MODELS,
+        )
+
+        # GPT-4:
+        # Input:  30 / 1,000,000 × 1,000 = $0.030
+        # Output: 60 / 1,000,000 ×   500 = $0.030
+        # Per request = $0.060
+        # 100 requests = $6.00
+        # Claude 3:
+        # Input:  15 / 1,000,000 × 2,000 = $0.030
+        # Output: 75 / 1,000,000 × 1,000 = $0.075
+        # Per request = $0.105
+        # 10 requests = $1.05
+
+        # Total per request = $0.060 + $0.105 = $0.165
+        # Total monthly cost = $6.00 + $1.05 = $7.05
+
+        assert result["usage_period"] == "monthly"
+        assert result["total_per_request"] == pytest.approx(0.165)
+        assert result["total_cost"] == pytest.approx(7.05)
+
+        assert len(result["rows"]) == 2
+
+        assert result["rows"][0]["model_name"] == "GPT-4"
+        assert result["rows"][0]["provider"] == "OpenAI"
+        assert result["rows"][0]["per_request_cost"] == pytest.approx(0.06)
+        assert result["rows"][0]["cost"] == pytest.approx(6.0)
+
+        assert result["rows"][1]["model_name"] == "Claude 3"
+        assert result["rows"][1]["provider"] == "Anthropic"
+        assert result["rows"][1]["per_request_cost"] == pytest.approx(0.105)
+        assert result["rows"][1]["cost"] == pytest.approx(1.05)
+
+    def test_returns_zero_cost_when_pricing_is_missing(self):
+        models = [{**self.AVAILABLE_MODELS[0],
+        "input_cost_per_million": None,
+        "output_cost_per_million": None,
+        }]
+
+        result = estimate_costs(
+            usage_period="monthly",
+            model_rows=self.MODEL_ROWS,
+            available_models=models,
+        )
+
+        assert result["usage_period"] == "monthly"
+        assert result["total_cost"] == pytest.approx(0.0)
+        assert result["total_per_request"] == pytest.approx(0.0)
+        assert result["rows"][0]["per_request_cost"] == pytest.approx(0)
+
+    def test_returns_empty_result_without_rows(self):
+        result = estimate_costs(
+            usage_period="monthly",
+            model_rows=[],
+            available_models=self.AVAILABLE_MODELS,
+        )
+
+        assert result["usage_period"] == "monthly"
+        assert result["total_cost"] == pytest.approx(0.0)
+        assert result["total_per_request"] == pytest.approx(0.0)
+        assert result["rows"] == []
