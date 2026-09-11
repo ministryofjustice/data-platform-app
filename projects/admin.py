@@ -52,14 +52,16 @@ class ProjectMembershipAdmin(SimpleHistoryAdmin):
     search_fields = ("project__name", "user__email")
     readonly_fields = ("project", "user", "created", "modified")
     inlines = (ProjectMembershipPermissionInline,)
+    list_select_related = ("project", "user")
 
 
 class ProjectAdmin(SimpleHistoryAdmin):
-    list_display = ("name", "business_unit", "created_by", "created")
+    list_display = ("name", "business_unit", "owner", "created_by", "created")
     list_filter = ("business_unit",)
     search_fields = ("name",)
     readonly_fields = ("uuid", "created_by", "created", "modified")
     inlines = (ProjectMembershipInline, AIGatewayTeamInline)
+    list_select_related = ("business_unit", "created_by", "owner")
 
 
 HISTORY_TYPE_LABELS = {"+": "Added", "~": "Changed", "-": "Removed"}
