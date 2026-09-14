@@ -13,7 +13,7 @@
       {% include "includes/forms/_error_summary.html" with form=form only %}
       <form method="post" action="{% url 'ai_gateway:key_create' project.uuid %}">
         {% csrf_token %}
-        {% include "includes/fields/_text_input.html" with field=form.name width='govuk-!-width-one-half' only %}
+        {% include "includes/fields/_text_input.html" with field=form.name width="govuk-!-width-one-half" only %}
         {% url 'ai_gateway:key_list' project.uuid as cancel_url %}
         {% include "includes/ai_gateway/_model_selection.html" with cancel_url=cancel_url %}
         <div class="govuk-button-group">
