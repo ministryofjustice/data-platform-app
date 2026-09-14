@@ -23,9 +23,7 @@
           color="blue">
     <link rel="apple-touch-icon"
           href="{% static 'assets/images/govuk-icon-180.png' %}">
-    <link rel="stylesheet"
-          type="text/css"
-          href="{% static 'assets/css/app.css' %}">
+    <link rel="stylesheet" href="{% static 'assets/css/app.css' %}">
     <meta property="og:image"
           content="{% static 'assets/images/govuk-opengraph-image.png' %}">
     <meta name="robots" content="noindex, nofollow" />
@@ -54,13 +52,13 @@
       <a href="#main-content" class="govuk-skip-link">Skip to main content</a>
     {% endblock skip_link %}
     {% block header %}
-      {% include 'base/header.html' %}
+      {% include "base/header.html" %}
     {% endblock header %}
     {% block nav %}
-      {% include 'includes/service_navigation.html' %}
+      {% include "includes/service_navigation.html" %}
     {% endblock nav %}
     {% if show_masthead %}
-      {% include 'includes/masthead.html' %}
+      {% include "includes/masthead.html" %}
     {% endif %}
     {% block main %}
       <div class="{% block base_div_class %}govuk-width-container{% endblock base_div_class %}">
@@ -72,7 +70,7 @@
         </main>
       </div>
     {% endblock main %}
-    {% include 'base/footer.html' %}
+    {% include "base/footer.html" %}
     {% block scripts %}
     {% endblock scripts %}
     <script type="module">

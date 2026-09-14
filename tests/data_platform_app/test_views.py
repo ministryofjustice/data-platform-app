@@ -155,6 +155,38 @@ class TestLandingView:
             'href="https://user-guide.data-platform.service.justice.gov.uk/"',
         )
 
+    def test_links_to_ai_cost_usage_calculator(self, client, user):
+        client.force_login(user)
+
+        response = client.get(reverse("landing"))
+
+        assertContains(response, f'href="{reverse("ai_cost_usage_calculator")}"')
+
+    def test_links_to_find_moj_data(self, client, user):
+        client.force_login(user)
+
+        response = client.get(reverse("landing"))
+
+        assertContains(response, 'href="https://find-moj-data.service.justice.gov.uk/"')
+
+
+class TestAICostUsageCalculatorView:
+    """Tests for the login-protected AICostUsageCalculatorView."""
+
+    def test_redirects_anonymous_user_to_login(self, client):
+        response = client.get(reverse("ai_cost_usage_calculator"))
+
+        assert response.status_code == 302
+        assert response.url.startswith(reverse("login"))
+
+    def test_renders_for_authenticated_user(self, client, user, key_service):
+        client.force_login(user)
+
+        response = client.get(reverse("ai_cost_usage_calculator"))
+
+        assert response.status_code == 200
+        assert "ai_gateway/ai_cost_usage_calculator.html" in [t.name for t in response.templates]
+
 
 class TestHealthcheckView:
     """Tests for the healthcheck endpoint at '/healthcheck/'"""

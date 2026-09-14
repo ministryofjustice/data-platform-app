@@ -77,4 +77,4 @@ indent = 2
 max_line_length = 99
 format_css = true
 format_js = true
-ignore = "H006,H021,H023,H025,H030,H031,T002"
+ignore = "H006,H021,H023,H025,H030,H031,T002,H047"
