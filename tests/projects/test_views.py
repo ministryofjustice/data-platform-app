@@ -4,7 +4,7 @@ from unittest.mock import patch
 from django.core.exceptions import ImproperlyConfigured
 from django.urls import reverse
 from model_bakery import baker
-from pytest_django.asserts import assertContains, assertInHTML
+from pytest_django.asserts import assertContains, assertInHTML, assertNotContains
 
 from ai_gateway.exceptions import AIGatewayAPIError
 from projects.graph import EntraAuthenticationError, EntraRequestError
@@ -44,6 +44,13 @@ class TestDetailView:
 
         assert response.status_code == 404
 
+    def test_superuser_can_view_project_without_membership(self, client, superuser, project):
+        client.force_login(superuser)
+
+        response = client.get(reverse("projects:project_detail", args=[project.uuid]))
+
+        assert response.status_code == 200
+
 
 class TestProjectUsersDetailView:
     """Tests for the ProjectUsersDetailView at '/projects/<uuid>/users/'"""
@@ -60,6 +67,13 @@ class TestProjectUsersDetailView:
         assert "projects/user_list.html" in [t.name for t in response.templates]
         assertContains(response, 'aria-current="location"', count=1)
         assertInHTML(current_members_link, response.content.decode())
+
+    def test_superuser_can_view_members_without_membership(self, client, superuser, project):
+        client.force_login(superuser)
+
+        response = client.get(reverse("projects:project_users", args=[project.uuid]))
+
+        assert response.status_code == 200
 
 
 class TestProjectDeleteView:
@@ -162,6 +176,27 @@ class TestProjectRemoveUserView:
         )
 
         assert response.status_code == 404
+
+    def test_project_member_cannot_remove_another_user(self, client, non_project_user, project):
+        ProjectUserPermissions.objects.create(
+            project=project,
+            user=non_project_user,
+            role="member",
+        )
+        other_user = baker.make("users.User")
+        membership = ProjectUserPermissions.objects.create(
+            project=project,
+            user=other_user,
+            role="member",
+        )
+        client.force_login(non_project_user)
+
+        response = client.post(
+            reverse("projects:project_user_remove", args=[project.uuid, other_user.id])
+        )
+
+        assert response.status_code == 404
+        assert ProjectUserPermissions.objects.filter(pk=membership.pk).exists()
 
     def test_remove_other_user_redirects_to_project_users(
         self, client, user, project, project_membership_notification_service
@@ -572,6 +607,14 @@ class TestProjectsListView:
         response = client.get(reverse("projects:projects_list"))
 
         assert response.status_code == 200
+
+    def test_does_not_list_projects_without_membership(self, client, superuser, project):
+        client.force_login(superuser)
+
+        response = client.get(reverse("projects:projects_list"))
+
+        assert response.status_code == 200
+        assertNotContains(response, project.name)
 
 
 class TestProjectCreateFlow:

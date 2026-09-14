@@ -10,8 +10,8 @@ RUN <<EOF
 apt-get update --quiet --yes
 apt-get install --quiet --yes \
     --no-install-recommends \
-    ca-certificates=20260601~26.04.1 \
-    python3.14-dev=3.14.4-1ubuntu0.1
+    ca-certificates \
+    python3.14-dev
 EOF
 
 # Install uv
@@ -40,7 +40,7 @@ RUN --mount=type=cache,target=/root/.cache \
 
 ##### BUILD NODE
 
-FROM docker.io/library/node:26.7.0-alpine@sha256:aadf416b2cdce311a8811ba3f0608a61b77dbf997500e2eafe781b51f6a0b019 AS build-node
+FROM docker.io/library/node:26.8.2-alpine@sha256:ef24c5053d50fdc3e4e56eb4e7ddb7861874ab0fdc797046ba897581deb8e868 AS build-node
 
 WORKDIR /build
 
@@ -96,10 +96,13 @@ EOF
 RUN <<EOF
 apt-get update --quiet --yes
 
+# Pick up security updates published since the base image was built
+apt-get upgrade --quiet --yes
+
 apt-get install --quiet --yes \
     --no-install-recommends \
-    ca-certificates=20260601~26.04.1 \
-    python3.14=3.14.4-1ubuntu0.1
+    ca-certificates \
+    python3.14
 
 apt-get clean --yes
 

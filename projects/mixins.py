@@ -2,11 +2,29 @@ import sentry_sdk
 from django.core.exceptions import ImproperlyConfigured
 from django.shortcuts import get_object_or_404
 
+from projects.models import Project
 from projects.services import ProjectMembershipNotificationService, ProjectNotificationError
 
 ADD_USER_SESSION_KEY = "project_user_add_selection"
 PROJECT_CREATE_SESSION_KEY = "project_create"
 USER_BUCKET_SESSION_KEY = "project_create_user_add"
+
+
+class ProjectAccessMixin:
+    """Limit project querysets to memberships, except for superusers."""
+
+    def get_accessible_projects(self, queryset=None, *, role=None):
+
+        if queryset is None:
+            queryset = Project.objects.all()
+
+        if self.request.user.is_superuser:
+            return queryset
+
+        filters = {"user_permissions__user": self.request.user}
+        if role is not None:
+            filters["user_permissions__role"] = role
+        return queryset.filter(**filters).distinct()
 
 
 class ProjectUserSelectionSessionMixin:
@@ -31,16 +49,11 @@ class ProjectUserSelectionSessionMixin:
         self.request.session[ADD_USER_SESSION_KEY] = session_map
 
 
-class ExistingProjectMixin:
+class ExistingProjectMixin(ProjectAccessMixin):
     def get_project(self):
-        from projects.models import Project
-
         if not hasattr(self, "_project"):
             self._project = get_object_or_404(
-                Project.objects.filter(
-                    user_permissions__user=self.request.user,
-                    user_permissions__role="admin",
-                ).distinct(),
+                self.get_accessible_projects(role="admin"),
                 uuid=self.kwargs["uuid"],
             )
         return self._project
