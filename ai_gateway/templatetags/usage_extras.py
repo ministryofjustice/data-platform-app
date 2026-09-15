@@ -4,15 +4,19 @@ register = template.Library()
 
 
 @register.filter
-def usd(value: float | int | None, max_decimal_places: int = 2) -> str:
+def usd(value: float | int | None, decimal_places: int = 2) -> str:
     """Format ``value`` as a dollar amount with thousands separators, e.g. ``$9,999.00``."""
     if value is None:
         return "-"
+
     try:
-        max_decimal_places = int(max_decimal_places)
-        formatted = f"${float(value):,.{max_decimal_places}f}"
+        decimal_places = int(decimal_places)
+        formatted = f"${float(value):,.{decimal_places}f}"
     except TypeError, ValueError:
         return "-"
+
+    if decimal_places == 0:
+        return formatted
 
     whole, decimal = formatted.split(".")
     decimal = decimal.rstrip("0")
