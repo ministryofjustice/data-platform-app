@@ -65,21 +65,20 @@ def estimate_costs(
 
         total_per_request += per_request_cost
         total_cost += row_cost
-
         rows.append(
             {
                 "model_name": model["display_name"],
                 "provider": model["provider"],
-                "per_request_cost": round(per_request_cost, 3),
-                "cost": round(row_cost, 2),
+                "per_request_cost": round(per_request_cost, 4),
+                "cost": round(row_cost, 4),
             }
         )
 
     return {
         "usage_period": usage_period,
         "rows": rows,
-        "total_per_request": round(total_per_request, 3),
-        "total_cost": round(total_cost, 2),
+        "total_per_request": round(total_per_request, 4),
+        "total_cost": round(total_cost, 4),
     }
 
 
