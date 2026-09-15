@@ -182,11 +182,11 @@
             <div class="app-cost-estimate-summary">
               <div class="app-cost-estimate-summary__item">
                 <h3 class="govuk-heading-s">Per request</h3>
-                <p class="app-cost-estimate-summary__value">{{ estimate_result.total_per_request|usd }}</p>
+                <p class="app-cost-estimate-summary__value">{{ estimate_result.total_per_request|usd:4 }}</p>
               </div>
               <div class="app-cost-estimate-summary__item">
                 <h3 class="govuk-heading-s">{{ estimate_result.usage_period|capfirst }}</h3>
-                <p class="app-cost-estimate-summary__value">{{ estimate_result.total_cost|usd }}</p>
+                <p class="app-cost-estimate-summary__value">{{ estimate_result.total_cost|usd:2 }}</p>
               </div>
             </div>
             <table class="govuk-table app-cost-estimate-table">
@@ -203,8 +203,8 @@
                   <tr class="govuk-table__row">
                     <td class="govuk-table__cell">{{ row.provider }}</td>
                     <td class="govuk-table__cell">{{ row.model_name }}</td>
-                    <td class="govuk-table__cell govuk-table__cell--numeric">{{ row.per_request_cost|usd }}</td>
-                    <td class="govuk-table__cell govuk-table__cell--numeric">{{ row.cost|usd }}</td>
+                    <td class="govuk-table__cell govuk-table__cell--numeric">{{ row.per_request_cost|usd:4 }}</td>
+                    <td class="govuk-table__cell govuk-table__cell--numeric">{{ row.cost|usd:2 }}</td>
                   </tr>
                 {% endfor %}
               </tbody>
