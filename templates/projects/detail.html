@@ -23,6 +23,6 @@
   <p class="govuk-body">{{ project.description }}</p>
   <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
   <h3 class="govuk-heading-s">Project owner</h3>
-  <p class="govuk-body">{{ project.created_by.full_name }}</p>
+  <p class="govuk-body">{{ project.owner.full_name }}</p>
   <p class="govuk-body-s">Created {{ project.created|date:"d F Y" }}</p>
 {% endblock project_main_content %}

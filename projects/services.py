@@ -10,7 +10,7 @@ from simple_history.utils import bulk_create_with_history
 from data_platform_app.services import GovUKNotificationError, GovUKNotificationsService
 from data_platform_app.utils import build_base_url
 from projects.graph import MicrosoftGraphClient
-from projects.models import Project, ProjectUserPermissions
+from projects.models import Project, ProjectMembership
 from users.models import User
 
 
@@ -146,6 +146,7 @@ class ProjectService:
                 description=description,
                 business_unit_id=business_unit_id,
                 created_by=created_by,
+                owner=created_by,
             )
             self._add_memberships(project, members, added_by=created_by)
 
@@ -168,11 +169,8 @@ class ProjectService:
 
     def _add_memberships(self, project: Project, members: list[User], *, added_by: User) -> None:
         bulk_create_with_history(
-            [
-                ProjectUserPermissions(project=project, user=member, role="admin")
-                for member in members
-            ],
-            ProjectUserPermissions,
+            [ProjectMembership(project=project, user=member) for member in members],
+            ProjectMembership,
             ignore_conflicts=True,
             default_user=added_by,
         )

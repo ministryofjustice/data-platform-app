@@ -7,7 +7,7 @@ from notifications_python_client.errors import HTTPError
 
 from data_platform_app.services import GovUKNotificationError, GovUKNotificationsService
 from projects.graph import EntraAuthenticationError, EntraRequestError
-from projects.models import ProjectUserPermissions
+from projects.models import ProjectMembership
 from projects.services import (
     ProjectMembershipNotificationService,
     ProjectNotificationError,
@@ -216,9 +216,7 @@ class TestProjectService:
 
         graph_client.get_user.assert_not_called()
         assert [member.oid for member in added] == [non_project_user.oid]
-        assert ProjectUserPermissions.objects.filter(
-            project=project, user=non_project_user
-        ).exists()
+        assert ProjectMembership.objects.filter(project=project, user=non_project_user).exists()
 
     def test_add_members_is_idempotent_for_existing_membership(
         self, project, user, non_project_user
@@ -231,7 +229,7 @@ class TestProjectService:
             added_by=non_project_user,
         )
 
-        assert ProjectUserPermissions.objects.filter(project=project, user=user).count() == 1
+        assert ProjectMembership.objects.filter(project=project, user=user).count() == 1
 
     def test_add_members_creates_stub_for_unknown_oid(self, project, user):
         new_oid = str(baker.make("users.User").oid)
@@ -252,7 +250,7 @@ class TestProjectService:
         assert created.first_name == "New"
         assert created.last_name == "Hire"
         assert [str(member.oid) for member in added] == [new_oid]
-        assert ProjectUserPermissions.objects.filter(project=project, user=created).exists()
+        assert ProjectMembership.objects.filter(project=project, user=created).exists()
 
     def test_add_members_propagates_graph_errors(self, project, user):
         new_oid = str(baker.make("users.User").oid)
@@ -300,11 +298,10 @@ class TestProjectService:
 
         assert project.name == "My Project"
         assert project.created_by == user
+        assert project.owner == user
         assert {member.oid for member in members} == {user.oid, non_project_user.oid}
-        assert ProjectUserPermissions.objects.filter(project=project, user=user).exists()
-        assert ProjectUserPermissions.objects.filter(
-            project=project, user=non_project_user
-        ).exists()
+        assert ProjectMembership.objects.filter(project=project, user=user).exists()
+        assert ProjectMembership.objects.filter(project=project, user=non_project_user).exists()
 
     def test_create_project_includes_owner_when_no_members_selected(self, user):
         business_unit = baker.make("projects.BusinessUnit")
@@ -319,7 +316,8 @@ class TestProjectService:
         )
 
         assert [member.oid for member in members] == [user.oid]
-        assert ProjectUserPermissions.objects.filter(project=project, user=user).exists()
+        assert ProjectMembership.objects.filter(project=project, user=user).exists()
+        assert project.owner == user
 
     def test_close_closes_graph_client(self):
         graph_client = Mock()

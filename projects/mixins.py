@@ -13,7 +13,7 @@ USER_BUCKET_SESSION_KEY = "project_create_user_add"
 class ProjectAccessMixin:
     """Limit project querysets to memberships, except for superusers."""
 
-    def get_accessible_projects(self, queryset=None, *, role=None):
+    def get_accessible_projects(self, queryset=None):
 
         if queryset is None:
             queryset = Project.objects.all()
@@ -21,9 +21,7 @@ class ProjectAccessMixin:
         if self.request.user.is_superuser:
             return queryset
 
-        filters = {"user_permissions__user": self.request.user}
-        if role is not None:
-            filters["user_permissions__role"] = role
+        filters = {"memberships__user": self.request.user}
         return queryset.filter(**filters).distinct()
 
 
@@ -53,7 +51,7 @@ class ExistingProjectMixin(ProjectAccessMixin):
     def get_project(self):
         if not hasattr(self, "_project"):
             self._project = get_object_or_404(
-                self.get_accessible_projects(role="admin"),
+                self.get_accessible_projects(),
                 uuid=self.kwargs["uuid"],
             )
         return self._project

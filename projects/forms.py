@@ -4,7 +4,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.forms import BaseFormSet, formset_factory
 
-from projects.models import Project, ProjectUserPermissions
+from projects.models import Project, ProjectMembership
 
 
 class ProjectAddMemberForm(forms.Form):
@@ -80,7 +80,7 @@ class BaseProjectAddMemberFormSet(BaseFormSet):
             return
 
         selected_oids = [member["oid"] for member in selected_members]
-        existing_memberships = ProjectUserPermissions.objects.filter(
+        existing_memberships = ProjectMembership.objects.filter(
             project=self.project,
             user__oid__in=selected_oids,
         )
