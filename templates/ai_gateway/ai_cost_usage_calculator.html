@@ -92,6 +92,10 @@
                       <select class="govuk-select govuk-!-width-full"
                               id="{{ form.provider.id_for_label }}"
                               name="{{ form.provider.html_name }}"
+                              hx-get="{% url 'ai_cost_usage_calculator' %}"
+                              hx-target="next .model-select"
+                              hx-trigger="change"
+                              hx-vals='js:{provider: this.value}'
                               aria-label="Provider"
                               data-name="{{ formset.prefix }}-%index%-provider"
                               data-id="id_{{ formset.prefix }}-%index%-provider">
@@ -103,7 +107,7 @@
                       </select>
                     </div>
                     <div class="govuk-form-group{% if form.model.errors %} govuk-form-group--error{% endif %}">
-                      <select class="govuk-select govuk-!-width-full"
+                      <select class="govuk-select govuk-!-width-full model-select"
                               id="{{ form.model.id_for_label }}"
                               name="{{ form.model.html_name }}"
                               aria-label="Model"
