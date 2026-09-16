@@ -266,6 +266,46 @@ class TestProjectService:
                 added_by=user,
             )
 
+    def test_add_members_creates_permission_rows_for_selected_codenames(
+        self, project, user, non_project_user
+    ):
+        service = ProjectService(graph_client=Mock())
+
+        service.add_members(
+            project=project,
+            selections=[{"oid": str(non_project_user.oid), "permissions": ["manage_api_keys"]}],
+            added_by=user,
+        )
+
+        membership = ProjectMembership.objects.get(project=project, user=non_project_user)
+        assert list(membership.permissions.values_list("permission__codename", flat=True)) == [
+            "manage_api_keys"
+        ]
+
+    def test_add_members_allows_zero_permissions(self, project, user, non_project_user):
+        service = ProjectService(graph_client=Mock())
+
+        service.add_members(
+            project=project,
+            selections=[{"oid": str(non_project_user.oid), "permissions": []}],
+            added_by=user,
+        )
+
+        membership = ProjectMembership.objects.get(project=project, user=non_project_user)
+        assert not membership.permissions.exists()
+
+    def test_add_members_records_granted_by_on_permission(self, project, user, non_project_user):
+        service = ProjectService(graph_client=Mock())
+
+        service.add_members(
+            project=project,
+            selections=[{"oid": str(non_project_user.oid), "permissions": ["manage_members"]}],
+            added_by=user,
+        )
+
+        membership = ProjectMembership.objects.get(project=project, user=non_project_user)
+        assert membership.permissions.get().granted_by == user
+
     def test_from_request_propagates_authentication_error(self, project, user):
         new_oid = str(baker.make("users.User").oid)
         User.objects.filter(oid=new_oid).delete()
@@ -318,6 +358,22 @@ class TestProjectService:
         assert [member.oid for member in members] == [user.oid]
         assert ProjectMembership.objects.filter(project=project, user=user).exists()
         assert project.owner == user
+
+    def test_create_project_grants_creator_both_permissions(self, user):
+        business_unit = baker.make("projects.BusinessUnit")
+        service = ProjectService(graph_client=Mock())
+
+        project, _members = service.create_project(
+            name="Owner Permissions Project",
+            description="A description",
+            business_unit_id=business_unit.id,
+            created_by=user,
+            selected_members=[],
+        )
+
+        membership = ProjectMembership.objects.get(project=project, user=user)
+        granted = set(membership.permissions.values_list("permission__codename", flat=True))
+        assert granted == {"manage_api_keys", "manage_members"}
 
     def test_close_closes_graph_client(self):
         graph_client = Mock()

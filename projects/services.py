@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from django.conf import settings
+from django.contrib.auth.models import Permission
 from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
 from simple_history.utils import bulk_create_with_history
@@ -10,7 +11,12 @@ from simple_history.utils import bulk_create_with_history
 from data_platform_app.services import GovUKNotificationError, GovUKNotificationsService
 from data_platform_app.utils import build_base_url
 from projects.graph import MicrosoftGraphClient
-from projects.models import Project, ProjectMembership
+from projects.models import (
+    Project,
+    ProjectMembership,
+    ProjectMembershipPermission,
+    ProjectPermission,
+)
 from users.models import User
 
 
@@ -134,11 +140,14 @@ class ProjectService:
         """Create a project with its selected members and the owner.
 
         Returns the project and the members added (owner included) so the
-        caller can send notifications.
+        caller can send notifications. The owner is granted every project
+        permission so they are never locked out of managing their own project.
         """
-        members_by_oid = {str(user.oid): user for user in self._resolve_members(selected_members)}
-        members_by_oid[str(created_by.oid)] = created_by
-        members = list(members_by_oid.values())
+        selections_by_oid = {selection["oid"]: selection for selection in selected_members}
+        selections_by_oid[str(created_by.oid)] = {
+            "oid": str(created_by.oid),
+            "permissions": list(ProjectPermission.values),
+        }
 
         with transaction.atomic():
             project = Project.objects.create(
@@ -148,7 +157,9 @@ class ProjectService:
                 created_by=created_by,
                 owner=created_by,
             )
-            self._add_memberships(project, members, added_by=created_by)
+            members = self._add_memberships(
+                project, selections_by_oid.values(), added_by=created_by
+            )
 
         return project, members
 
@@ -160,20 +171,56 @@ class ProjectService:
         added_by: User,
     ) -> list[User]:
         """Add selected members to ``project`` and return the members added."""
-        members = self._resolve_members(selections)
-
         with transaction.atomic():
-            self._add_memberships(project, members, added_by=added_by)
+            members = self._add_memberships(project, selections, added_by=added_by)
 
         return members
 
-    def _add_memberships(self, project: Project, members: list[User], *, added_by: User) -> None:
-        bulk_create_with_history(
-            [ProjectMembership(project=project, user=member) for member in members],
-            ProjectMembership,
-            ignore_conflicts=True,
-            default_user=added_by,
-        )
+    def _add_memberships(self, project: Project, selections, *, added_by: User) -> list[User]:
+        """Create memberships and their granted permissions for ``selections``.
+
+        ``selections`` are dicts with an ``oid`` and a ``permissions`` list of
+        ``ProjectPermission`` codenames (possibly empty).
+        """
+        selections = list(selections)
+        members = self._resolve_members(selections)
+        permissions_by_codename = self._permissions_by_codename()
+
+        memberships = []
+        for member, selection in zip(members, selections, strict=True):
+            membership, _ = ProjectMembership.objects.get_or_create(project=project, user=member)
+            memberships.append((membership, selection.get("permissions") or []))
+
+        permission_rows = [
+            ProjectMembershipPermission(
+                membership=membership,
+                permission=permissions_by_codename[codename],
+                granted_by=added_by,
+            )
+            for membership, codenames in memberships
+            for codename in codenames
+            if codename in permissions_by_codename
+        ]
+        if permission_rows:
+            bulk_create_with_history(
+                permission_rows,
+                ProjectMembershipPermission,
+                ignore_conflicts=True,
+                default_user=added_by,
+            )
+
+        return members
+
+    def _permissions_by_codename(self) -> dict[str, Permission]:
+        """Return the ``projects.Project`` permissions, keyed by codename."""
+        return {
+            permission.codename: permission
+            for permission in Permission.objects.filter(
+                content_type__app_label="projects",
+                content_type__model="project",
+                codename__in=ProjectPermission.values,
+            )
+        }
 
     def _resolve_members(self, selections) -> list[User]:
         """Resolve cleaned selections to users, creating stubs for new oids.
