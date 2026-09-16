@@ -19,7 +19,7 @@
               <ul class="govuk-summary-card__actions">
                 <li class="govuk-summary-card__action">
                   <a class="govuk-link"
-                     href="{% url 'projects:project_users_add' project.uuid %}?edit={{ member.oid }}"><!-- djlint:off -->Change<span class="govuk-visually-hidden"> {{ member.email }}</span><!-- djlint:on --></a>
+                     href="{% url 'projects:project_users_add' project.uuid %}?edit={{ member.oid }}">Change<span class="govuk-visually-hidden"> {{ member.email }}</span></a>
                 </li>
                 <li class="govuk-summary-card__action">
                   <button type="submit"

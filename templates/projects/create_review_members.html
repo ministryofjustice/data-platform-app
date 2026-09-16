@@ -20,13 +20,13 @@
                 <ul class="govuk-summary-card__actions">
                   <li class="govuk-summary-card__action">
                     <a class="govuk-link"
-                       href="{% url 'projects:project_create_add_member' %}?edit={{ member.oid }}"><!-- djlint:off -->Change<span class="govuk-visually-hidden"> {{ member.email }}</span><!-- djlint:on --></a>
+                       href="{% url 'projects:project_create_add_member' %}?edit={{ member.oid }}">Change<span class="govuk-visually-hidden"> {{ member.email }}</span></a>
                   </li>
                   <li class="govuk-summary-card__action">
                     <button type="submit"
                             name="remove_oid"
                             value="{{ member.oid }}"
-                            class="govuk-link app-link-button"><!-- djlint:off -->Remove<span class="govuk-visually-hidden"> {{ member.email }}</span><!-- djlint:on --></button>
+                            class="govuk-link app-link-button">Remove<span class="govuk-visually-hidden"> {{ member.email }}</span></button>
                   </li>
                 </ul>
               </div>
