@@ -145,7 +145,11 @@ class TestModelUsageRateFormSet:
         )
 
         assert not formset.is_valid()
-        assert "Select a model"
+        assert "Select a provider" in formset.forms[0].errors["provider"]
+        assert "Select a model" in formset.forms[0].errors["model"]
+        assert "Enter the number of input tokens" in formset.forms[0].errors["input_tokens"]
+        assert "Enter the number of output tokens" in formset.forms[0].errors["output_tokens"]
+        assert "Enter the number of requests" in formset.forms[0].errors["requests_per_period"]
 
     def test_formset_filters_model_choices_by_provider(self):
         formset = build_model_usage_rate_formset(

@@ -76,6 +76,16 @@
           {% include "includes/ai_gateway/_usage_spend_section.html" with heading="Daily spend" heading_level="h4" column_label="Date" rows=overview_data.daily_spend_preview chart_name=overview_data.daily_chart_name chart_data=overview_data.daily_chart_data chart_label=overview_data.daily_chart_label show_all=overview_data.daily_show_all empty_message="No spend recorded for this month." only %}
           {% include "includes/ai_gateway/_usage_spend_section.html" with heading="Monthly spend" heading_level="h4" column_label="Month" rows=overview_data.monthly_spend_rows chart_name=overview_data.monthly_chart_name chart_data=overview_data.monthly_chart_data chart_label="Monthly spend" empty_message="No spend recorded yet." only %}
         {% endif %}
+        <div class="govuk-grid-row govuk-!-margin-bottom-2">
+          <div class="govuk-grid-column-full">
+            <div class="info-panel">
+              <h2 class="govuk-heading-m">Cost calculator</h2>
+              <p class="govuk-body">
+                Use the <a class="govuk-link" href="{% url 'ai_cost_usage_calculator' %}">AI usage cost calculator</a> to estimate the cost of different models available through the Justice AI Gateway.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="govuk-tabs__panel govuk-tabs__panel--hidden"
            id="spend-per-key">
@@ -121,14 +131,4 @@
       </div>
     </div>
   {% endif %}
-  <div class="govuk-grid-row govuk-!-margin-bottom-8">
-    <div class="govuk-grid-column-full">
-      <div class="info-panel">
-        <h2 class="govuk-heading-m">Cost calculator</h2>
-        <p class="govuk-body">
-          Use the <a class="govuk-link" href="{% url 'ai_cost_usage_calculator' %}">AI usage cost calculator</a> to estimate the cost of different models available through the Justice AI Gateway.
-        </p>
-      </div>
-    </div>
-  </div>
 {% endblock project_main_content %}

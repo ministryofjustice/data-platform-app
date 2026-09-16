@@ -160,14 +160,14 @@ class BaseModelUsageRateFormSet(BaseFormSet):
         kwargs["available_models"] = self.available_models
         return kwargs
 
+    def _construct_form(self, index, **kwargs):
+        form = super()._construct_form(index, **kwargs)
+        if index == 0:
+            form.empty_permitted = False
+        return form
+
     def clean(self):
         super().clean()
-
-        if any(self.errors):
-            return
-
-        if not any(form.has_changed() for form in self.forms):
-            raise forms.ValidationError("Add at least one model")
 
 
 def build_model_usage_rate_formset(*, available_models, data=None, initial=None, extra=1):
