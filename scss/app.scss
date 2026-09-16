@@ -38,19 +38,16 @@ $masthead-background-color: #381a62;
   }
 }
 
-
-
 .info-panel {
   background-color: #f4f8fb;
   padding: govuk-spacing(3);
-  border: 1px solid #1D70B8;
+  border: 1px solid #1d70b8;
   display: flex;
   flex-direction: column;
   height: 100%;
 
-
   .govuk-link:last-child {
-  margin-top: 1rem;
+    margin-top: 1rem;
   }
 
   @include govuk-media-query($from: tablet) {
