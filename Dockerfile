@@ -40,7 +40,7 @@ RUN --mount=type=cache,target=/root/.cache \
 
 ##### BUILD NODE
 
-FROM docker.io/library/node:26.8.2-alpine@sha256:ef24c5053d50fdc3e4e56eb4e7ddb7861874ab0fdc797046ba897581deb8e868 AS build-node
+FROM docker.io/library/node:26.9.0-alpine@sha256:2c45bdcbf63561a54da9549612084b43ca309854a4110c87857d609ddeb61c9e AS build-node
 
 WORKDIR /build
 
