@@ -755,6 +755,10 @@ class TestKeyCreateConfirmView:
 
 
 class TestKeyDetailView:
+    @pytest.fixture(autouse=True)
+    def _grant_manage_api_keys(self, project, user, grant_project_permission):
+        grant_project_permission(project, user, ProjectPermission.MANAGE_API_KEYS)
+
     def test_renders_for_member(self, client, user, project, key, key_service):
         client.force_login(user)
 
@@ -809,6 +813,26 @@ class TestKeyDetailView:
         response = client.get(reverse("ai_gateway:key_detail", args=[project.uuid, key.pk]))
 
         assert response.status_code == 404
+
+    def test_hides_manage_buttons_without_manage_api_keys_permission(
+        self, client, project, key, project_member_without_permissions
+    ):
+        client.force_login(project_member_without_permissions)
+
+        response = client.get(reverse("ai_gateway:key_detail", args=[project.uuid, key.pk]))
+
+        assertNotContains(
+            response,
+            f'href="{reverse("ai_gateway:key_model_change", args=[project.uuid, key.pk])}"',
+        )
+        assertNotContains(
+            response,
+            f'href="{reverse("ai_gateway:key_regenerate", args=[project.uuid, key.pk])}"',
+        )
+        assertNotContains(
+            response,
+            f'href="{reverse("ai_gateway:key_revoke", args=[project.uuid, key.pk])}"',
+        )
 
     def test_key_from_another_project_gets_404(self, client, user, project):
         other_project = baker.make("projects.Project", created_by=user)
