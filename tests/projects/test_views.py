@@ -1,6 +1,7 @@
 import uuid
 from unittest.mock import patch
 
+import pytest
 from django.core.exceptions import ImproperlyConfigured
 from django.urls import reverse
 from model_bakery import baker
@@ -8,7 +9,7 @@ from pytest_django.asserts import assertContains, assertInHTML, assertNotContain
 
 from ai_gateway.exceptions import AIGatewayAPIError
 from projects.graph import EntraAuthenticationError, EntraRequestError
-from projects.models import Project, ProjectMembership
+from projects.models import Project, ProjectMembership, ProjectPermission
 from projects.services import ProjectNotificationError
 from users.models import User
 
@@ -160,6 +161,10 @@ class TestProjectDeleteView:
 class TestProjectRemoveUserView:
     """Tests for the ProjectRemoveUserView at '/projects/<uuid>/users/<user_id>/remove/'."""
 
+    @pytest.fixture(autouse=True)
+    def _grant_manage_members(self, project, user, grant_project_permission):
+        grant_project_permission(project, user, ProjectPermission.MANAGE_MEMBERS)
+
     def test_remove_user_page_renders(self, client, user, project):
         client.force_login(user)
         response = client.get(
@@ -176,6 +181,20 @@ class TestProjectRemoveUserView:
         )
 
         assert response.status_code == 404
+
+    def test_remove_user_page_denied_without_manage_members_permission(
+        self, client, project, project_member_without_permissions
+    ):
+        client.force_login(project_member_without_permissions)
+
+        response = client.get(
+            reverse(
+                "projects:project_user_remove",
+                args=[project.uuid, project_member_without_permissions.id],
+            )
+        )
+
+        assert response.status_code == 403
 
     def test_remove_other_user_redirects_to_project_users(
         self, client, user, project, project_membership_notification_service
@@ -245,6 +264,10 @@ class TestProjectRemoveUserView:
 class TestProjectAddUsersFlow:
     """Tests for the ProjectAddUsersView and ProjectAddUsersConfirmView."""
 
+    @pytest.fixture(autouse=True)
+    def _grant_manage_members(self, project, user, grant_project_permission):
+        grant_project_permission(project, user, ProjectPermission.MANAGE_MEMBERS)
+
     def test_add_users_page_renders(self, client, user, project):
         client.force_login(user)
 
@@ -259,6 +282,24 @@ class TestProjectAddUsersFlow:
         response = client.get(reverse("projects:project_users_add", args=[project.uuid]))
 
         assert response.status_code == 404
+
+    def test_add_users_page_denied_without_manage_members_permission(
+        self, client, project, project_member_without_permissions
+    ):
+        client.force_login(project_member_without_permissions)
+
+        response = client.get(reverse("projects:project_users_add", args=[project.uuid]))
+
+        assert response.status_code == 403
+
+    def test_confirm_page_denied_without_manage_members_permission(
+        self, client, project, project_member_without_permissions
+    ):
+        client.force_login(project_member_without_permissions)
+
+        response = client.get(reverse("projects:project_users_add_confirm", args=[project.uuid]))
+
+        assert response.status_code == 403
 
     def test_add_users_page_context_contains_formset(self, client, user, project):
         client.force_login(user)

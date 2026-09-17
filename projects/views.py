@@ -31,10 +31,11 @@ from projects.mixins import (
     ProjectAccessMixin,
     ProjectLayoutContextMixin,
     ProjectMembershipNotificationMixin,
+    ProjectPermissionRequiredMixin,
     ProjectUserSelectionSessionMixin,
     UUIDObjectMixin,
 )
-from projects.models import BusinessUnit, Project, ProjectMembership
+from projects.models import BusinessUnit, Project, ProjectMembership, ProjectPermission
 from projects.services import ProjectService
 
 
@@ -406,7 +407,10 @@ class ProjectDeleteView(ProjectAccessMixin, UUIDObjectMixin, DeleteView):
         return response
 
 
-class ProjectAddUsersView(ExistingProjectMixin, ProjectUserSelectionFormView):
+class ProjectAddUsersView(
+    ProjectPermissionRequiredMixin, ExistingProjectMixin, ProjectUserSelectionFormView
+):
+    permission_required = ProjectPermission.MANAGE_MEMBERS.permission_name
     template_name = "projects/user_add.html"
 
     def get_success_url(self):
@@ -417,11 +421,13 @@ class ProjectAddUsersView(ExistingProjectMixin, ProjectUserSelectionFormView):
 
 
 class ProjectAddUsersConfirmView(
+    ProjectPermissionRequiredMixin,
     ProjectMembershipNotificationMixin,
     ExistingProjectMixin,
     ProjectUserSelectionSessionMixin,
     View,
 ):
+    permission_required = ProjectPermission.MANAGE_MEMBERS.permission_name
     template_name = "projects/user_add_confirm.html"
 
     def get_selected_users(self):
@@ -470,12 +476,13 @@ class ProjectAddUsersConfirmView(
         return redirect("projects:project_users", uuid=project.uuid)
 
 
-class ProjectRemoveUserView(ProjectAccessMixin, ProjectMembershipNotificationMixin, DeleteView):
-    """
-    Will need additional checks for user permissions to ensure
-    the user can remove users from the project.
-    """
-
+class ProjectRemoveUserView(
+    ProjectPermissionRequiredMixin,
+    ExistingProjectMixin,
+    ProjectMembershipNotificationMixin,
+    DeleteView,
+):
+    permission_required = ProjectPermission.MANAGE_MEMBERS.permission_name
     template_name = "projects/user_remove_confirm.html"
     context_object_name = "membership"
     model = ProjectMembership

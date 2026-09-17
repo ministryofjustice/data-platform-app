@@ -16,6 +16,7 @@ from ai_gateway.exceptions import AIGatewayAPIError
 from ai_gateway.filtering import VISIBLE_LIMIT
 from ai_gateway.models import Key
 from ai_gateway.services import UsageService
+from projects.models import ProjectPermission
 
 PLAINTEXT_KEY = "sk-plaintext-key-value-123456"
 
@@ -65,6 +66,10 @@ class TestKeyListView:
 
 
 class TestKeyCreateView:
+    @pytest.fixture(autouse=True)
+    def _grant_manage_api_keys(self, project, user, grant_project_permission):
+        grant_project_permission(project, user, ProjectPermission.MANAGE_API_KEYS)
+
     def test_get_renders_form(self, client, user, project, key_service):
         client.force_login(user)
         response = client.get(reverse("ai_gateway:key_create", args=[project.uuid]))
@@ -159,8 +164,21 @@ class TestKeyCreateView:
         assert not Key.objects.filter(project=project).exists()
         key_service.create_key.assert_not_called()
 
+    def test_denied_without_manage_api_keys_permission(
+        self, client, project, key_service, project_member_without_permissions
+    ):
+        client.force_login(project_member_without_permissions)
+
+        response = client.get(reverse("ai_gateway:key_create", args=[project.uuid]))
+
+        assert response.status_code == 403
+
 
 class TestKeyCreateViewFiltering:
+    @pytest.fixture(autouse=True)
+    def _grant_manage_api_keys(self, project, user, grant_project_permission):
+        grant_project_permission(project, user, ProjectPermission.MANAGE_API_KEYS)
+
     def test_get_renders_provider_and_family_filters(self, client, user, project, key_service):
         client.force_login(user)
 
@@ -321,6 +339,10 @@ class TestKeyCreateViewFiltering:
 
 
 class TestKeyModelChangeView:
+    @pytest.fixture(autouse=True)
+    def _grant_manage_api_keys(self, project, user, grant_project_permission):
+        grant_project_permission(project, user, ProjectPermission.MANAGE_API_KEYS)
+
     def _change_url(self, project, key):
         return reverse("ai_gateway:key_model_change", args=[project.uuid, key.pk])
 
@@ -329,6 +351,17 @@ class TestKeyModelChangeView:
 
     def _detail_url(self, project, key):
         return reverse("ai_gateway:key_detail", args=[project.uuid, key.pk])
+
+    def test_denied_without_manage_api_keys_permission(
+        self, client, project, key, key_service, project_member_without_permissions
+    ):
+        client.force_login(project_member_without_permissions)
+
+        change_response = client.get(self._change_url(project, key))
+        review_response = client.get(self._review_url(project, key))
+
+        assert change_response.status_code == 403
+        assert review_response.status_code == 403
 
     def test_get_renders_form_with_current_key_models_selected(
         self, client, user, project, key, key_service
@@ -614,6 +647,10 @@ class TestKeyModelChangeView:
 
 
 class TestKeyCreateConfirmView:
+    @pytest.fixture(autouse=True)
+    def _grant_manage_api_keys(self, project, user, grant_project_permission):
+        grant_project_permission(project, user, ProjectPermission.MANAGE_API_KEYS)
+
     def _confirm_url(self, project):
         return reverse("ai_gateway:key_create_confirm", args=[project.uuid])
 
@@ -707,6 +744,15 @@ class TestKeyCreateConfirmView:
 
         assert response.status_code == 404
 
+    def test_denied_without_manage_api_keys_permission(
+        self, client, project, key_service, project_member_without_permissions
+    ):
+        client.force_login(project_member_without_permissions)
+
+        response = client.get(self._confirm_url(project))
+
+        assert response.status_code == 403
+
 
 class TestKeyDetailView:
     def test_renders_for_member(self, client, user, project, key, key_service):
@@ -789,6 +835,10 @@ class TestKeyDetailView:
 
 
 class TestKeyRegenerateView:
+    @pytest.fixture(autouse=True)
+    def _grant_manage_api_keys(self, project, user, grant_project_permission):
+        grant_project_permission(project, user, ProjectPermission.MANAGE_API_KEYS)
+
     def test_renders_for_member(self, client, user, project, key):
         client.force_login(user)
         response = client.get(reverse("ai_gateway:key_regenerate", args=[project.uuid, key.pk]))
@@ -801,6 +851,15 @@ class TestKeyRegenerateView:
         response = client.get(reverse("ai_gateway:key_regenerate", args=[project.uuid, key.pk]))
 
         assert response.status_code == 404
+
+    def test_denied_without_manage_api_keys_permission(
+        self, client, project, key, project_member_without_permissions
+    ):
+        client.force_login(project_member_without_permissions)
+
+        response = client.get(reverse("ai_gateway:key_regenerate", args=[project.uuid, key.pk]))
+
+        assert response.status_code == 403
 
     def test_post_regenerates_key_and_renders_created_template(
         self, client, user, project, key, key_service
@@ -846,6 +905,10 @@ class TestKeyRegenerateView:
 
 
 class TestKeyRevokeView:
+    @pytest.fixture(autouse=True)
+    def _grant_manage_api_keys(self, project, user, grant_project_permission):
+        grant_project_permission(project, user, ProjectPermission.MANAGE_API_KEYS)
+
     def test_get_renders_confirmation_page(self, client, user, project, key, key_service):
         client.force_login(user)
 
@@ -879,6 +942,15 @@ class TestKeyRevokeView:
         assert get_response.status_code == 404
         assert post_response.status_code == 404
         key_service.delete_key.assert_not_called()
+
+    def test_denied_without_manage_api_keys_permission(
+        self, client, project, key, key_service, project_member_without_permissions
+    ):
+        client.force_login(project_member_without_permissions)
+
+        response = client.get(reverse("ai_gateway:key_revoke", args=[project.uuid, key.pk]))
+
+        assert response.status_code == 403
 
     def test_key_from_another_project_gets_404(self, client, user, project, key_service):
         other_project = baker.make("projects.Project", created_by=user)

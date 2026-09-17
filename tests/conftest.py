@@ -40,6 +40,14 @@ def project(db, user):
 
 
 @pytest.fixture
+def project_member_without_permissions(db, project):
+    """A project member with no project-level permissions granted."""
+    member = baker.make("users.User")
+    baker.make("projects.ProjectMembership", project=project, user=member)
+    return member
+
+
+@pytest.fixture
 def grant_project_permission():
     """Factory fixture for granting a project member a specific permission."""
 
