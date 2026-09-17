@@ -9,7 +9,7 @@ class TestUserHasPerm:
     def test_user_has_permission(self, project, user, perm, grant_project_permission):
         backend = ProjectPermissionBackend()
         grant_project_permission(project, user, perm)
-        user_has_perm = backend.has_perm(user, f"projects.{perm}", project)
+        user_has_perm = backend.has_perm(user, perm.permission_name, project)
         assert user_has_perm is True
 
     @pytest.mark.parametrize(
@@ -18,5 +18,5 @@ class TestUserHasPerm:
     )
     def test_user_does_not_have_permission(self, project, user, perm):
         backend = ProjectPermissionBackend()
-        user_has_perm = backend.has_perm(user, f"projects.{perm}", project)
+        user_has_perm = backend.has_perm(user, perm.permission_name, project)
         assert user_has_perm is False

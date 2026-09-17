@@ -26,7 +26,7 @@ class TestProjectPermissionRequiredMixin:
         self, rf, project, user, grant_project_permission, perm
     ):
         grant_project_permission(project, user, perm)
-        view = ProjectScopedStubView(project, f"projects.{perm.value}")
+        view = ProjectScopedStubView(project, perm.permission_name)
         view.request = rf.get("/")
         view.request.user = user
 
@@ -34,7 +34,7 @@ class TestProjectPermissionRequiredMixin:
 
     @pytest.mark.parametrize("perm", list(ProjectPermission))
     def test_has_permission_false_when_user_lacks_permission(self, rf, project, user, perm):
-        view = ProjectScopedStubView(project, f"projects.{perm.value}")
+        view = ProjectScopedStubView(project, perm.permission_name)
         view.request = rf.get("/")
         view.request.user = user
 
@@ -44,7 +44,7 @@ class TestProjectPermissionRequiredMixin:
     def test_has_permission_true_for_superuser_without_membership(
         self, rf, project, superuser, perm
     ):
-        view = ProjectScopedStubView(project, f"projects.{perm.value}")
+        view = ProjectScopedStubView(project, perm.permission_name)
         view.request = rf.get("/")
         view.request.user = superuser
 
@@ -55,7 +55,7 @@ class TestProjectPermissionRequiredMixin:
         self, rf, project, user, grant_project_permission, perm
     ):
         grant_project_permission(project, user, perm)
-        view = ProjectScopedStubView(project, f"projects.{perm.value}")
+        view = ProjectScopedStubView(project, perm.permission_name)
         view.request = rf.get("/")
         view.request.user = user
 
@@ -68,7 +68,7 @@ class TestProjectPermissionRequiredMixin:
     def test_dispatch_raises_permission_denied_when_user_lacks_permission(
         self, rf, project, user, perm
     ):
-        view = ProjectScopedStubView(project, f"projects.{perm.value}")
+        view = ProjectScopedStubView(project, perm.permission_name)
         view.request = rf.get("/")
         view.request.user = user
 
