@@ -1,9 +1,11 @@
 from unittest.mock import create_autospec, patch
 
 import pytest
+from django.contrib.auth.models import Permission
 from model_bakery import baker
 
 from ai_gateway.services import KeyService
+from projects.models import ProjectMembership, ProjectMembershipPermission
 from projects.services import ProjectMembershipNotificationService
 
 
@@ -35,6 +37,24 @@ def project(db, user):
     project = baker.make("projects.Project", name="Example Project", created_by=user)
     baker.make("projects.ProjectMembership", project=project, user=user)
     return project
+
+
+@pytest.fixture
+def grant_project_permission():
+    """Factory fixture for granting a project member a specific permission."""
+
+    def _grant_project_permission(project, user, perm):
+        membership = ProjectMembership.objects.get(project=project, user=user)
+        permission = Permission.objects.get(
+            codename=perm.value, content_type__app_label="projects", content_type__model="project"
+        )
+        ProjectMembershipPermission.objects.get_or_create(
+            membership=membership,
+            permission=permission,
+            defaults={"granted_by": user},
+        )
+
+    return _grant_project_permission
 
 
 @pytest.fixture

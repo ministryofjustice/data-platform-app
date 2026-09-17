@@ -16,7 +16,10 @@ AZURE_AUTH = {
     "REDIRECT_URI": "http://testserver/sso/callback/",
     "AUTHORITY": "https://login.microsoftonline.com/test-tenant-id",
 }
-AUTHENTICATION_BACKENDS = ["django.contrib.auth.backends.ModelBackend"]
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "projects.backends.ProjectPermissionBackend",
+]
 
 # Use a fast password hasher so tests with User creation are not slow
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]

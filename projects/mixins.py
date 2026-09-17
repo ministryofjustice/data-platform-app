@@ -1,4 +1,5 @@
 import sentry_sdk
+from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.core.exceptions import ImproperlyConfigured
 from django.shortcuts import get_object_or_404
 from django.utils.functional import cached_property
@@ -65,6 +66,17 @@ class ExistingProjectMixin(ProjectAccessMixin):
         context = super().get_context_data(**kwargs)
         context["project"] = self.project
         return context
+
+
+class ProjectPermissionRequiredMixin(PermissionRequiredMixin):
+    """Require project-level permissions for the project resolved by get_project().
+
+    Must appear before the View subclass in the MRO, alongside a mixin providing get_project(),
+    so has_permission() runs during dispatch() before the view executes.
+    """
+
+    def has_permission(self):
+        return self.request.user.has_perms(self.get_permission_required(), self.get_project())
 
 
 class UUIDObjectMixin:
