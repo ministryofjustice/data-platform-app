@@ -24,7 +24,7 @@ from ai_gateway.forms import (
 from ai_gateway.models import Key, Team
 from ai_gateway.services import KeyService, UsageService, estimate_costs
 from data_platform_app.mixins import FeatureRequiredMixin
-from projects.mixins import ProjectAccessMixin, ProjectLayoutContextMixin
+from projects.mixins import ExistingProjectMixin, ProjectLayoutContextMixin
 from projects.models import Project
 
 
@@ -99,26 +99,9 @@ class AICostUsageCalculatorView(TemplateView):
         return deduplicated_items
 
 
-class ProjectScopedMixin(ProjectAccessMixin):
-    """Resolve an accessible project from the URL."""
-
-    request: HttpRequest
-    kwargs: dict
-
-    @cached_property
-    def project(self) -> Project:
-        return get_object_or_404(
-            self.get_accessible_projects(),
-            uuid=self.kwargs["uuid"],
-        )
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["project"] = self.project
-        return context
-
-
-class UsageView(FeatureRequiredMixin, ProjectScopedMixin, ProjectLayoutContextMixin, TemplateView):
+class UsageView(
+    FeatureRequiredMixin, ExistingProjectMixin, ProjectLayoutContextMixin, TemplateView
+):
     """
     The usage UI is a single page with GOV.UK tabs for Overview, Spend per API key and
     Spend per model.
@@ -195,7 +178,7 @@ class UsageView(FeatureRequiredMixin, ProjectScopedMixin, ProjectLayoutContextMi
             }
 
 
-class KeyListView(ProjectScopedMixin, ProjectLayoutContextMixin, ListView):
+class KeyListView(ExistingProjectMixin, ProjectLayoutContextMixin, ListView):
     template_name = "ai_gateway/key-list.html"
     context_object_name = "keys"
     active_project_section = "ai_gateway"
@@ -342,7 +325,7 @@ class ModelSelectionContextMixin(AvailableModelsMixin):
         }
 
 
-class KeyCreateView(ProjectScopedMixin, ModelSelectionContextMixin, FormView):
+class KeyCreateView(ExistingProjectMixin, ModelSelectionContextMixin, FormView):
     """Collects a key name and model selection, then hands off to the confirmation step."""
 
     template_name = "ai_gateway/key-create.html"
@@ -376,7 +359,7 @@ class KeyCreateView(ProjectScopedMixin, ModelSelectionContextMixin, FormView):
         return redirect(f"{url}?{query}")
 
 
-class KeyCreateConfirmView(ProjectScopedMixin, AvailableModelsMixin, View):
+class KeyCreateConfirmView(ExistingProjectMixin, AvailableModelsMixin, View):
     """Reviews the submitted key details and creates the key on confirmation."""
 
     template_name = "ai_gateway/key-create-confirm.html"
@@ -447,7 +430,7 @@ class KeyCreateConfirmView(ProjectScopedMixin, AvailableModelsMixin, View):
         return response
 
 
-class KeyScopedMixin(ProjectScopedMixin):
+class KeyScopedMixin(ExistingProjectMixin):
     """Resolves a key scoped to the current project."""
 
     @cached_property
@@ -667,7 +650,7 @@ class KeyDetailView(KeyScopedMixin, DetailView):
         return context
 
 
-class KeyRegenerateView(ProjectScopedMixin, SingleObjectMixin, TemplateView):
+class KeyRegenerateView(ExistingProjectMixin, SingleObjectMixin, TemplateView):
     template_name = "ai_gateway/key-regenerate.html"
     context_object_name = "key"
 
@@ -700,7 +683,7 @@ class KeyRegenerateView(ProjectScopedMixin, SingleObjectMixin, TemplateView):
         return response
 
 
-class KeyRevokeView(ProjectScopedMixin, DeleteView):
+class KeyRevokeView(ExistingProjectMixin, DeleteView):
     template_name = "ai_gateway/key-revoke.html"
     context_object_name = "key"
     http_method_names = ["get", "post", "head", "options"]
