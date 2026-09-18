@@ -488,10 +488,13 @@ class ProjectRemoveUserView(
     model = ProjectMembership
 
     def get_object(self, queryset=None):
+        membership_qs = (
+            ProjectMembership.objects.filter(project__in=self.get_accessible_projects())
+            .exclude(project__owner=self.kwargs["user_id"])
+            .select_related("project", "user")
+        )
         return get_object_or_404(
-            ProjectMembership.objects.select_related("project", "user").filter(
-                project__in=self.get_accessible_projects()
-            ),
+            membership_qs,
             project__uuid=self.kwargs["uuid"],
             user_id=self.kwargs["user_id"],
         )

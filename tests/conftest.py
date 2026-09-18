@@ -34,9 +34,21 @@ def superuser(db):
 @pytest.fixture
 def project(db, user):
     """A project with the test user as an admin member."""
-    project = baker.make("projects.Project", name="Example Project", created_by=user)
+    project = baker.make("projects.Project", name="Example Project", created_by=user, owner=user)
     baker.make("projects.ProjectMembership", project=project, user=user)
     return project
+
+
+@pytest.fixture
+def project_owner(project):
+    return project.owner
+
+
+@pytest.fixture
+def project_member(project):
+    user = baker.make("users.User")
+    baker.make("projects.ProjectMembership", project=project, user=user)
+    return user
 
 
 @pytest.fixture

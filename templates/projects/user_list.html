@@ -29,13 +29,13 @@
         </tr>
       </thead>
       <tbody class="govuk-table__body">
-        {% for permission in project.memberships.all %}
+        {% for membership in project.memberships.all %}
           <tr class="govuk-table__row">
-            <td class="govuk-table__cell govuk-!-font-weight-bold">{{ permission.user.full_name }}</td>
+            <td class="govuk-table__cell govuk-!-font-weight-bold">{{ membership.user.full_name }}</td>
             <td class="govuk-table__cell govuk-!-text-align-right">
-              {% if can_manage_members %}
-                <a href="{% url 'projects:project_user_remove' project.uuid permission.user.id %}"
-                   class="govuk-link"><!-- djlint:off -->Remove<span class="govuk-visually-hidden"> {{ permission.user.full_name }}</span><!-- djlint:on --></a>
+              {% if can_manage_members and membership.user != project.owner %}
+                <a href="{% url 'projects:project_user_remove' project.uuid membership.user.id %}"
+                   class="govuk-link"><!-- djlint:off -->Remove<span class="govuk-visually-hidden"> {{ membership.user.full_name }}</span><!-- djlint:on --></a>
               {% endif %}
             </td>
           </tr>
