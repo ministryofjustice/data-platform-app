@@ -76,7 +76,7 @@ class TestProjectUsersDetailView:
 
         assert response.status_code == 200
 
-    def test_users_page_doesnt_render_for_non_member(self, client, project, non_project_user):
+    def test_users_page_does_not_render_for_non_member(self, client, project, non_project_user):
         client.force_login(non_project_user)
         response = client.get(reverse("projects:project_users", args=[project.uuid]))
 
