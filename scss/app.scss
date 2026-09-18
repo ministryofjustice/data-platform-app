@@ -44,13 +44,15 @@ $masthead-background-color: #381a62;
   border: 1px solid #1d70b8;
   display: flex;
   flex-direction: column;
-  height: 100%;
+  align-items: flex-start;
 
   .govuk-link:last-child {
     margin-top: 1rem;
   }
 
   @include govuk-media-query($from: tablet) {
+    height: 100%;
+
     .govuk-link:last-child {
       margin-top: auto;
     }
