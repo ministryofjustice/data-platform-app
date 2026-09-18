@@ -31,10 +31,11 @@ from projects.mixins import (
     ProjectAccessMixin,
     ProjectLayoutContextMixin,
     ProjectMembershipNotificationMixin,
+    ProjectPermissionRequiredMixin,
     ProjectUserSelectionSessionMixin,
     UUIDObjectMixin,
 )
-from projects.models import BusinessUnit, Project, ProjectMembership
+from projects.models import BusinessUnit, Project, ProjectMembership, ProjectPermission
 from projects.services import ProjectService
 
 
@@ -365,8 +366,8 @@ class ProjectUsersDetailView(
 
 class ProjectDeleteView(ProjectAccessMixin, UUIDObjectMixin, DeleteView):
     """
-    Will need additional checks for user permissions to ensure
-    the user has access to delete the project.
+    View to delete a project. There is no specific permission for deleting a project, it is only
+    accessible to project owners and superusers.
     """
 
     template_name = "projects/delete_confirm.html"
@@ -375,7 +376,10 @@ class ProjectDeleteView(ProjectAccessMixin, UUIDObjectMixin, DeleteView):
     success_url = reverse_lazy("projects:projects_list")
 
     def get_queryset(self):
-        return self.get_accessible_projects()
+        queryset = self.get_accessible_projects()
+        if self.request.user.is_superuser:
+            return queryset
+        return queryset.filter(owner=self.request.user)
 
     def form_valid(self, form):
         project = self.object
@@ -406,7 +410,10 @@ class ProjectDeleteView(ProjectAccessMixin, UUIDObjectMixin, DeleteView):
         return response
 
 
-class ProjectAddUsersView(ExistingProjectMixin, ProjectUserSelectionFormView):
+class ProjectAddUsersView(
+    ProjectPermissionRequiredMixin, ExistingProjectMixin, ProjectUserSelectionFormView
+):
+    permission_required = ProjectPermission.MANAGE_MEMBERS.permission_name
     template_name = "projects/user_add.html"
 
     def get_success_url(self):
@@ -417,11 +424,13 @@ class ProjectAddUsersView(ExistingProjectMixin, ProjectUserSelectionFormView):
 
 
 class ProjectAddUsersConfirmView(
+    ProjectPermissionRequiredMixin,
     ProjectMembershipNotificationMixin,
     ExistingProjectMixin,
     ProjectUserSelectionSessionMixin,
     View,
 ):
+    permission_required = ProjectPermission.MANAGE_MEMBERS.permission_name
     template_name = "projects/user_add_confirm.html"
 
     def get_selected_users(self):
@@ -470,21 +479,25 @@ class ProjectAddUsersConfirmView(
         return redirect("projects:project_users", uuid=project.uuid)
 
 
-class ProjectRemoveUserView(ProjectAccessMixin, ProjectMembershipNotificationMixin, DeleteView):
-    """
-    Will need additional checks for user permissions to ensure
-    the user can remove users from the project.
-    """
-
+class ProjectRemoveUserView(
+    ProjectPermissionRequiredMixin,
+    ExistingProjectMixin,
+    ProjectMembershipNotificationMixin,
+    DeleteView,
+):
+    permission_required = ProjectPermission.MANAGE_MEMBERS.permission_name
     template_name = "projects/user_remove_confirm.html"
     context_object_name = "membership"
     model = ProjectMembership
 
     def get_object(self, queryset=None):
+        membership_qs = (
+            ProjectMembership.objects.filter(project__in=self.get_accessible_projects())
+            .exclude(project__owner=self.kwargs["user_id"])
+            .select_related("project", "user")
+        )
         return get_object_or_404(
-            ProjectMembership.objects.select_related("project", "user").filter(
-                project__in=self.get_accessible_projects()
-            ),
+            membership_qs,
             project__uuid=self.kwargs["uuid"],
             user_id=self.kwargs["user_id"],
         )

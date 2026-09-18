@@ -24,8 +24,12 @@ from ai_gateway.forms import (
 from ai_gateway.models import Key, Team
 from ai_gateway.services import KeyService, UsageService, estimate_costs
 from data_platform_app.mixins import FeatureRequiredMixin
-from projects.mixins import ProjectAccessMixin, ProjectLayoutContextMixin
-from projects.models import Project
+from projects.mixins import (
+    ExistingProjectMixin,
+    ProjectLayoutContextMixin,
+    ProjectPermissionRequiredMixin,
+)
+from projects.models import Project, ProjectPermission
 
 
 class AICostUsageCalculatorView(TemplateView):
@@ -99,26 +103,9 @@ class AICostUsageCalculatorView(TemplateView):
         return deduplicated_items
 
 
-class ProjectScopedMixin(ProjectAccessMixin):
-    """Resolve an accessible project from the URL."""
-
-    request: HttpRequest
-    kwargs: dict
-
-    @cached_property
-    def project(self) -> Project:
-        return get_object_or_404(
-            self.get_accessible_projects(),
-            uuid=self.kwargs["uuid"],
-        )
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["project"] = self.project
-        return context
-
-
-class UsageView(FeatureRequiredMixin, ProjectScopedMixin, ProjectLayoutContextMixin, TemplateView):
+class UsageView(
+    FeatureRequiredMixin, ExistingProjectMixin, ProjectLayoutContextMixin, TemplateView
+):
     """
     The usage UI is a single page with GOV.UK tabs for Overview, Spend per API key and
     Spend per model.
@@ -195,7 +182,7 @@ class UsageView(FeatureRequiredMixin, ProjectScopedMixin, ProjectLayoutContextMi
             }
 
 
-class KeyListView(ProjectScopedMixin, ProjectLayoutContextMixin, ListView):
+class KeyListView(ExistingProjectMixin, ProjectLayoutContextMixin, ListView):
     template_name = "ai_gateway/key-list.html"
     context_object_name = "keys"
     active_project_section = "ai_gateway"
@@ -342,9 +329,12 @@ class ModelSelectionContextMixin(AvailableModelsMixin):
         }
 
 
-class KeyCreateView(ProjectScopedMixin, ModelSelectionContextMixin, FormView):
+class KeyCreateView(
+    ProjectPermissionRequiredMixin, ExistingProjectMixin, ModelSelectionContextMixin, FormView
+):
     """Collects a key name and model selection, then hands off to the confirmation step."""
 
+    permission_required = ProjectPermission.MANAGE_API_KEYS.permission_name
     template_name = "ai_gateway/key-create.html"
     form_class = KeyCreateForm
 
@@ -376,9 +366,12 @@ class KeyCreateView(ProjectScopedMixin, ModelSelectionContextMixin, FormView):
         return redirect(f"{url}?{query}")
 
 
-class KeyCreateConfirmView(ProjectScopedMixin, AvailableModelsMixin, View):
+class KeyCreateConfirmView(
+    ProjectPermissionRequiredMixin, ExistingProjectMixin, AvailableModelsMixin, View
+):
     """Reviews the submitted key details and creates the key on confirmation."""
 
+    permission_required = ProjectPermission.MANAGE_API_KEYS.permission_name
     template_name = "ai_gateway/key-create-confirm.html"
 
     def _key_create_url(self, name: str, model_ids: list[str], show_errors: bool = False) -> str:
@@ -447,7 +440,7 @@ class KeyCreateConfirmView(ProjectScopedMixin, AvailableModelsMixin, View):
         return response
 
 
-class KeyScopedMixin(ProjectScopedMixin):
+class KeyScopedMixin(ExistingProjectMixin):
     """Resolves a key scoped to the current project."""
 
     @cached_property
@@ -461,9 +454,12 @@ class KeyScopedMixin(ProjectScopedMixin):
         return context
 
 
-class KeyModelChangeView(KeyScopedMixin, ModelSelectionContextMixin, FormView):
+class KeyModelChangeView(
+    ProjectPermissionRequiredMixin, KeyScopedMixin, ModelSelectionContextMixin, FormView
+):
     """Lets users amend model selection for an existing key before review."""
 
+    permission_required = ProjectPermission.MANAGE_API_KEYS.permission_name
     template_name = "ai_gateway/key-model-change.html"
     form_class = KeyModelChangeForm
     model_filter_url_name = "ai_gateway:key_model_change"
@@ -517,9 +513,12 @@ class KeyModelChangeView(KeyScopedMixin, ModelSelectionContextMixin, FormView):
         return redirect(f"{url}?{query}")
 
 
-class KeyModelChangeConfirmView(KeyScopedMixin, AvailableModelsMixin, FormView):
+class KeyModelChangeConfirmView(
+    ProjectPermissionRequiredMixin, KeyScopedMixin, AvailableModelsMixin, FormView
+):
     """Shows a review table of model changes before applying them."""
 
+    permission_required = ProjectPermission.MANAGE_API_KEYS.permission_name
     template_name = "ai_gateway/key-model-change-review.html"
     form_class = KeyModelChangeForm
 
@@ -667,7 +666,10 @@ class KeyDetailView(KeyScopedMixin, DetailView):
         return context
 
 
-class KeyRegenerateView(ProjectScopedMixin, SingleObjectMixin, TemplateView):
+class KeyRegenerateView(
+    ProjectPermissionRequiredMixin, ExistingProjectMixin, SingleObjectMixin, TemplateView
+):
+    permission_required = ProjectPermission.MANAGE_API_KEYS.permission_name
     template_name = "ai_gateway/key-regenerate.html"
     context_object_name = "key"
 
@@ -700,7 +702,8 @@ class KeyRegenerateView(ProjectScopedMixin, SingleObjectMixin, TemplateView):
         return response
 
 
-class KeyRevokeView(ProjectScopedMixin, DeleteView):
+class KeyRevokeView(ProjectPermissionRequiredMixin, ExistingProjectMixin, DeleteView):
+    permission_required = ProjectPermission.MANAGE_API_KEYS.permission_name
     template_name = "ai_gateway/key-revoke.html"
     context_object_name = "key"
     http_method_names = ["get", "post", "head", "options"]

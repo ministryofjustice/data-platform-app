@@ -1,6 +1,7 @@
 import uuid
 from unittest.mock import patch
 
+import pytest
 from django.core.exceptions import ImproperlyConfigured
 from django.urls import reverse
 from model_bakery import baker
@@ -8,7 +9,7 @@ from pytest_django.asserts import assertContains, assertInHTML, assertNotContain
 
 from ai_gateway.exceptions import AIGatewayAPIError
 from projects.graph import EntraAuthenticationError, EntraRequestError
-from projects.models import Project, ProjectMembership
+from projects.models import Project, ProjectMembership, ProjectPermission
 from projects.services import ProjectNotificationError
 from users.models import User
 
@@ -25,8 +26,8 @@ def member_selection(user):
 class TestDetailView:
     """Tests for the ProjectDetailView at '/projects/<uuid>/'."""
 
-    def test_detail_page_renders(self, client, user, project):
-        client.force_login(user)
+    def test_detail_page_renders(self, client, project, project_member):
+        client.force_login(project_member)
         response = client.get(reverse("projects:project_detail", args=[project.uuid]))
         current_overview_link = (
             f'<a href="{reverse("projects:project_detail", args=[project.uuid])}" '
@@ -55,8 +56,8 @@ class TestDetailView:
 class TestProjectUsersDetailView:
     """Tests for the ProjectUsersDetailView at '/projects/<uuid>/users/'"""
 
-    def test_users_page_renders_with_members_active(self, client, user, project):
-        client.force_login(user)
+    def test_users_page_renders_with_members_active(self, client, project, project_member):
+        client.force_login(project_member)
         response = client.get(reverse("projects:project_users", args=[project.uuid]))
         current_members_link = (
             f'<a href="{reverse("projects:project_users", args=[project.uuid])}" '
@@ -75,6 +76,12 @@ class TestProjectUsersDetailView:
 
         assert response.status_code == 200
 
+    def test_users_page_does_not_render_for_non_member(self, client, project, non_project_user):
+        client.force_login(non_project_user)
+        response = client.get(reverse("projects:project_users", args=[project.uuid]))
+
+        assert response.status_code == 404
+
 
 class TestProjectDeleteView:
     """Tests for the ProjectDeleteView at '/projects/<uuid>/delete'."""
@@ -92,27 +99,61 @@ class TestProjectDeleteView:
 
         assert response.status_code == 404
 
-    def test_delete_project(self, client, user, project, key_service):
-        client.force_login(user)
-        response = client.post(reverse("projects:project_delete", args=[project.uuid]))
+    def test_project_owner_can_delete_project(self, client, project, project_owner, key_service):
+        client.force_login(project_owner)
+        response = client.get(reverse("projects:project_delete", args=[project.uuid]))
+        assert response.status_code == 200
 
+        response = client.post(reverse("projects:project_delete", args=[project.uuid]))
         assert response.status_code == 302
-        assert not Project.objects.filter(id=project.id).exists()
+        assert Project.objects.filter(id=project.id).exists() is False
+        # no keys to delete
+        key_service.bulk_delete_keys.assert_not_called()
+        key_service.delete_team.assert_not_called()
+
+    def test_superuser_can_delete_project(self, client, project, superuser, key_service):
+        client.force_login(superuser)
+        response = client.get(reverse("projects:project_delete", args=[project.uuid]))
+        assert response.status_code == 200
+
+        response = client.post(reverse("projects:project_delete", args=[project.uuid]))
+        assert response.status_code == 302
+        assert Project.objects.filter(id=project.id).exists() is False
+        # no keys to delete
+        key_service.bulk_delete_keys.assert_not_called()
+        key_service.delete_team.assert_not_called()
+
+    def test_project_member_cannot_delete_project(
+        self, client, project, project_member, key_service
+    ):
+        client.force_login(project_member)
+        response = client.get(reverse("projects:project_delete", args=[project.uuid]))
+        assert response.status_code == 404
+
+        response = client.post(reverse("projects:project_delete", args=[project.uuid]))
+        assert response.status_code == 404
+        assert Project.objects.filter(id=project.id).exists()
         key_service.bulk_delete_keys.assert_not_called()
         key_service.delete_team.assert_not_called()
 
     def test_delete_project_deletes_gateway_keys_and_team(
-        self, client, user, project, key_service
+        self, client, project, project_owner, key_service
     ):
         baker.make("ai_gateway.Team", project=project, litellm_team_id="team-123")
         baker.make(
-            "ai_gateway.Key", project=project, litellm_secret="sk-secret-1", created_by=user
+            "ai_gateway.Key",
+            project=project,
+            litellm_secret="sk-secret-1",
+            created_by=project_owner,
         )
         baker.make(
-            "ai_gateway.Key", project=project, litellm_secret="sk-secret-2", created_by=user
+            "ai_gateway.Key",
+            project=project,
+            litellm_secret="sk-secret-2",
+            created_by=project_owner,
         )
 
-        client.force_login(user)
+        client.force_login(project_owner)
         response = client.post(reverse("projects:project_delete", args=[project.uuid]))
 
         assert response.status_code == 302
@@ -124,15 +165,18 @@ class TestProjectDeleteView:
         assert sorted(deleted_keys) == ["sk-secret-1", "sk-secret-2"]
 
     def test_gateway_error_on_bulk_delete_keys_aborts_project_deletion(
-        self, client, user, project, key_service
+        self, client, project, project_owner, key_service
     ):
         baker.make("ai_gateway.Team", project=project, litellm_team_id="team-123")
         baker.make(
-            "ai_gateway.Key", project=project, litellm_secret="sk-secret-1", created_by=user
+            "ai_gateway.Key",
+            project=project,
+            litellm_secret="sk-secret-1",
+            created_by=project_owner,
         )
         key_service.bulk_delete_keys.side_effect = AIGatewayAPIError(500, "gateway error")
 
-        client.force_login(user)
+        client.force_login(project_owner)
         response = client.post(reverse("projects:project_delete", args=[project.uuid]))
 
         assert response.status_code == 302
@@ -141,15 +185,18 @@ class TestProjectDeleteView:
         key_service.delete_team.assert_not_called()
 
     def test_gateway_error_on_delete_team_aborts_project_deletion(
-        self, client, user, project, key_service
+        self, client, project, project_owner, key_service
     ):
         baker.make("ai_gateway.Team", project=project, litellm_team_id="team-123")
         baker.make(
-            "ai_gateway.Key", project=project, litellm_secret="sk-secret-1", created_by=user
+            "ai_gateway.Key",
+            project=project,
+            litellm_secret="sk-secret-1",
+            created_by=project_owner,
         )
         key_service.delete_team.side_effect = AIGatewayAPIError(500, "gateway error")
 
-        client.force_login(user)
+        client.force_login(project_owner)
         response = client.post(reverse("projects:project_delete", args=[project.uuid]))
 
         assert response.status_code == 302
@@ -160,10 +207,14 @@ class TestProjectDeleteView:
 class TestProjectRemoveUserView:
     """Tests for the ProjectRemoveUserView at '/projects/<uuid>/users/<user_id>/remove/'."""
 
-    def test_remove_user_page_renders(self, client, user, project):
-        client.force_login(user)
+    @pytest.fixture(autouse=True)
+    def _grant_manage_members(self, project, project_owner, grant_project_permission):
+        grant_project_permission(project, project_owner, ProjectPermission.MANAGE_MEMBERS)
+
+    def test_remove_user_page_renders(self, client, project, project_owner, project_member):
+        client.force_login(project_owner)
         response = client.get(
-            reverse("projects:project_user_remove", args=[project.uuid, user.id])
+            reverse("projects:project_user_remove", args=[project.uuid, project_member.id])
         )
 
         assert response.status_code == 200
@@ -176,6 +227,20 @@ class TestProjectRemoveUserView:
         )
 
         assert response.status_code == 404
+
+    def test_remove_user_page_denied_without_manage_members_permission(
+        self, client, project, project_member_without_permissions
+    ):
+        client.force_login(project_member_without_permissions)
+
+        response = client.get(
+            reverse(
+                "projects:project_user_remove",
+                args=[project.uuid, project_member_without_permissions.id],
+            )
+        )
+
+        assert response.status_code == 403
 
     def test_remove_other_user_redirects_to_project_users(
         self, client, user, project, project_membership_notification_service
@@ -202,51 +267,84 @@ class TestProjectRemoveUserView:
         )
 
     def test_remove_self_redirects_to_projects_list(
-        self, client, user, project, project_membership_notification_service
-    ):
-        client.force_login(user)
-
-        response = client.post(
-            reverse("projects:project_user_remove", args=[project.uuid, user.id])
-        )
-
-        assert response.status_code == 302
-        assert response.url == reverse("projects:projects_list")
-        assert not ProjectMembership.objects.filter(project=project, user=user).exists()
-        project_membership_notification_service.send_member_removed_email.assert_called_once_with(
-            project=project,
-            member=user,
-            removed_by=user,
-        )
-
-    def test_remove_user_continues_when_notification_fails(
         self,
         client,
         user,
         project,
+        project_owner,
+        project_member,
+        project_membership_notification_service,
+        grant_project_permission,
+    ):
+        grant_project_permission(
+            project,
+            project_member,
+            ProjectPermission.MANAGE_MEMBERS,
+        )
+        client.force_login(project_member)
+
+        response = client.post(
+            reverse("projects:project_user_remove", args=[project.uuid, project_member.id])
+        )
+
+        assert response.status_code == 302
+        assert response.url == reverse("projects:projects_list")
+        assert not ProjectMembership.objects.filter(project=project, user=project_member).exists()
+        project_membership_notification_service.send_member_removed_email.assert_called_once_with(
+            project=project,
+            member=project_member,
+            removed_by=project_member,
+        )
+
+    def test_remove_member_continues_when_notification_fails(
+        self,
+        client,
+        project,
+        project_owner,
+        project_member,
         project_membership_notification_service,
     ):
         project_membership_notification_service.send_member_removed_email.side_effect = (
             ProjectNotificationError("Notify failed")
         )
 
-        client.force_login(user)
+        client.force_login(project_owner)
         with patch("projects.views.sentry_sdk.capture_exception") as capture_exception:
             response = client.post(
-                reverse("projects:project_user_remove", args=[project.uuid, user.id])
+                reverse("projects:project_user_remove", args=[project.uuid, project_member.id])
             )
 
         assert response.status_code == 302
-        assert response.url == reverse("projects:projects_list")
-        assert not ProjectMembership.objects.filter(project=project, user=user).exists()
+        assert response.url == reverse("projects:project_users", args=[project.uuid])
+        assert not ProjectMembership.objects.filter(project=project, user=project_member).exists()
         capture_exception.assert_called_once()
+
+    def test_removing_owner_returns_404(
+        self, client, project, project_owner, project_member, grant_project_permission
+    ):
+        grant_project_permission(
+            project,
+            project_member,
+            ProjectPermission.MANAGE_MEMBERS,
+        )
+        client.force_login(project_member)
+
+        response = client.post(
+            reverse("projects:project_user_remove", args=[project.uuid, project_owner.id])
+        )
+
+        assert response.status_code == 404
 
 
 class TestProjectAddUsersFlow:
     """Tests for the ProjectAddUsersView and ProjectAddUsersConfirmView."""
 
-    def test_add_users_page_renders(self, client, user, project):
-        client.force_login(user)
+    @pytest.fixture(autouse=True)
+    def _grant_manage_members(self, project, project_owner, grant_project_permission):
+        grant_project_permission(project, project_owner, ProjectPermission.MANAGE_MEMBERS)
+
+    def test_add_users_page_renders(self, client, project, project_owner):
+        client.force_login(project_owner)
 
         response = client.get(reverse("projects:project_users_add", args=[project.uuid]))
 
@@ -260,18 +358,38 @@ class TestProjectAddUsersFlow:
 
         assert response.status_code == 404
 
-    def test_add_users_page_context_contains_formset(self, client, user, project):
-        client.force_login(user)
+    def test_add_users_page_denied_without_manage_members_permission(
+        self, client, project, project_member_without_permissions
+    ):
+        client.force_login(project_member_without_permissions)
+
+        response = client.get(reverse("projects:project_users_add", args=[project.uuid]))
+
+        assert response.status_code == 403
+
+    def test_confirm_page_denied_without_manage_members_permission(
+        self, client, project, project_member_without_permissions
+    ):
+        client.force_login(project_member_without_permissions)
+
+        response = client.get(reverse("projects:project_users_add_confirm", args=[project.uuid]))
+
+        assert response.status_code == 403
+
+    def test_add_users_page_context_contains_formset(self, client, project, project_owner):
+        client.force_login(project_owner)
 
         response = client.get(reverse("projects:project_users_add", args=[project.uuid]))
 
         assert response.status_code == 200
         assert "formset" in response.context
 
-    def test_add_users_page_repopulates_selected_users_from_session(self, client, user, project):
+    def test_add_users_page_repopulates_selected_users_from_session(
+        self, client, project, project_owner
+    ):
         selected_user_one = baker.make("users.User", email="member.five@example.com")
         selected_user_two = baker.make("users.User", email="member.six@example.com")
-        client.force_login(user)
+        client.force_login(project_owner)
 
         session = client.session
         session["project_user_add_selection"] = {
@@ -290,10 +408,10 @@ class TestProjectAddUsersFlow:
         assert formset.forms[0].initial["oid"] == str(selected_user_one.oid)
         assert formset.forms[1].initial["oid"] == str(selected_user_two.oid)
 
-    def test_add_users_page_submits_and_redirects_to_confirm(self, client, user, project):
+    def test_add_users_page_submits_and_redirects_to_confirm(self, client, project, project_owner):
 
         user_to_add = baker.make("users.User", email="member.one@example.com")
-        client.force_login(user)
+        client.force_login(project_owner)
 
         response = client.post(
             reverse("projects:project_users_add", args=[project.uuid]),
@@ -309,10 +427,12 @@ class TestProjectAddUsersFlow:
         assert response.status_code == 302
         assert response.url == reverse("projects:project_users_add_confirm", args=[project.uuid])
 
-    def test_add_users_page_deduplicates_repeated_user_submission(self, client, user, project):
+    def test_add_users_page_deduplicates_repeated_user_submission(
+        self, client, project, project_owner
+    ):
 
         user_to_add = baker.make("users.User", email="member.two@example.com")
-        client.force_login(user)
+        client.force_login(project_owner)
 
         response = client.post(
             reverse("projects:project_users_add", args=[project.uuid]),
@@ -329,10 +449,10 @@ class TestProjectAddUsersFlow:
         assert response.status_code == 302
         assert response.url == reverse("projects:project_users_add_confirm", args=[project.uuid])
 
-    def test_confirm_page_renders_selected_users(self, client, user, project):
+    def test_confirm_page_renders_selected_users(self, client, project, project_owner):
 
         selected_user = baker.make("users.User", email="member.three@example.com")
-        client.force_login(user)
+        client.force_login(project_owner)
         session = client.session
         session["project_user_add_selection"] = {
             f"project:{project.id}": [member_selection(selected_user)]
@@ -349,13 +469,13 @@ class TestProjectAddUsersFlow:
         self,
         client,
         django_capture_on_commit_callbacks,
-        user,
+        project_owner,
         project,
         project_membership_notification_service,
     ):
 
         selected_user = baker.make("users.User", email="member.four@example.com")
-        client.force_login(user)
+        client.force_login(project_owner)
         session = client.session
         session["project_user_add_selection"] = {
             f"project:{project.id}": [member_selection(selected_user)]
@@ -376,14 +496,14 @@ class TestProjectAddUsersFlow:
         project_membership_notification_service.send_member_added_email.assert_called_once_with(
             project=project,
             member=selected_user,
-            added_by=user,
+            added_by=project_owner,
         )
 
     def test_confirm_adds_users_continues_when_notification_fails(
         self,
         client,
         django_capture_on_commit_callbacks,
-        user,
+        project_owner,
         project,
         project_membership_notification_service,
     ):
@@ -392,7 +512,7 @@ class TestProjectAddUsersFlow:
         project_membership_notification_service.send_member_added_email.side_effect = (
             ProjectNotificationError("Notify failed")
         )
-        client.force_login(user)
+        client.force_login(project_owner)
         session = client.session
         session["project_user_add_selection"] = {
             f"project:{project.id}": [member_selection(selected_user)]
@@ -419,12 +539,12 @@ class TestProjectAddUsersFlow:
         self,
         client,
         django_capture_on_commit_callbacks,
-        user,
+        project_owner,
         project,
     ):
 
         selected_user = baker.make("users.User", email="member.config.fail@example.com")
-        client.force_login(user)
+        client.force_login(project_owner)
         session = client.session
         session["project_user_add_selection"] = {
             f"project:{project.id}": [member_selection(selected_user)]
@@ -451,10 +571,12 @@ class TestProjectAddUsersFlow:
         ).exists()
         capture_exception.assert_called_once()
 
-    def test_confirm_adds_users_records_membership_history_with_user(self, client, user, project):
+    def test_confirm_adds_users_records_membership_history_with_user(
+        self, client, project, project_owner
+    ):
         """Regression: bulk_create_with_history must record history_user for added memberships."""
         selected_user = baker.make("users.User", email="history.add@example.com")
-        client.force_login(user)
+        client.force_login(project_owner)
         session = client.session
         session["project_user_add_selection"] = {
             f"project:{project.id}": [member_selection(selected_user)]
@@ -466,18 +588,18 @@ class TestProjectAddUsersFlow:
         membership = ProjectMembership.objects.get(project=project, user=selected_user)
         historical = membership.history.filter(history_type="+")
         assert historical.exists()
-        assert historical.first().history_user == user
+        assert historical.first().history_user == project_owner
 
     def test_confirm_adds_new_entra_user_creates_stub_account(
         self,
         client,
         django_capture_on_commit_callbacks,
-        user,
+        project_owner,
         project,
         project_membership_notification_service,
     ):
         new_oid = str(uuid.uuid4())
-        client.force_login(user)
+        client.force_login(project_owner)
         session = client.session
         session["project_user_add_selection"] = {
             f"project:{project.id}": [
@@ -518,9 +640,9 @@ class TestProjectAddUsersFlow:
             user=created_user,
         ).exists()
 
-    def test_confirm_add_redirects_when_entra_auth_missing(self, client, user, project):
+    def test_confirm_add_redirects_when_entra_auth_missing(self, client, project, project_owner):
         new_oid = str(uuid.uuid4())
-        client.force_login(user)
+        client.force_login(project_owner)
         session = client.session
         session["project_user_add_selection"] = {
             f"project:{project.id}": [
@@ -540,9 +662,9 @@ class TestProjectAddUsersFlow:
         assert not User.objects.filter(oid=new_oid).exists()
         assert "error_message" in client.session
 
-    def test_confirm_add_redirects_when_entra_lookup_fails(self, client, user, project):
+    def test_confirm_add_redirects_when_entra_lookup_fails(self, client, project, project_owner):
         new_oid = str(uuid.uuid4())
-        client.force_login(user)
+        client.force_login(project_owner)
         session = client.session
         session["project_user_add_selection"] = {
             f"project:{project.id}": [

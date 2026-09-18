@@ -11,6 +11,11 @@ class ProjectPermission(models.TextChoices):
     MANAGE_API_KEYS = "manage_api_keys", "Manage API Keys"
     MANAGE_MEMBERS = "manage_members", "Manage Members"
 
+    @property
+    def permission_name(self) -> str:
+        """Full Django permission name, e.g. 'projects.manage_members'."""
+        return f"projects.{self.value}"
+
 
 class ProjectMembershipPermission(TimeStampedModel):
     membership = models.ForeignKey(
