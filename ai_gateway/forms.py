@@ -160,17 +160,13 @@ class BaseModelUsageRateFormSet(BaseFormSet):
         kwargs["available_models"] = self.available_models
         return kwargs
 
-    def _construct_form(self, index, **kwargs):
-        form = super()._construct_form(index, **kwargs)
-        if index == 0:
-            form.empty_permitted = False
-        return form
 
-
-def build_model_usage_rate_formset(*, available_models, data=None, initial=None, extra=1):
+def build_model_usage_rate_formset(*, available_models, data=None, initial=None, extra=0):
     formset_class = formset_factory(
         ModelUsageRateForm,
         formset=BaseModelUsageRateFormSet,
+        min_num=1,
+        validate_min=True,
         extra=extra,
     )
     return formset_class(
