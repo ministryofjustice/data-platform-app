@@ -166,9 +166,6 @@ class BaseModelUsageRateFormSet(BaseFormSet):
             form.empty_permitted = False
         return form
 
-    def clean(self):
-        super().clean()
-
 
 def build_model_usage_rate_formset(*, available_models, data=None, initial=None, extra=1):
     formset_class = formset_factory(
