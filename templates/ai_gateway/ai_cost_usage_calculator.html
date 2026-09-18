@@ -51,7 +51,8 @@
                     </p>
                   {% endfor %}
                 {% endif %}
-                <div class="govuk-radios govuk-radios--inline" data-module="govuk-radios">
+                <div class="govuk-radios govuk-radios--inline govuk-radios--small"
+                     data-module="govuk-radios">
                   {% for value, label in usage_period_form.usage_period.field.choices %}
                     <div class="govuk-radios__item">
                       <input class="govuk-radios__input"
@@ -182,11 +183,11 @@
             <div class="app-cost-estimate-summary">
               <div class="app-cost-estimate-summary__item">
                 <h3 class="govuk-heading-s">Per request</h3>
-                <p class="app-cost-estimate-summary__value">{{ estimate_result.total_per_request|usd:4 }}</p>
+                <p class="govuk-heading-l">{{ estimate_result.total_per_request|usd:4 }}</p>
               </div>
               <div class="app-cost-estimate-summary__item">
                 <h3 class="govuk-heading-s">{{ estimate_result.usage_period|capfirst }}</h3>
-                <p class="app-cost-estimate-summary__value">{{ estimate_result.total_cost|usd:2 }}</p>
+                <p class="govuk-heading-l">{{ estimate_result.total_cost|usd:2 }}</p>
               </div>
             </div>
             <table class="govuk-table app-cost-estimate-table">

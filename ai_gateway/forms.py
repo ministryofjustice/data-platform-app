@@ -160,20 +160,13 @@ class BaseModelUsageRateFormSet(BaseFormSet):
         kwargs["available_models"] = self.available_models
         return kwargs
 
-    def clean(self):
-        super().clean()
 
-        if any(self.errors):
-            return
-
-        if not any(form.has_changed() for form in self.forms):
-            raise forms.ValidationError("Add at least one model")
-
-
-def build_model_usage_rate_formset(*, available_models, data=None, initial=None, extra=1):
+def build_model_usage_rate_formset(*, available_models, data=None, initial=None, extra=0):
     formset_class = formset_factory(
         ModelUsageRateForm,
         formset=BaseModelUsageRateFormSet,
+        min_num=1,
+        validate_min=True,
         extra=extra,
     )
     return formset_class(
