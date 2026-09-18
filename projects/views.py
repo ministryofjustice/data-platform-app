@@ -366,8 +366,8 @@ class ProjectUsersDetailView(
 
 class ProjectDeleteView(ProjectAccessMixin, UUIDObjectMixin, DeleteView):
     """
-    Will need additional checks for user permissions to ensure
-    the user has access to delete the project.
+    View to delete a project. There is no specific permission for deleting a project, it is only
+    accessible to project owners and superusers.
     """
 
     template_name = "projects/delete_confirm.html"
@@ -376,7 +376,10 @@ class ProjectDeleteView(ProjectAccessMixin, UUIDObjectMixin, DeleteView):
     success_url = reverse_lazy("projects:projects_list")
 
     def get_queryset(self):
-        return self.get_accessible_projects()
+        queryset = self.get_accessible_projects()
+        if self.request.user.is_superuser:
+            return queryset
+        return queryset.filter(owner=self.request.user)
 
     def form_valid(self, form):
         project = self.object

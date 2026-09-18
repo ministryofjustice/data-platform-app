@@ -99,27 +99,61 @@ class TestProjectDeleteView:
 
         assert response.status_code == 404
 
-    def test_delete_project(self, client, user, project, key_service):
-        client.force_login(user)
-        response = client.post(reverse("projects:project_delete", args=[project.uuid]))
+    def test_project_owner_can_delete_project(self, client, project, project_owner, key_service):
+        client.force_login(project_owner)
+        response = client.get(reverse("projects:project_delete", args=[project.uuid]))
+        assert response.status_code == 200
 
+        response = client.post(reverse("projects:project_delete", args=[project.uuid]))
         assert response.status_code == 302
-        assert not Project.objects.filter(id=project.id).exists()
+        assert Project.objects.filter(id=project.id).exists() is False
+        # no keys to delete
+        key_service.bulk_delete_keys.assert_not_called()
+        key_service.delete_team.assert_not_called()
+
+    def test_superuser_can_delete_project(self, client, project, superuser, key_service):
+        client.force_login(superuser)
+        response = client.get(reverse("projects:project_delete", args=[project.uuid]))
+        assert response.status_code == 200
+
+        response = client.post(reverse("projects:project_delete", args=[project.uuid]))
+        assert response.status_code == 302
+        assert Project.objects.filter(id=project.id).exists() is False
+        # no keys to delete
+        key_service.bulk_delete_keys.assert_not_called()
+        key_service.delete_team.assert_not_called()
+
+    def test_project_member_cannot_delete_project(
+        self, client, project, project_member, key_service
+    ):
+        client.force_login(project_member)
+        response = client.get(reverse("projects:project_delete", args=[project.uuid]))
+        assert response.status_code == 404
+
+        response = client.post(reverse("projects:project_delete", args=[project.uuid]))
+        assert response.status_code == 404
+        assert Project.objects.filter(id=project.id).exists()
         key_service.bulk_delete_keys.assert_not_called()
         key_service.delete_team.assert_not_called()
 
     def test_delete_project_deletes_gateway_keys_and_team(
-        self, client, user, project, key_service
+        self, client, project, project_owner, key_service
     ):
         baker.make("ai_gateway.Team", project=project, litellm_team_id="team-123")
         baker.make(
-            "ai_gateway.Key", project=project, litellm_secret="sk-secret-1", created_by=user
+            "ai_gateway.Key",
+            project=project,
+            litellm_secret="sk-secret-1",
+            created_by=project_owner,
         )
         baker.make(
-            "ai_gateway.Key", project=project, litellm_secret="sk-secret-2", created_by=user
+            "ai_gateway.Key",
+            project=project,
+            litellm_secret="sk-secret-2",
+            created_by=project_owner,
         )
 
-        client.force_login(user)
+        client.force_login(project_owner)
         response = client.post(reverse("projects:project_delete", args=[project.uuid]))
 
         assert response.status_code == 302
@@ -131,15 +165,18 @@ class TestProjectDeleteView:
         assert sorted(deleted_keys) == ["sk-secret-1", "sk-secret-2"]
 
     def test_gateway_error_on_bulk_delete_keys_aborts_project_deletion(
-        self, client, user, project, key_service
+        self, client, project, project_owner, key_service
     ):
         baker.make("ai_gateway.Team", project=project, litellm_team_id="team-123")
         baker.make(
-            "ai_gateway.Key", project=project, litellm_secret="sk-secret-1", created_by=user
+            "ai_gateway.Key",
+            project=project,
+            litellm_secret="sk-secret-1",
+            created_by=project_owner,
         )
         key_service.bulk_delete_keys.side_effect = AIGatewayAPIError(500, "gateway error")
 
-        client.force_login(user)
+        client.force_login(project_owner)
         response = client.post(reverse("projects:project_delete", args=[project.uuid]))
 
         assert response.status_code == 302
@@ -148,15 +185,18 @@ class TestProjectDeleteView:
         key_service.delete_team.assert_not_called()
 
     def test_gateway_error_on_delete_team_aborts_project_deletion(
-        self, client, user, project, key_service
+        self, client, project, project_owner, key_service
     ):
         baker.make("ai_gateway.Team", project=project, litellm_team_id="team-123")
         baker.make(
-            "ai_gateway.Key", project=project, litellm_secret="sk-secret-1", created_by=user
+            "ai_gateway.Key",
+            project=project,
+            litellm_secret="sk-secret-1",
+            created_by=project_owner,
         )
         key_service.delete_team.side_effect = AIGatewayAPIError(500, "gateway error")
 
-        client.force_login(user)
+        client.force_login(project_owner)
         response = client.post(reverse("projects:project_delete", args=[project.uuid]))
 
         assert response.status_code == 302
