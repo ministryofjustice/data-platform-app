@@ -86,7 +86,8 @@
                       Email
                     </legend>
                     <div class="govuk-form-group{% if form.oid.errors or formset.non_form_errors and forloop.first %} govuk-form-group--error{% endif %}">
-                      <label class="govuk-label" for="{{ form.oid.auto_id }}-autocomplete">Enter an email address to add a project member</label>
+                      <label class="govuk-label"
+                             for="{{ form.oid.auto_id }}-autocomplete">Enter an email address to add a project member</label>
                       {% if formset.non_form_errors and forloop.first %}
                         {% for error in formset.non_form_errors %}
                           <p class="govuk-error-message">

@@ -169,7 +169,9 @@
               </button>
             </div>
             <hr class="govuk-section-break govuk-section-break--m govuk-section-break--visible">
-            <button type="submit" class="govuk-button" data-module="govuk-button">Estimate cost</button>
+            <button type="submit"
+                    class="govuk-button"
+                    data-module="govuk-button">Estimate cost</button>
           </form>
         </div>
       </div>
@@ -195,8 +197,10 @@
                 <tr class="govuk-table__row">
                   <th scope="col" class="govuk-table__header">Provider</th>
                   <th scope="col" class="govuk-table__header">Model</th>
-                  <th scope="col" class="govuk-table__header govuk-table__header--numeric">Per request</th>
-                  <th scope="col" class="govuk-table__header govuk-table__header--numeric">{{ estimate_result.usage_period|capfirst }}</th>
+                  <th scope="col"
+                      class="govuk-table__header govuk-table__header--numeric">Per request</th>
+                  <th scope="col"
+                      class="govuk-table__header govuk-table__header--numeric">{{ estimate_result.usage_period|capfirst }}</th>
                 </tr>
               </thead>
               <tbody class="govuk-table__body">

@@ -33,7 +33,8 @@
       <form method="post" novalidate>
         {% csrf_token %}
         <div class="govuk-form-group{% if form.name.errors %} govuk-form-group--error{% endif %}">
-          <label class="govuk-label govuk-label--m" for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+          <label class="govuk-label govuk-label--m"
+                 for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
           <div class="govuk-hint">Enter a meaningful name for this project</div>
           {% if form.name.errors %}
             {% for error in form.name.errors %}
