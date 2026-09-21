@@ -166,7 +166,6 @@ def build_model_usage_rate_formset(*, available_models, data=None, initial=None,
         ModelUsageRateForm,
         formset=BaseModelUsageRateFormSet,
         min_num=1,
-        validate_min=True,
         extra=extra,
     )
     return formset_class(
