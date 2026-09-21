@@ -36,7 +36,7 @@ def calculator_formset_management_data(total_forms=1):
     return {
         "models-TOTAL_FORMS": str(total_forms),
         "models-INITIAL_FORMS": "0",
-        "models-MIN_NUM_FORMS": "0",
+        "models-MIN_NUM_FORMS": "1",
         "models-MAX_NUM_FORMS": "1000",
     }
 
@@ -145,7 +145,16 @@ class TestModelUsageRateFormSet:
         )
 
         assert not formset.is_valid()
-        assert "Select a model"
+        assert "Please submit at least 1 form." in formset.non_form_errors()
+
+    def test_rejects_zero_submitted_forms(self):
+        formset = build_model_usage_rate_formset(
+            data=calculator_formset_management_data(total_forms=0),
+            available_models=AVAILABLE_MODELS,
+        )
+
+        assert not formset.is_valid()
+        assert "Please submit at least 1 form." in formset.non_form_errors()
 
     def test_formset_filters_model_choices_by_provider(self):
         formset = build_model_usage_rate_formset(
