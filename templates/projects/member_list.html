@@ -19,6 +19,7 @@
       <thead class="govuk-table__head">
         <tr class="govuk-table__row">
           <th scope="col" class="govuk-table__header">Name</th>
+          <th scope="col" class="govuk-table__header">Permissions</th>
           <th scope="col" class="govuk-table__header">
             <span class="govuk-visually-hidden">Actions</span>
           </th>
@@ -27,7 +28,21 @@
       <tbody class="govuk-table__body">
         {% for permission in project.memberships.all %}
           <tr class="govuk-table__row">
-            <td class="govuk-table__cell govuk-!-font-weight-bold">{{ permission.user.full_name }}</td>
+            <td class="govuk-table__cell">
+              <p class="govuk-!-font-weight-bold govuk-!-margin-top-0">{{ permission.user.full_name }}</p>
+              <p class="govuk-hint govuk-!-margin-bottom-0">{{ permission.user.email }}</p>
+            </td>
+            <td class="govuk-table__cell">
+              {% with permissions=permission.permissions.all %}
+                {% if permissions %}
+                  {% for assignment in permissions %}
+                    {{ assignment.permission.name }}{% if not forloop.last %}, {% endif %}
+                  {% endfor %}
+                {% else %}
+                  No permissions
+                {% endif %}
+              {% endwith %}
+            </td>
             <td class="govuk-table__cell govuk-!-text-align-right">
               <a href="{% url 'projects:project_user_remove' project.uuid permission.user.id %}"
                  class="govuk-link">Remove<span class="govuk-visually-hidden"> {{ permission.user.full_name }}</span></a>

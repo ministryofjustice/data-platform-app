@@ -257,6 +257,8 @@ $masthead-background-color: #381a62;
 }
 
 .app-summary-list--member.app-summary-list--last {
+  margin-bottom: govuk-spacing(0);
+  padding-bottom: govuk-spacing(0);
   border-bottom: 0;
 }
 

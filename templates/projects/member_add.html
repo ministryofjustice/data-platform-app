@@ -7,7 +7,7 @@
 {% endblock back_link %}
 {% block content %}
   <div class="govuk-grid-row">
-    <div class="govuk-grid-column-two-thirds">
+    <div class="govuk-grid-column-one-half">
       {% if error_message %}
         {% include "includes/error_message.html" with heading=error_message.heading message=error_message.message only %}
       {% endif %}
@@ -20,6 +20,11 @@
                 {% for error in form.oid.errors %}
                   <li>
                     <a href="#{{ form.oid.auto_id }}-autocomplete">{{ error }}</a>
+                  </li>
+                {% endfor %}
+                {% for error in form.permissions.errors %}
+                  <li>
+                    <a href="#id_permissions_0">{{ error }}</a>
                   </li>
                 {% endfor %}
               </ul>
@@ -45,10 +50,16 @@
           {{ form.email }}
           {{ form.display_name }}
         </div>
-        <div class="govuk-form-group">
+        <div class="govuk-form-group{% if form.permissions.errors %} govuk-form-group--error{% endif %}">
           <fieldset class="govuk-fieldset">
             <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">Permissions</legend>
             <div class="govuk-hint">Choose permissions for this member</div>
+            {% for error in form.permissions.errors %}
+              <p class="govuk-error-message">
+                <span class="govuk-visually-hidden">Error:</span>
+                {{ error }}
+              </p>
+            {% endfor %}
             <div class="govuk-checkboxes" data-module="govuk-checkboxes">
               {% for value, label in form.permissions.field.choices %}
                 <div class="govuk-checkboxes__item">
@@ -65,6 +76,27 @@
             </div>
           </fieldset>
         </div>
+        <details class="govuk-details">
+          <summary class="govuk-details__summary">
+            <span class="govuk-details__summary-text">What can members with these permissions do?</span>
+          </summary>
+          <div class="govuk-details__text">
+            <dl class="govuk-summary-list">
+              <div class="govuk-summary-list__row govuk-summary-list__row">
+                <dt class="govuk-summary-list__key">Manage API keys</dt>
+                <dd class="govuk-summary-list__value">
+                  Create, regenerate and revoke API keys
+                </dd>
+              </div>
+              <div class="govuk-summary-list__row govuk-summary-list__row">
+                <dt class="govuk-summary-list__key">Manage members</dt>
+                <dd class="govuk-summary-list__value">
+                  Add or remove project members and change their permissions
+                </dd>
+              </div>
+            </dl>
+          </div>
+        </details>
         <div class="govuk-button-group">
           <button type="submit" class="govuk-button">Add member</button>
           <a href="{{ cancel_url }}" class="govuk-link">Cancel</a>

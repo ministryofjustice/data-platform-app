@@ -156,7 +156,7 @@ class ProjectCreateView(FormView):
 class ProjectCreateAddUsersView(ProjectUserSelectionSessionMixin, FormView):
     """The yes/no decision on whether to add members during project creation."""
 
-    template_name = "projects/create_user_add.html"
+    template_name = "projects/create_member_add.html"
     form_class = ProjectCreateAddUsersDecisionForm
 
     def get_user_bucket_key(self):
@@ -177,7 +177,7 @@ class ProjectCreateAddUsersView(ProjectUserSelectionSessionMixin, FormView):
         return redirect("projects:project_create_add_member")
 
 
-class ProjectMemberFormView(ProjectUserSelectionSessionMixin, FormView):
+class ProjectMemberFormBaseView(ProjectUserSelectionSessionMixin, FormView):
     """Search for a user and choose their permissions, one member at a time.
 
     Shared by the project-creation and existing-project add-member flows;
@@ -242,7 +242,7 @@ class ProjectMemberFormView(ProjectUserSelectionSessionMixin, FormView):
         return redirect(self.get_success_url())
 
 
-class ProjectCreateAddMemberView(ProjectMemberFormView):
+class ProjectCreateAddMemberView(ProjectMemberFormBaseView):
     def get_user_bucket_key(self):
         return USER_BUCKET_SESSION_KEY
 
@@ -375,7 +375,7 @@ class ProjectCreateConfirmView(
 class ProjectUsersDetailView(
     ProjectAccessMixin, ProjectLayoutContextMixin, UUIDObjectMixin, DetailView
 ):
-    template_name = "projects/user_list.html"
+    template_name = "projects/member_list.html"
     context_object_name = "project"
     model = Project
     active_project_section = "members"
@@ -385,7 +385,9 @@ class ProjectUsersDetailView(
             Project.objects.prefetch_related(
                 Prefetch(
                     "memberships",
-                    queryset=ProjectMembership.objects.select_related("user"),
+                    queryset=ProjectMembership.objects.select_related("user").prefetch_related(
+                        "permissions__permission"
+                    ),
                 )
             )
         )
@@ -438,7 +440,7 @@ class ProjectDeleteView(ProjectAccessMixin, UUIDObjectMixin, DeleteView):
         return response
 
 
-class ProjectAddUsersView(ExistingProjectMixin, ProjectMemberFormView):
+class ProjectAddUsersView(ExistingProjectMixin, ProjectMemberFormBaseView):
     def get_success_url(self):
         return reverse(
             "projects:project_users_add_review",
@@ -463,7 +465,7 @@ class ProjectAddUsersReviewView(
     ProjectUserSelectionSessionMixin,
     View,
 ):
-    template_name = "projects/user_add_review.html"
+    template_name = "projects/member_add_review.html"
 
     def get(self, request, *args, **kwargs):
         project = self.get_project()
@@ -521,7 +523,7 @@ class ProjectRemoveUserView(ProjectAccessMixin, ProjectMembershipNotificationMix
     the user can remove users from the project.
     """
 
-    template_name = "projects/user_remove_confirm.html"
+    template_name = "projects/member_remove_confirm.html"
     context_object_name = "membership"
     model = ProjectMembership
 

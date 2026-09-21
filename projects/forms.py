@@ -28,9 +28,10 @@ class ProjectMemberForm(forms.Form):
     )
     permissions = forms.MultipleChoiceField(
         label="Permissions",
-        required=False,
+        required=True,
         choices=ProjectPermission.choices,
         initial=list,
+        error_messages={"required": "Choose at least one permission for this member"},
         widget=forms.CheckboxSelectMultiple(attrs={"class": "govuk-checkboxes__input"}),
     )
 

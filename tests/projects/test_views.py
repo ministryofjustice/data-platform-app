@@ -65,7 +65,7 @@ class TestProjectUsersDetailView:
         )
 
         assert response.status_code == 200
-        assert "projects/user_list.html" in [t.name for t in response.templates]
+        assert "projects/member_list.html" in [t.name for t in response.templates]
         assertContains(response, 'aria-current="location"', count=1)
         assertInHTML(current_members_link, response.content.decode())
 
@@ -168,7 +168,7 @@ class TestProjectRemoveUserView:
         )
 
         assert response.status_code == 200
-        assert "projects/user_remove_confirm.html" in [t.name for t in response.templates]
+        assert "projects/member_remove_confirm.html" in [t.name for t in response.templates]
 
     def test_remove_user_page_fail(self, client, non_project_user, project):
         client.force_login(non_project_user)
@@ -297,7 +297,11 @@ class TestProjectAddUsersFlow:
 
         response = client.post(
             reverse("projects:project_users_add", args=[project.uuid]),
-            data={"oid": str(user_to_add.oid), "permissions": ["manage_members"]},
+            data={
+                "oid": str(user_to_add.oid),
+                "email": user_to_add.email,
+                "permissions": ["manage_members"],
+            },
         )
 
         assert response.status_code == 302
@@ -339,7 +343,7 @@ class TestProjectAddUsersFlow:
         response = client.get(reverse("projects:project_users_add_review", args=[project.uuid]))
 
         assert response.status_code == 200
-        assert "projects/user_add_review.html" in [t.name for t in response.templates]
+        assert "projects/member_add_review.html" in [t.name for t in response.templates]
         assert selected_user.email in response.content.decode()
         assert "Manage Members" in response.content.decode()
 
@@ -679,7 +683,7 @@ class TestProjectCreateFlow:
         response = client.get(reverse("projects:project_create_add_users"))
 
         assert response.status_code == 200
-        assert "projects/create_user_add.html" in [t.name for t in response.templates]
+        assert "projects/create_member_add.html" in [t.name for t in response.templates]
         assert "form" in response.context
 
     def test_create_add_users_shows_decision_error_when_missing(self, client, user):
