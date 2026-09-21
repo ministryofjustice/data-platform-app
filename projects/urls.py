@@ -13,7 +13,7 @@ from projects.views import (
     ProjectDetailView,
     ProjectListView,
     ProjectRemoveUserView,
-    ProjectUsersDetailView,
+    ProjectUsersListView,
 )
 
 app_name = "projects"
@@ -37,7 +37,7 @@ urlpatterns = [
     ),
     path("create/confirm/", ProjectCreateConfirmView.as_view(), name="project_create_confirm"),
     path("<uuid:uuid>/", ProjectDetailView.as_view(), name="project_detail"),
-    path("<uuid:uuid>/users/", ProjectUsersDetailView.as_view(), name="project_users"),
+    path("<uuid:uuid>/users/", ProjectUsersListView.as_view(), name="project_users"),
     path("<uuid:uuid>/users/add/", ProjectAddUsersView.as_view(), name="project_users_add"),
     path(
         "<uuid:uuid>/users/add/review/",

@@ -4,7 +4,7 @@ from django.db.models import Prefetch
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
-from django.views.generic.base import View
+from django.views.generic.base import TemplateView, View
 from django.views.generic.detail import DetailView
 from django.views.generic.edit import DeleteView, FormView
 from django.views.generic.list import ListView
@@ -374,23 +374,18 @@ class ProjectCreateConfirmView(
         return redirect("projects:project_detail", uuid=project.uuid)
 
 
-class ProjectUsersDetailView(
-    ProjectAccessMixin, ProjectLayoutContextMixin, UUIDObjectMixin, DetailView
-):
-    template_name = "projects/member_list.html"
-    context_object_name = "project"
-    model = Project
+class ProjectUsersListView(ExistingProjectMixin, ProjectLayoutContextMixin, TemplateView):
+    template_name = "projects/user_list.html"
     active_project_section = "members"
 
-    def get_queryset(self):
-        return self.get_accessible_projects(
-            Project.objects.prefetch_related(
-                Prefetch(
-                    "memberships",
-                    queryset=ProjectMembership.objects.select_related("user").prefetch_related(
-                        "permissions__permission"
-                    ),
-                )
+    def get_accessible_projects(self):
+        queryset = super().get_accessible_projects()
+        return queryset.prefetch_related(
+            Prefetch(
+                "memberships",
+                queryset=ProjectMembership.objects.select_related("user").prefetch_related(
+                    "permissions__permission"
+                ),
             )
         )
 

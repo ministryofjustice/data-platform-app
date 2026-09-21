@@ -54,8 +54,8 @@ class TestDetailView:
         assert response.status_code == 200
 
 
-class TestProjectUsersDetailView:
-    """Tests for the ProjectUsersDetailView at '/projects/<uuid>/users/'"""
+class TestProjectUsersListView:
+    """Tests for the ProjectUsersListView at '/projects/<uuid>/users/'"""
 
     def test_users_page_renders_with_members_active(self, client, project, project_member):
         client.force_login(project_member)
