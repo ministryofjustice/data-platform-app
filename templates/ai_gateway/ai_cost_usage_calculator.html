@@ -76,20 +76,15 @@
                 <h4 class="govuk-heading-m">Models and usage rates</h4>
                 {% if formset_has_errors %}
                   <p class="govuk-error-message">
-                    <span class="govuk-visually-hidden">Error:</span> Complete model and usage details
+                    <span class="govuk-visually-hidden">Error:</span> Finish entering model and usage details
                   </p>
                 {% endif %}
                 {{ formset.management_form }}
-                <div class="app-model-usage-header">
-                  <p class="govuk-body govuk-!-font-weight-bold govuk-!-margin-bottom-1">Provider</p>
-                  <p class="govuk-body govuk-!-font-weight-bold govuk-!-margin-bottom-1">Model</p>
-                  <p class="govuk-body govuk-!-font-weight-bold govuk-!-margin-bottom-1">Input tokens</p>
-                  <p class="govuk-body govuk-!-font-weight-bold govuk-!-margin-bottom-1">Output tokens</p>
-                  <p class="govuk-body govuk-!-font-weight-bold govuk-!-margin-bottom-1">Requests</p>
-                </div>
                 {% for form in formset %}
                   <div class="moj-add-another__item">
                     <div class="govuk-form-group{% if form.provider.errors %} govuk-form-group--error{% endif %}">
+                      <label class="govuk-label govuk-label-s app-model-usage-label{% if not forloop.first %} app-model-usage-label--repeated{% endif %}"
+                             for="{{ form.provider.id_for_label }}">Provider</label>
                       <select class="govuk-select govuk-!-width-full"
                               id="{{ form.provider.id_for_label }}"
                               name="{{ form.provider.html_name }}"
@@ -108,6 +103,8 @@
                       </select>
                     </div>
                     <div class="govuk-form-group{% if form.model.errors %} govuk-form-group--error{% endif %}">
+                      <label class="govuk-label govuk-label-s app-model-usage-label{% if not forloop.first %} app-model-usage-label--repeated{% endif %}"
+                             for="{{ form.model.id_for_label }}">Model</label>
                       <select class="govuk-select govuk-!-width-full model-select"
                               id="{{ form.model.id_for_label }}"
                               name="{{ form.model.html_name }}"
@@ -122,6 +119,8 @@
                       </select>
                     </div>
                     <div class="govuk-form-group{% if form.input_tokens.errors %} govuk-form-group--error{% endif %}">
+                      <label class="govuk-label govuk-label-s app-model-usage-label{% if not forloop.first %} app-model-usage-label--repeated{% endif %}"
+                             for="{{ form.input_tokens.id_for_label }}">Input tokens</label>
                       <input class="govuk-input govuk-!-width-full{% if form.input_tokens.errors %} govuk-input--error{% endif %}"
                              id="{{ form.input_tokens.id_for_label }}"
                              name="{{ form.input_tokens.html_name }}"
@@ -133,6 +132,8 @@
                              data-id="id_{{ formset.prefix }}-%index%-input_tokens">
                     </div>
                     <div class="govuk-form-group{% if form.output_tokens.errors %} govuk-form-group--error{% endif %}">
+                      <label class="govuk-label govuk-label-s app-model-usage-label{% if not forloop.first %} app-model-usage-label--repeated{% endif %}"
+                             for="{{ form.output_tokens.id_for_label }}">Output tokens</label>
                       <input class="govuk-input govuk-!-width-full{% if form.output_tokens.errors %} govuk-input--error{% endif %}"
                              id="{{ form.output_tokens.id_for_label }}"
                              name="{{ form.output_tokens.html_name }}"
@@ -144,10 +145,12 @@
                              data-id="id_{{ formset.prefix }}-%index%-output_tokens">
                     </div>
                     <div class="govuk-form-group{% if form.requests_per_period.errors %} govuk-form-group--error{% endif %}">
+                      <label class="govuk-label govuk-label-s app-model-usage-label{% if not forloop.first %} app-model-usage-label--repeated{% endif %}"
+                             for="{{ form.requests_per_period.id_for_label }}">Requests per period</label>
                       <input class="govuk-input govuk-!-width-full{% if form.requests_per_period.errors %} govuk-input--error{% endif %}"
                              id="{{ form.requests_per_period.id_for_label }}"
                              name="{{ form.requests_per_period.html_name }}"
-                             aria-label="Requests"
+                             aria-label="Requests per period"
                              type="text"
                              inputmode="numeric"
                              value="{{ form.requests_per_period.value|default:'' }}"
