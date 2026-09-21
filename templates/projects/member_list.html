@@ -1,5 +1,6 @@
 {% extends "base/project_layout.html" %}
 {% load static %}
+{% load project_permissions %}
 {% block title %}
   {{ project.name }} members - Justice Data Platform | Ministry of Justice
 {% endblock title %}
@@ -7,12 +8,15 @@
   <a href="{% url 'projects:projects_list' %}" class="govuk-back-link">Back to projects</a>
 {% endblock back_link %}
 {% block project_main_content %}
+  {% has_project_permission request.user "projects.manage_members" project as can_manage_members %}
   <div class="govuk-grid-column-two-thirds govuk-!-padding-left-0">
     <h2 class="govuk-heading-m">Project members</h2>
   </div>
   <div class="govuk-grid-column-one-third govuk-!-padding-right-0 govuk-!-text-align-right">
-    <a class="govuk-button govuk-button--secondary"
-       href="{% url 'projects:project_users_add' project.uuid %}">Add a member</a>
+    {% if can_manage_members %}
+      <a class="govuk-button govuk-button--secondary"
+         href="{% url 'projects:project_users_add' project.uuid %}">Add a member</a>
+    {% endif %}
   </div>
   {% if project.memberships.all %}
     <table class="govuk-table">
@@ -26,14 +30,14 @@
         </tr>
       </thead>
       <tbody class="govuk-table__body">
-        {% for permission in project.memberships.all %}
+        {% for membership in project.memberships.all %}
           <tr class="govuk-table__row">
             <td class="govuk-table__cell">
-              <p class="govuk-!-font-weight-bold govuk-!-margin-top-0">{{ permission.user.full_name }}</p>
-              <p class="govuk-hint govuk-!-margin-bottom-0">{{ permission.user.email }}</p>
+              <p class="govuk-!-font-weight-bold govuk-!-margin-top-0">{{ membership.user.full_name }}</p>
+              <p class="govuk-hint govuk-!-margin-bottom-0">{{ membership.user.email }}</p>
             </td>
             <td class="govuk-table__cell">
-              {% with permissions=permission.permissions.all %}
+              {% with permissions=membership.permissions.all %}
                 {% if permissions %}
                   {% for assignment in permissions %}
                     {{ assignment.permission.name }}{% if not forloop.last %}, {% endif %}
@@ -44,8 +48,10 @@
               {% endwith %}
             </td>
             <td class="govuk-table__cell govuk-!-text-align-right">
-              <a href="{% url 'projects:project_user_remove' project.uuid permission.user.id %}"
-                 class="govuk-link">Remove<span class="govuk-visually-hidden"> {{ permission.user.full_name }}</span></a>
+              {% if can_manage_members and membership.user != project.owner %}
+                <a href="{% url 'projects:project_user_remove' project.uuid membership.user.id %}"
+                   class="govuk-link">Remove<span class="govuk-visually-hidden"> {{ membership.user.full_name }}</span></a>
+              {% endif %}
             </td>
           </tr>
         {% endfor %}

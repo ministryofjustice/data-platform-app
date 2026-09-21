@@ -36,7 +36,8 @@
       <form method="post" novalidate>
         {% csrf_token %}
         <div class="govuk-form-group{% if form.oid.errors %} govuk-form-group--error{% endif %}">
-          <label class="govuk-hint" for="{{ form.oid.auto_id }}-autocomplete">Enter an email address to add a member</label>
+          <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">Email</legend>
+          <div class="govuk-hint" for="{{ form.oid.auto_id }}-autocomplete">Enter an email address to add a member</div>
           {% for error in form.oid.errors %}
             <p class="govuk-error-message">
               <span class="govuk-visually-hidden">Error:</span>

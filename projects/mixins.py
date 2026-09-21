@@ -1,6 +1,8 @@
 import sentry_sdk
+from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.core.exceptions import ImproperlyConfigured
 from django.shortcuts import get_object_or_404
+from django.utils.functional import cached_property
 
 from projects.models import Project, ProjectPermission
 from projects.services import ProjectMembershipNotificationService, ProjectNotificationError
@@ -30,7 +32,7 @@ class ProjectUserSelectionSessionMixin:
         return None
 
     def get_user_bucket_key(self):
-        raise NotImplementedError
+        return f"project:{self.get_project().id}"
 
     def get_selected_members(self):
         session_map = self.request.session.get(ADD_USER_SESSION_KEY, {})
@@ -81,16 +83,33 @@ class ProjectUserSelectionSessionMixin:
 
 
 class ExistingProjectMixin(ProjectAccessMixin):
-    def get_project(self):
-        if not hasattr(self, "_project"):
-            self._project = get_object_or_404(
-                self.get_accessible_projects(),
-                uuid=self.kwargs["uuid"],
-            )
-        return self._project
+    """Resolve an accessible project from the URL."""
 
-    def get_user_bucket_key(self):
-        return f"project:{self.get_project().id}"
+    @cached_property
+    def project(self) -> Project:
+        return get_object_or_404(
+            self.get_accessible_projects(),
+            uuid=self.kwargs["uuid"],
+        )
+
+    def get_project(self) -> Project:
+        return self.project
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["project"] = self.project
+        return context
+
+
+class ProjectPermissionRequiredMixin(PermissionRequiredMixin):
+    """Require project-level permissions for the project resolved by get_project().
+
+    Must appear before the View subclass in the MRO, alongside a mixin providing get_project(),
+    so has_permission() runs during dispatch() before the view executes.
+    """
+
+    def has_permission(self):
+        return self.request.user.has_perms(self.get_permission_required(), self.get_project())
 
 
 class UUIDObjectMixin:
