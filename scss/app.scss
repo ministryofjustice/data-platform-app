@@ -70,28 +70,34 @@ $masthead-background-color: #381a62;
   flex-wrap: wrap;
 }
 
-.app-model-usage-header {
-  display: grid;
-  grid-template-columns: 2fr 3fr 1.1fr 1.1fr 1.1fr 80px;
-  column-gap: govuk-spacing(3);
-  margin-bottom: govuk-spacing(1);
-
-  p {
-    white-space: nowrap;
+@include govuk-media-query($from: desktop) {
+  .app-model-usage-label--repeated {
+    @include govuk-visually-hidden;
   }
 }
 
 .app-model-usage-rows {
   .moj-add-another__item {
-    position: relative;
     display: grid;
-    grid-template-columns: 2fr 3fr 1.1fr 1.1fr 1.1fr 80px;
-    column-gap: govuk-spacing(3);
-    align-items: start;
+    grid-template-columns: 1fr;
+    row-gap: govuk-spacing(3);
     margin-top: govuk-spacing(2);
 
     .govuk-form-group {
       margin-bottom: 0;
+    }
+
+    @include govuk-media-query($from: desktop) {
+      grid-template-columns: 2fr 3fr 1.1fr 1.1fr 1.1fr 80px;
+      column-gap: govuk-spacing(3);
+      row-gap: 0;
+      align-items: stretch;
+    }
+
+    .govuk-form-group {
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
     }
   }
 
@@ -99,7 +105,7 @@ $masthead-background-color: #381a62;
     position: relative !important;
     display: inline-block !important;
     width: auto !important;
-    align-self: center;
+    align-self: end;
     justify-self: end;
     margin: 0 !important;
     padding: 0 !important;
