@@ -401,7 +401,9 @@ class KeyService:
         The app-level cost estimator is not scoped to a project, so it shows
         the same gateway model catalogue to every authenticated user.
         """
-        return [self._enrich_model(model) for model in self._client.list_models_v1_info()]
+        models = [self._enrich_model(model) for model in self._client.list_models_v1_info()]
+        models.sort(key=lambda model: model["display_name"].lower())
+        return models
 
     def _allowed_model_names(self, project: Project) -> set[str]:
         """Return every model name ``project`` may currently use.
