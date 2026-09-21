@@ -146,11 +146,11 @@
                     </div>
                     <div class="govuk-form-group{% if form.requests_per_period.errors %} govuk-form-group--error{% endif %}">
                       <label class="govuk-label govuk-label-s app-model-usage-label{% if not forloop.first %} app-model-usage-label--repeated{% endif %}"
-                             for="{{ form.requests_per_period.id_for_label }}">Requests per period</label>
+                             for="{{ form.requests_per_period.id_for_label }}">Requests</label>
                       <input class="govuk-input govuk-!-width-full{% if form.requests_per_period.errors %} govuk-input--error{% endif %}"
                              id="{{ form.requests_per_period.id_for_label }}"
                              name="{{ form.requests_per_period.html_name }}"
-                             aria-label="Requests per period"
+                             aria-label="Requests"
                              type="text"
                              inputmode="numeric"
                              value="{{ form.requests_per_period.value|default:'' }}"
