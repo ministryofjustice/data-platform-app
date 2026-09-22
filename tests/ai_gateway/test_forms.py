@@ -10,6 +10,13 @@ AVAILABLE_MODELS = [
         "input_cost_per_million": 30.0,
         "output_cost_per_million": 60.0,
     },
+    {
+        "model_name": "claude-sonnet",
+        "display_name": "Claude Sonnet",
+        "provider": "Anthropic",
+        "input_cost_per_million": 20.0,
+        "output_cost_per_million": 30.0,
+    },
 ]
 
 
@@ -29,7 +36,7 @@ def calculator_formset_management_data(total_forms=1):
     return {
         "models-TOTAL_FORMS": str(total_forms),
         "models-INITIAL_FORMS": "0",
-        "models-MIN_NUM_FORMS": "0",
+        "models-MIN_NUM_FORMS": "1",
         "models-MAX_NUM_FORMS": "1000",
     }
 
@@ -82,6 +89,16 @@ class TestAIUsageCostCalculatorForm:
         assert not form.is_valid()
         assert "Ensure this value is less than or equal to 1000000."
 
+    def test_filters_model_choices_by_selected_provider(self):
+        form = ModelUsageRateForm(
+            data=calculator_form_data(provider="OpenAI"),
+            available_models=AVAILABLE_MODELS,
+        )
+
+        assert form.fields["model"].choices == [
+            ("gpt-4", "GPT-4"),
+        ]
+
 
 class TestModelUsageRateFormSet:
     def test_formset_accepts_valid_data(self):
@@ -128,4 +145,20 @@ class TestModelUsageRateFormSet:
         )
 
         assert not formset.is_valid()
-        assert "Select a model"
+
+    def test_formset_filters_model_choices_by_provider(self):
+        formset = build_model_usage_rate_formset(
+            data=calculator_formset_management_data()
+            | {
+                "models-0-provider": "Anthropic",
+                "models-0-model": "claude-sonnet",
+                "models-0-input_tokens": "1000",
+                "models-0-output_tokens": "500",
+                "models-0-requests_per_period": "100",
+            },
+            available_models=AVAILABLE_MODELS,
+        )
+
+        assert formset.forms[0].fields["model"].choices == [
+            ("claude-sonnet", "Claude Sonnet"),
+        ]

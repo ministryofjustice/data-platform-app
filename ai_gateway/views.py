@@ -42,6 +42,18 @@ class AICostUsageCalculatorView(TemplateView):
         with KeyService.from_settings() as service:
             return service.list_all_models()
 
+    def get(self, request, *args, **kwargs):
+        if not request.htmx:
+            return super().get(request, *args, **kwargs)
+
+        provider = request.GET.get("provider")
+        models = filter_models(self.available_models, provider=provider)
+        return render(
+            request,
+            "ai_gateway/partials/model_list.html",
+            {"models": models},
+        )
+
     def post(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         usage_period_form = UsagePeriodForm(request.POST)
         formset = build_model_usage_rate_formset(

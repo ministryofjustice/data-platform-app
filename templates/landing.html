@@ -29,7 +29,9 @@
         <p class="govuk-body">
           Estimate the cost of different models available through the Justice AI Gateway, based on expected token usage and request volume.
         </p>
-        <a class="govuk-link" href="{% url 'ai_cost_usage_calculator' %}">
+        <a class="govuk-link"
+           href="{% url 'ai_cost_usage_calculator' %}"
+           aria-label="Estimate costs using the AI usage cost calculator">
           {% include "includes/_icon_arrow_right.html" %}
           Estimate costs
         </a>
@@ -40,7 +42,8 @@
         <h4 class="govuk-heading-m">Find data</h4>
         <p class="govuk-body">Find justice data assets and see how to request access.</p>
         <a class="govuk-link"
-           href="https://find-moj-data.service.justice.gov.uk/">
+           href="https://find-moj-data.service.justice.gov.uk/"
+           aria-label="Find data and request access to justice data assets">
           {% include "includes/_icon_arrow_right.html" %}
           Find data
         </a>
