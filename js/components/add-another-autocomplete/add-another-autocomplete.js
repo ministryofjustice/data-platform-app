@@ -1,5 +1,6 @@
 import { initAll as initXGovuk } from "@x-govuk/govuk-prototype-components";
 import EntraUserAutocomplete from "../entra-user-autocomplete/entra-user-autocomplete.js";
+import htmx from "htmx.org";
 
 const AddAnotherAutocomplete = {
   init: function (scope = document) {
@@ -94,9 +95,24 @@ const AddAnotherAutocomplete = {
       EntraUserAutocomplete.init(newItem);
     };
 
+    const initialiseHtmx = function (newItem) {
+      htmx.process(newItem);
+
+      const providerSelect = newItem.querySelector('[name$="-provider"]');
+      if (providerSelect) {
+        htmx.trigger(providerSelect, "change");
+      }
+    };
+
     const addAnotherContainers = scope.querySelectorAll(
       '.moj-add-another[data-module="moj-add-another"]',
     );
+
+    const markRepeatedLabels = function (newItem) {
+      newItem.querySelectorAll(".app-model-usage-label").forEach((label) => {
+        label.classList.add("app-model-usage-label--repeated");
+      });
+    };
 
     addAnotherContainers.forEach((container) => {
       syncFormsetCount(container);
@@ -126,8 +142,10 @@ const AddAnotherAutocomplete = {
           }
 
           resetValidation(newItem);
+          markRepeatedLabels(newItem);
           resetSelectAutocomplete(newItem);
           resetEntraAutocomplete(newItem);
+          initialiseHtmx(newItem);
         });
       });
     });

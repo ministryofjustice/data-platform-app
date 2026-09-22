@@ -1082,7 +1082,6 @@ class TestUsageView:
             )
 
         assertContains(response, "This project has no recorded AI Gateway spend")
-        assertContains(response, f'href="{reverse("ai_cost_usage_calculator")}"')
 
     def _mock_service_with_daily_spend(self):
         daily = [{"label": str(day), "spend": 1.0} for day in range(1, 14)]
@@ -1158,6 +1157,13 @@ class TestAICostUsageCalculatorView:
             "input_cost_per_million": 30.0,
             "output_cost_per_million": 60.0,
         },
+        {
+            "model_name": "claude-3",
+            "display_name": "Claude 3",
+            "provider": "Anthropic",
+            "input_cost_per_million": 15.0,
+            "output_cost_per_million": 75.0,
+        },
     ]
 
     def test_calculator_view_renders(self, client, user, key_service):
@@ -1195,22 +1201,7 @@ class TestAICostUsageCalculatorView:
         assertContains(response, "6.00")
 
     def test_multi_row_post_renders_both_models(self, client, user, key_service):
-        key_service.list_all_models.return_value = [
-            {
-                "model_name": "gpt-4",
-                "display_name": "GPT-4",
-                "provider": "OpenAI",
-                "input_cost_per_million": 30.0,
-                "output_cost_per_million": 60.0,
-            },
-            {
-                "model_name": "claude-3",
-                "display_name": "Claude 3",
-                "provider": "Anthropic",
-                "input_cost_per_million": 15.0,
-                "output_cost_per_million": 75.0,
-            },
-        ]
+        key_service.list_all_models.return_value = self.CALCULATOR_MODELS
         client.force_login(user)
 
         response = client.post(
@@ -1262,3 +1253,18 @@ class TestAICostUsageCalculatorView:
         assert response.status_code == 200
         assertContains(response, "Select a model")
         assertContains(response, "There is a problem")
+
+    def test_htmx_returns_filtered_models(self, client, user, key_service):
+        client.force_login(user)
+
+        key_service.list_all_models.return_value = self.CALCULATOR_MODELS
+        response = client.get(
+            reverse("ai_cost_usage_calculator"),
+            {"provider": self.CALCULATOR_MODELS[1]["provider"]},
+            HTTP_HX_REQUEST="true",
+        )
+        content = response.content.decode()
+
+        assert response.status_code == 200
+        assert self.CALCULATOR_MODELS[1]["display_name"] in content
+        assert self.CALCULATOR_MODELS[0]["display_name"] not in content

@@ -597,12 +597,12 @@ class TestEstimateCosts:
 
         assert result["rows"][0]["model_name"] == "GPT-4"
         assert result["rows"][0]["provider"] == "OpenAI"
-        assert result["rows"][0]["per_request_cost"] == pytest.approx(0.06)
-        assert result["rows"][0]["cost"] == pytest.approx(6.0)
+        assert result["rows"][0]["per_request_cost"] == 0.06
+        assert result["rows"][0]["cost"] == 6.0
 
         assert result["usage_period"] == "monthly"
-        assert result["total_per_request"] == pytest.approx(0.060)
-        assert result["total_cost"] == pytest.approx(6.00)
+        assert result["total_per_request"] == 0.060
+        assert result["total_cost"] == 6.00
 
     def test_sums_each_model_row(self):
         result = estimate_costs(
@@ -626,20 +626,20 @@ class TestEstimateCosts:
         # Total monthly cost = $6.00 + $1.05 = $7.05
 
         assert result["usage_period"] == "monthly"
-        assert result["total_per_request"] == pytest.approx(0.165)
-        assert result["total_cost"] == pytest.approx(7.05)
+        assert result["total_per_request"] == 0.165
+        assert result["total_cost"] == 7.05
 
         assert len(result["rows"]) == 2
 
         assert result["rows"][0]["model_name"] == "GPT-4"
         assert result["rows"][0]["provider"] == "OpenAI"
-        assert result["rows"][0]["per_request_cost"] == pytest.approx(0.06)
-        assert result["rows"][0]["cost"] == pytest.approx(6.0)
+        assert result["rows"][0]["per_request_cost"] == 0.06
+        assert result["rows"][0]["cost"] == 6.0
 
         assert result["rows"][1]["model_name"] == "Claude 3"
         assert result["rows"][1]["provider"] == "Anthropic"
-        assert result["rows"][1]["per_request_cost"] == pytest.approx(0.105)
-        assert result["rows"][1]["cost"] == pytest.approx(1.05)
+        assert result["rows"][1]["per_request_cost"] == 0.105
+        assert result["rows"][1]["cost"] == 1.05
 
     def test_returns_zero_cost_when_pricing_is_missing(self):
         models = [
@@ -657,9 +657,9 @@ class TestEstimateCosts:
         )
 
         assert result["usage_period"] == "monthly"
-        assert result["total_cost"] == pytest.approx(0.0)
-        assert result["total_per_request"] == pytest.approx(0.0)
-        assert result["rows"][0]["per_request_cost"] == pytest.approx(0)
+        assert result["total_cost"] == 0.0
+        assert result["total_per_request"] == 0.0
+        assert result["rows"][0]["per_request_cost"] == 0
 
     def test_returns_empty_result_without_rows(self):
         result = estimate_costs(
@@ -669,6 +669,53 @@ class TestEstimateCosts:
         )
 
         assert result["usage_period"] == "monthly"
-        assert result["total_cost"] == pytest.approx(0.0)
-        assert result["total_per_request"] == pytest.approx(0.0)
+        assert result["total_cost"] == 0.0
+        assert result["total_per_request"] == 0.0
         assert result["rows"] == []
+
+    def test_returns_rounded_to_4(self):
+        rows = [
+            {
+                "model": "gpt-4",
+                "input_tokens": 100,
+                "output_tokens": 50,
+                "requests_per_period": 100,
+            },
+            {
+                "model": "claude-3",
+                "input_tokens": 200,
+                "output_tokens": 100,
+                "requests_per_period": 10,
+            },
+        ]
+        # GPT-4:
+        # Input:  30 / 1,000,000 × 100 = $0.003
+        # Output: 60 / 1,000,000 ×   50 = $0.003
+        # Per request = $0.006
+        # 100 requests = $0.60
+        # Claude 3:
+        # Input:  15 / 1,000,000 × 200 = $0.003
+        # Output: 75 / 1,000,000 × 100 = $0.0075
+        # Per request = $0.0105
+        # 10 requests = $0.105
+
+        result = estimate_costs(
+            usage_period="monthly",
+            model_rows=rows,
+            available_models=self.AVAILABLE_MODELS,
+        )
+
+        assert result["usage_period"] == "monthly"
+        assert result["rows"][0]["model_name"] == "GPT-4"
+        assert result["rows"][0]["provider"] == "OpenAI"
+        assert result["rows"][0]["per_request_cost"] == 0.006
+        assert result["rows"][0]["cost"] == 0.60
+
+        assert result["rows"][1]["model_name"] == "Claude 3"
+        assert result["rows"][1]["provider"] == "Anthropic"
+        assert result["rows"][1]["per_request_cost"] == 0.0105
+        assert result["rows"][1]["cost"] == 0.105
+        # 0.60 + 0.105
+        assert result["total_cost"] == 0.705
+        # 0.006 + 0.0105
+        assert result["total_per_request"] == 0.0165

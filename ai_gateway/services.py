@@ -65,21 +65,20 @@ def estimate_costs(
 
         total_per_request += per_request_cost
         total_cost += row_cost
-
         rows.append(
             {
                 "model_name": model["display_name"],
                 "provider": model["provider"],
-                "per_request_cost": round(per_request_cost, 3),
-                "cost": round(row_cost, 2),
+                "per_request_cost": round(per_request_cost, 4),
+                "cost": round(row_cost, 4),
             }
         )
 
     return {
         "usage_period": usage_period,
         "rows": rows,
-        "total_per_request": round(total_per_request, 3),
-        "total_cost": round(total_cost, 2),
+        "total_per_request": round(total_per_request, 4),
+        "total_cost": round(total_cost, 4),
     }
 
 
@@ -402,7 +401,9 @@ class KeyService:
         The app-level cost estimator is not scoped to a project, so it shows
         the same gateway model catalogue to every authenticated user.
         """
-        return [self._enrich_model(model) for model in self._client.list_models_v1_info()]
+        models = [self._enrich_model(model) for model in self._client.list_models_v1_info()]
+        models.sort(key=lambda model: model["display_name"].lower())
+        return models
 
     def _allowed_model_names(self, project: Project) -> set[str]:
         """Return every model name ``project`` may currently use.

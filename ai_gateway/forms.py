@@ -4,6 +4,7 @@ from typing import Any
 from django import forms
 from django.forms import BaseFormSet, formset_factory
 
+from ai_gateway.filtering import filter_models
 from ai_gateway.models import Key
 from projects.models import Project
 
@@ -136,12 +137,16 @@ class ModelUsageRateForm(forms.Form):
 
     def __init__(self, *args, available_models: list[dict[str, Any]], **kwargs):
         super().__init__(*args, **kwargs)
-        self.available_models = available_models
+        models = available_models
         self.fields["provider"].choices = sorted(
             {(model["provider"], model["provider"]) for model in available_models}
         )
+        provider = self.data.get(self.add_prefix("provider"))
+        if provider:
+            models = filter_models(models, provider=provider)
+
         self.fields["model"].choices = [
-            (model["model_name"], model["display_name"]) for model in available_models
+            (model["model_name"], model["display_name"]) for model in models
         ]
 
 
@@ -155,23 +160,14 @@ class BaseModelUsageRateFormSet(BaseFormSet):
         kwargs["available_models"] = self.available_models
         return kwargs
 
-    def clean(self):
-        super().clean()
 
-        if any(self.errors):
-            return
-
-        if not any(form.has_changed() for form in self.forms):
-            raise forms.ValidationError("Add at least one model")
-
-
-def build_model_usage_rate_formset(*, available_models, data=None, initial=None, extra=1):
+def build_model_usage_rate_formset(*, available_models, data=None, initial=None, extra=0):
     formset_class = formset_factory(
         ModelUsageRateForm,
         formset=BaseModelUsageRateFormSet,
+        min_num=1,
         extra=extra,
     )
-
     return formset_class(
         data=data,
         initial=initial,

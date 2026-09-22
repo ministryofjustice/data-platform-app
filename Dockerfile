@@ -1,6 +1,6 @@
 ##### BUILD PYTHON
 
-FROM docker.io/library/ubuntu:26.04@sha256:2260313b31c8c011cd2eebe728008efac1b3982be73eb71348ea2648d2c0e09b AS build-python
+FROM docker.io/library/ubuntu:26.04@sha256:513c074113a871b51a8d16ab445c88779d6452d937a164fb5cc479f32668a41d AS build-python
 
 SHELL ["/bin/bash", "-e", "-u", "-o", "pipefail", "-c"]
 
@@ -40,7 +40,7 @@ RUN --mount=type=cache,target=/root/.cache \
 
 ##### BUILD NODE
 
-FROM docker.io/library/node:26.8.2-alpine@sha256:ef24c5053d50fdc3e4e56eb4e7ddb7861874ab0fdc797046ba897581deb8e868 AS build-node
+FROM docker.io/library/node:26.9.0-alpine@sha256:2c45bdcbf63561a54da9549612084b43ca309854a4110c87857d609ddeb61c9e AS build-node
 
 WORKDIR /build
 
@@ -57,7 +57,7 @@ EOF
 
 ##### FINAL
 
-FROM docker.io/library/ubuntu:26.04@sha256:2260313b31c8c011cd2eebe728008efac1b3982be73eb71348ea2648d2c0e09b AS final
+FROM docker.io/library/ubuntu:26.04@sha256:513c074113a871b51a8d16ab445c88779d6452d937a164fb5cc479f32668a41d AS final
 
 ARG VERSION="unknown"
 ARG COMMIT_SHA="unknown"
