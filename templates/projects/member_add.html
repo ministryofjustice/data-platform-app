@@ -1,0 +1,109 @@
+{% extends "base/base.html" %}
+{% block title %}
+  Add a project member - Justice Data Platform | Ministry of Justice
+{% endblock title %}
+{% block back_link %}
+  <a href="{{ back_url }}" class="govuk-back-link">Back</a>
+{% endblock back_link %}
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-one-half">
+      {% if error_message %}
+        {% include "includes/error_message.html" with heading=error_message.heading message=error_message.message only %}
+      {% endif %}
+      {% if form.errors %}
+        <div class="govuk-error-summary" data-module="govuk-error-summary">
+          <div role="alert">
+            <h2 class="govuk-error-summary__title">There is a problem</h2>
+            <div class="govuk-error-summary__body">
+              <ul class="govuk-list govuk-error-summary__list">
+                {% for error in form.oid.errors %}
+                  <li>
+                    <a href="#{{ form.oid.auto_id }}-autocomplete">{{ error }}</a>
+                  </li>
+                {% endfor %}
+                {% for error in form.permissions.errors %}
+                  <li>
+                    <a href="#id_permissions_0">{{ error }}</a>
+                  </li>
+                {% endfor %}
+              </ul>
+            </div>
+          </div>
+        </div>
+      {% endif %}
+      <h1 class="govuk-heading-l">Add member</h1>
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="govuk-form-group{% if form.oid.errors %} govuk-form-group--error{% endif %}">
+          <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">Email</legend>
+          <label class="govuk-label"
+                 for="{{ form.oid.auto_id }}-autocomplete">Enter an email address to add a member</label>
+          {% for error in form.oid.errors %}
+            <p class="govuk-error-message">
+              <span class="govuk-visually-hidden">Error:</span>
+              {{ error }}
+            </p>
+          {% endfor %}
+          <div data-module="entra-user-autocomplete"
+               data-search-url="{% url 'projects:entra_user_search' %}"
+               data-input-id="{{ form.oid.auto_id }}-autocomplete"></div>
+          {{ form.oid }}
+          {{ form.email }}
+          {{ form.display_name }}
+        </div>
+        <div class="govuk-form-group{% if form.permissions.errors %} govuk-form-group--error{% endif %}">
+          <fieldset class="govuk-fieldset">
+            <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">Permissions</legend>
+            <div class="govuk-hint">Choose permissions for this member</div>
+            {% for error in form.permissions.errors %}
+              <p class="govuk-error-message">
+                <span class="govuk-visually-hidden">Error:</span>
+                {{ error }}
+              </p>
+            {% endfor %}
+            <div class="govuk-checkboxes" data-module="govuk-checkboxes">
+              {% for value, label in form.permissions.field.choices %}
+                <div class="govuk-checkboxes__item">
+                  <input class="govuk-checkboxes__input"
+                         id="id_permissions_{{ forloop.counter0 }}"
+                         name="permissions"
+                         type="checkbox"
+                         value="{{ value }}"
+                         {% if value in form.permissions.value %}checked{% endif %}>
+                  <label class="govuk-label govuk-checkboxes__label"
+                         for="id_permissions_{{ forloop.counter0 }}">{{ label }}</label>
+                </div>
+              {% endfor %}
+            </div>
+          </fieldset>
+        </div>
+        <details class="govuk-details">
+          <summary class="govuk-details__summary">
+            <span class="govuk-details__summary-text">What can members with these permissions do?</span>
+          </summary>
+          <div class="govuk-details__text">
+            <dl class="govuk-summary-list">
+              <div class="govuk-summary-list__row govuk-summary-list__row">
+                <dt class="govuk-summary-list__key">Manage API keys</dt>
+                <dd class="govuk-summary-list__value">
+                  Create, regenerate and revoke API keys
+                </dd>
+              </div>
+              <div class="govuk-summary-list__row govuk-summary-list__row">
+                <dt class="govuk-summary-list__key">Manage members</dt>
+                <dd class="govuk-summary-list__value">
+                  Add or remove project members and change their permissions
+                </dd>
+              </div>
+            </dl>
+          </div>
+        </details>
+        <div class="govuk-button-group">
+          <button type="submit" class="govuk-button">Add member</button>
+          <a href="{{ cancel_url }}" class="govuk-link">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock content %}
