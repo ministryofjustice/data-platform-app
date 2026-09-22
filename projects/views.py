@@ -169,6 +169,7 @@ class ProjectCreateAddUsersView(ProjectUserSelectionSessionMixin, FormView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["project"] = self.request.session.get(PROJECT_CREATE_SESSION_KEY, {})
+        context["error_message"] = self.request.session.pop("error_message", None)
         return context
 
     def form_valid(self, form):
