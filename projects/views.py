@@ -1,6 +1,6 @@
 import sentry_sdk
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Prefetch
+from django.db.models import Case, F, IntegerField, Prefetch, Value, When
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
@@ -375,7 +375,7 @@ class ProjectCreateConfirmView(
 
 
 class ProjectUsersListView(ExistingProjectMixin, ProjectLayoutContextMixin, TemplateView):
-    template_name = "projects/user_list.html"
+    template_name = "projects/member_list.html"
     active_project_section = "members"
 
     def get_accessible_projects(self):
@@ -383,9 +383,16 @@ class ProjectUsersListView(ExistingProjectMixin, ProjectLayoutContextMixin, Temp
         return queryset.prefetch_related(
             Prefetch(
                 "memberships",
-                queryset=ProjectMembership.objects.select_related("user").prefetch_related(
-                    "permissions__permission"
-                ),
+                queryset=ProjectMembership.objects.select_related("user")
+                .prefetch_related("permissions__permission")
+                .annotate(
+                    owner_order=Case(
+                        When(user_id=F("project__owner_id"), then=Value(0)),
+                        default=Value(1),
+                        output_field=IntegerField(),
+                    )
+                )
+                .order_by("owner_order", "user__email"),
             )
         )
 

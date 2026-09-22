@@ -20,15 +20,15 @@ def anonymous_user():
 @pytest.fixture
 def user(db):
     """A saved User instance with no special permissions."""
-
-    return baker.make("users.User")
+    return baker.make("users.User", email="user@example.com")
 
 
 @pytest.fixture
 def superuser(db):
     """A superuser who is not a member of any project."""
-
-    return baker.make("users.User", is_staff=True, is_superuser=True)
+    return baker.make(
+        "users.User", email="superuser@example.com", is_staff=True, is_superuser=True
+    )
 
 
 @pytest.fixture
@@ -46,7 +46,7 @@ def project_owner(project):
 
 @pytest.fixture
 def project_member(project):
-    user = baker.make("users.User")
+    user = baker.make("users.User", email="project.member@example.com")
     baker.make("projects.ProjectMembership", project=project, user=user)
     return user
 

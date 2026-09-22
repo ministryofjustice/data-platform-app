@@ -83,6 +83,17 @@ class TestProjectUsersListView:
 
         assert response.status_code == 404
 
+    def test_owner_listed_first(self, client, project, project_owner, project_member):
+        client.force_login(project_owner)
+        response = client.get(reverse("projects:project_users", args=[project.uuid]))
+
+        assert response.status_code == 200
+        assert project_owner.email != project_member.email
+        content = response.content.decode()
+        owner_index = content.find(project_owner.email)
+        member_index = content.find(project_member.email)
+        assert owner_index < member_index
+
 
 class TestProjectDeleteView:
     """Tests for the ProjectDeleteView at '/projects/<uuid>/delete'."""
