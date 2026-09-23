@@ -77,6 +77,16 @@ class ProjectMemberForm(forms.Form):
         return cleaned_data
 
 
+class ProjectMemberPermissionsForm(forms.Form):
+    permissions = forms.MultipleChoiceField(
+        label="Permissions",
+        required=True,
+        choices=ProjectPermission.choices,
+        error_messages={"required": "Choose at least one permission for this member"},
+        widget=forms.CheckboxSelectMultiple(attrs={"class": "govuk-checkboxes__input"}),
+    )
+
+
 class ProjectCreateForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

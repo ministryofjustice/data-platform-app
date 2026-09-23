@@ -78,27 +78,7 @@
             </div>
           </fieldset>
         </div>
-        <details class="govuk-details">
-          <summary class="govuk-details__summary">
-            <span class="govuk-details__summary-text">What can members with these permissions do?</span>
-          </summary>
-          <div class="govuk-details__text">
-            <dl class="govuk-summary-list">
-              <div class="govuk-summary-list__row govuk-summary-list__row">
-                <dt class="govuk-summary-list__key">Manage API keys</dt>
-                <dd class="govuk-summary-list__value">
-                  Create, regenerate and revoke API keys
-                </dd>
-              </div>
-              <div class="govuk-summary-list__row govuk-summary-list__row">
-                <dt class="govuk-summary-list__key">Manage members</dt>
-                <dd class="govuk-summary-list__value">
-                  Add or remove project members and change their permissions
-                </dd>
-              </div>
-            </dl>
-          </div>
-        </details>
+        {% include "projects/includes/permissions_help.html" %}
         <div class="govuk-button-group">
           <button type="submit" class="govuk-button">Add member</button>
           <a href="{{ cancel_url }}" class="govuk-link">Cancel</a>

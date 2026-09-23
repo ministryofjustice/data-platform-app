@@ -4,6 +4,7 @@ from django.db.models import Case, F, IntegerField, Prefetch, Value, When
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
+from django.utils.functional import cached_property
 from django.views.generic.base import TemplateView, View
 from django.views.generic.detail import DetailView
 from django.views.generic.edit import DeleteView, FormView
@@ -16,6 +17,7 @@ from projects.forms import (
     ProjectCreateAddUsersDecisionForm,
     ProjectCreateForm,
     ProjectMemberForm,
+    ProjectMemberPermissionsForm,
 )
 from projects.graph import (
     EntraAuthenticationError,
@@ -534,18 +536,33 @@ class ProjectAddUsersReviewView(
         return redirect("projects:project_users", uuid=project.uuid)
 
 
-class ProjectMembersDetailView(
+class ProjectMemberEditView(
     ProjectPermissionRequiredMixin,
     ExistingProjectMixin,
-    DetailView,
+    FormView,
 ):
     permission_required = ProjectPermission.MANAGE_MEMBERS.permission_name
-    template_name = "projects/member_detail.html"
-    context_object_name = "membership"
-    model = ProjectMembership
+    template_name = "projects/member_edit.html"
+    form_class = ProjectMemberPermissionsForm
 
-    def get_queryset(self):
-        return self.project.memberships.all().select_related("user", "project")
+    @cached_property
+    def membership(self):
+        return get_object_or_404(
+            self.project.memberships.select_related("user", "project"),
+            pk=self.kwargs["pk"],
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["membership"] = self.membership
+        return context
+
+    def get_initial(self):
+        initial = super().get_initial()
+        initial["permissions"] = list(
+            self.membership.permissions.values_list("permission__codename", flat=True)
+        )
+        return initial
 
 
 class ProjectRemoveUserView(
