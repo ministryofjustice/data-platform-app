@@ -8,6 +8,7 @@ from datetime import date, datetime
 from typing import Any
 
 import sentry_sdk
+import structlog
 from django.conf import settings
 from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
@@ -24,6 +25,8 @@ from users.models import User
 
 DAILY_SPEND_PREVIEW_COUNT = 10
 LINE_CHART_MIN_POINTS = 2
+
+logger = structlog.get_logger(__name__)
 
 
 def previous_month(value: date) -> date:
@@ -452,6 +455,11 @@ class KeyService:
         """
         team = self._get_or_create_team(project)
         litellm_alias = self._build_alias(project, name)
+        logger.debug(
+            "creating_key",
+            project_id=project.pk,
+            key_alias=litellm_alias,
+        )
         data = self._client.generate_key(
             team.litellm_team_id, key_alias=litellm_alias, models=models
         )
@@ -474,6 +482,7 @@ class KeyService:
 
         # Avoid holding a DB row lock while making a network call to the gateway.
         old_token_id = Key.objects.values_list("litellm_token", flat=True).get(pk=key.pk)
+        logger.debug("regenerating_key", key_id=key.pk)
         data = self._client.regenerate_key(old_token_id)
         new_token_id = data["token_id"]
         new_key = data["key"]
@@ -496,6 +505,7 @@ class KeyService:
 
     def delete_team(self, team_id: str) -> None:
         """Delete the gateway team identified by ``team_id``."""
+        logger.debug("delete_team", team_id=team_id)
         self._client.delete_team(team_id)
 
     def get_models_for_key(self, key: Key) -> list[str]:
@@ -526,6 +536,7 @@ class KeyService:
         Saves the last successfully applied model state so Simple History
         records the change and actor.
         """
+        logger.debug("update_models_for_key", key_id=key.pk, models=models)
         self._client.update_key_models(key.litellm_token, models)
         self._record_applied_models(
             key,
@@ -536,6 +547,11 @@ class KeyService:
 
     def delete_key(self, key: Key) -> None:
         """Delete the virtual key from the gateway and remove its metadata."""
+        logger.debug(
+            "deleting_key",
+            key_id=key.pk,
+            key_alias=key.litellm_alias,
+        )
         self._client.delete_key(key.litellm_token)
         key.delete()
 
@@ -639,6 +655,7 @@ class KeyService:
         try:
             return project.ai_gateway_team
         except Team.DoesNotExist:
+            logger.debug("creating_new_team", project_id=str(project.uuid))
             access_group_id = self._client.get_access_group_id(self._default_access_group_name())
             team_id = self._client.create_team(str(project.uuid), [access_group_id])
             return Team.objects.create(project=project, litellm_team_id=team_id)

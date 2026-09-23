@@ -9,6 +9,7 @@ dependencies = [
     "django-azure-auth==2.6.0",
     "django-extensions==4.1",
     "django-simple-history==3.13.0",
+    "django-structlog==10.1.0",
     "gunicorn==26.2.0",
     "httpx==0.28.1",
     "model-bakery==1.24.0",

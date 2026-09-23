@@ -1,4 +1,5 @@
 import sentry_sdk
+import structlog
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Prefetch
 from django.http import JsonResponse
@@ -37,6 +38,8 @@ from projects.mixins import (
 )
 from projects.models import BusinessUnit, Project, ProjectMembership, ProjectPermission
 from projects.services import ProjectService
+
+logger = structlog.get_logger(__name__)
 
 
 def clear_project_create_session(request):
