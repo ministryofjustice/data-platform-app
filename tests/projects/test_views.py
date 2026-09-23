@@ -731,6 +731,49 @@ class TestProjectAddUsersFlow:
         capture_exception.assert_called_once()
 
 
+class TestProjectMemberDetailView:
+    def test_finds_member(self, client, project, project_owner):
+        client.force_login(project_owner)
+        membership = ProjectMembership.objects.get(
+            project=project,
+            user=project_owner,
+        )
+        response = client.get(
+            reverse("projects:project_member_detail", args=[project.uuid, membership.pk])
+        )
+
+        assert response.status_code == 200
+        assert "membership" in response.context
+        assert response.context["membership"] == membership
+
+    def test_member_without_permission(self, client, project, project_member):
+        client.force_login(project_member)
+        membership = ProjectMembership.objects.get(
+            project=project,
+            user=project_member,
+        )
+        response = client.get(
+            reverse("projects:project_member_detail", args=[project.uuid, membership.pk])
+        )
+
+        assert response.status_code == 403
+
+    def test_other_project_member_not_found(
+        self, client, project, project_owner, non_project_user
+    ):
+        client.force_login(project_owner)
+        other_project = baker.make("projects.Project")
+        membership = ProjectMembership.objects.create(
+            project=other_project,
+            user=non_project_user,
+        )
+        response = client.get(
+            reverse("projects:project_member_detail", args=[project.uuid, membership.pk])
+        )
+
+        assert response.status_code == 404
+
+
 class TestProjectsListView:
     """Tests for the login-protected projects ListView."""
 

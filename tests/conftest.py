@@ -5,7 +5,7 @@ from django.contrib.auth.models import Permission
 from model_bakery import baker
 
 from ai_gateway.services import KeyService
-from projects.models import ProjectMembership, ProjectMembershipPermission
+from projects.models import ProjectMembership, ProjectMembershipPermission, ProjectPermission
 from projects.services import ProjectMembershipNotificationService
 
 
@@ -40,7 +40,9 @@ def project(db, user):
 
 
 @pytest.fixture
-def project_owner(project):
+def project_owner(project, grant_project_permission):
+    for perm in ProjectPermission:
+        grant_project_permission(project, project.owner, perm)
     return project.owner
 
 

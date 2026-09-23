@@ -1,0 +1,35 @@
+{% extends "base/base.html" %}
+{% load static %}
+{% block title %}
+  Manage access {{ membership.user.full_name }} - Justice Data Platform | Ministry of Justice
+{% endblock title %}
+{% block back_link %}
+  <a href="{% url 'projects:project_users' membership.project.uuid %}"
+     class="govuk-back-link">Back to {{ membership.project.name }}</a>
+{% endblock back_link %}
+{% block content %}
+  {% if success_message %}
+    <div class="govuk-grid-row">
+      <div class="govuk-grid-column-two-thirds">
+        {% include "includes/success_message.html" with heading=success_message.heading message=success_message.message only %}
+      </div>
+    </div>
+  {% endif %}
+  {% if error_message %}
+    <div class="govuk-grid-row">
+      <div class="govuk-grid-column-one-half">
+        {% include "includes/error_message.html" with heading=error_message.heading message=error_message.message only %}
+      </div>
+    </div>
+  {% endif %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-full">
+      <span class="govuk-caption-l">Manage access</span>
+      <h1 class="govuk-heading-l">{{ membership.user.full_name }}</h1>
+      <p class="govuk-body">{{ membership.user.email }}</p>
+    </div>
+  </div>
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-one-half"></div>
+  </div>
+{% endblock content %}

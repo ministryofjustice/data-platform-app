@@ -534,6 +534,20 @@ class ProjectAddUsersReviewView(
         return redirect("projects:project_users", uuid=project.uuid)
 
 
+class ProjectMembersDetailView(
+    ProjectPermissionRequiredMixin,
+    ExistingProjectMixin,
+    DetailView,
+):
+    permission_required = ProjectPermission.MANAGE_MEMBERS.permission_name
+    template_name = "projects/member_detail.html"
+    context_object_name = "membership"
+    model = ProjectMembership
+
+    def get_queryset(self):
+        return self.project.memberships.all().select_related("user", "project")
+
+
 class ProjectRemoveUserView(
     ProjectPermissionRequiredMixin,
     ExistingProjectMixin,

@@ -12,6 +12,7 @@ from projects.views import (
     ProjectDeleteView,
     ProjectDetailView,
     ProjectListView,
+    ProjectMembersDetailView,
     ProjectRemoveUserView,
     ProjectUsersListView,
 )
@@ -45,6 +46,11 @@ urlpatterns = [
         name="project_users_add_review",
     ),
     path("<uuid:uuid>/delete/", ProjectDeleteView.as_view(), name="project_delete"),
+    path(
+        "<uuid:uuid>/users/<int:pk>/",
+        ProjectMembersDetailView.as_view(),
+        name="project_member_detail",
+    ),
     path(
         "<uuid:uuid>/users/<int:user_id>/remove/",
         ProjectRemoveUserView.as_view(),
