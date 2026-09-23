@@ -5,6 +5,7 @@ from typing import Any
 from urllib.parse import urlencode
 
 import sentry_sdk
+import structlog
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -30,6 +31,8 @@ from projects.mixins import (
     ProjectPermissionRequiredMixin,
 )
 from projects.models import Project, ProjectPermission
+
+logger = structlog.get_logger(__name__)
 
 
 class AICostUsageCalculatorView(TemplateView):
@@ -320,6 +323,11 @@ class ModelSelectionContextMixin(AvailableModelsMixin):
         visible_matches = filtered_models if expanded else filtered_models[:VISIBLE_LIMIT]
         # Pinned models don't count toward the visible limit.
         visible_models = [*pinned_models, *visible_matches]
+
+        if len(visible_models) == 0:
+            logger.debug("No visible models after filtering.")
+            sentry_sdk.capture_message("No visible models after filtering.")
+
         hidden_selected_models = self._hidden_selected_models(selected_model_ids, visible_models)
 
         return {
