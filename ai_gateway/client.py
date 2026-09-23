@@ -5,10 +5,13 @@ from __future__ import annotations
 from typing import Any, cast
 
 import httpx
+import structlog
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
 from ai_gateway.exceptions import AIGatewayAPIError, AIGatewayTransportError
+
+logger = structlog.get_logger(__name__)
 
 
 class AIGatewayClient:

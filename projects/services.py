@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import structlog
 from django.conf import settings
 from django.contrib.auth.models import Permission
 from django.core.exceptions import ImproperlyConfigured
@@ -18,6 +19,8 @@ from projects.models import (
     ProjectPermission,
 )
 from users.models import User
+
+logger = structlog.get_logger(__name__)
 
 
 class ProjectNotificationError(Exception):
@@ -67,6 +70,12 @@ class ProjectMembershipNotificationService:
 
         try:
             project_url = f"{build_base_url(settings.APP_ENV)}{project.get_absolute_url()}"
+            logger.debug(
+                "sending_member_added_email",
+                project_id=project.pk,
+                member_email=member.email,
+                added_by_email=added_by.email,
+            )
             self._notifications_service.send_email(
                 email_address=member.email,
                 template_id=self._member_added_template_id,
@@ -86,6 +95,12 @@ class ProjectMembershipNotificationService:
             return
 
         try:
+            logger.debug(
+                "sending_member_removed_email",
+                project_id=project.pk,
+                member_email=member.email,
+                removed_by_email=removed_by.email,
+            )
             self._notifications_service.send_email(
                 email_address=member.email,
                 template_id=self._member_removed_template_id,
@@ -148,7 +163,11 @@ class ProjectService:
             "oid": str(created_by.oid),
             "permissions": list(ProjectPermission.values),
         }
-
+        logger.debug(
+            "creating_project",
+            project_name=name,
+            created_by_email=created_by.email,
+        )
         with transaction.atomic():
             project = Project.objects.create(
                 name=name,
@@ -171,6 +190,12 @@ class ProjectService:
         added_by: User,
     ) -> list[User]:
         """Add selected members to ``project`` and return the members added."""
+        logger.debug(
+            "adding_members",
+            project_id=project.pk,
+            added_by_email=added_by.email,
+            users=selections,
+        )
         with transaction.atomic():
             members = self._add_memberships(project, selections, added_by=added_by)
 
@@ -190,6 +215,13 @@ class ProjectService:
         for member, selection in zip(members, selections, strict=True):
             membership, _ = ProjectMembership.objects.get_or_create(project=project, user=member)
             memberships.append((membership, selection.get("permissions") or []))
+
+        logger.debug(
+            "creating_project_memberships",
+            project_id=project.pk,
+            added_by_email=added_by.email,
+            selections=selections,
+        )
 
         permission_rows = [
             ProjectMembershipPermission(
