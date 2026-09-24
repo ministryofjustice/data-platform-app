@@ -18,6 +18,8 @@
               <li>
                 {% if field.id_for_label %}
                   <a href="#{{ field.id_for_label }}">{{ error }}</a>
+                {% elif field.field.widget.attrs.id %}
+                  <a href="#{{ field.field.widget.attrs.id }}">{{ error }}</a>
                 {% else %}
                   {{ error }}
                 {% endif %}

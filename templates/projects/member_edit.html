@@ -15,10 +15,10 @@
       </div>
     </div>
   {% endif %}
-  {% if error_message %}
+  {% if form.errors %}
     <div class="govuk-grid-row">
       <div class="govuk-grid-column-one-half">
-        {% include "includes/error_message.html" with heading=error_message.heading message=error_message.message only %}
+        {% include "includes/forms/_error_summary.html" with form=form only %}
       </div>
     </div>
   {% endif %}
@@ -34,7 +34,7 @@
       <form method="post">
         <div class="govuk-form-group{% if form.permissions.errors %} govuk-form-group--error{% endif %}">
           {% csrf_token %}
-          <fieldset class="govuk-fieldset">
+          <fieldset class="govuk-fieldset" id="{{ form.permissions.auto_id }}">
             <legend class="govuk-fieldset__legend govuk-fieldset__legend--m">Permissions</legend>
             <div class="govuk-hint">Choose permissions for this member</div>
             {% for error in form.permissions.errors %}

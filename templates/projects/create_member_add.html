@@ -9,26 +9,15 @@
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-two-thirds">
       {% if form.errors %}
-        <div class="govuk-error-summary" data-module="govuk-error-summary">
-          <div role="alert">
-            <h2 class="govuk-error-summary__title">There is a problem</h2>
-            <div class="govuk-error-summary__body">
-              <ul class="govuk-list govuk-error-summary__list">
-                {% for error in form.add_user.errors %}
-                  <li>
-                    <a href="#add_user_yes">{{ error }}</a>
-                  </li>
-                {% endfor %}
-              </ul>
-            </div>
-          </div>
-        </div>
+        {% include "includes/forms/_error_summary.html" with form=form only %}
       {% endif %}
       <h1 class="govuk-heading-l">Add members</h1>
       <form method="post" novalidate>
         {% csrf_token %}
         <div class="govuk-form-group{% if form.add_user.errors %} govuk-form-group--error{% endif %}">
-          <fieldset class="govuk-fieldset" aria-describedby="add-user-hint">
+          <fieldset class="govuk-fieldset"
+                    aria-describedby="add-user-hint"
+                    id="{{ form.add_user.auto_id }}">
             <h3 class="govuk-heading-m">Do you want to add project members now?</h3>
             <div class="govuk-hint" id="add-user-hint">You can also add members later</div>
             {% for error in form.add_user.errors %}

@@ -16,7 +16,7 @@ class ProjectMemberForm(forms.Form):
 
     oid = forms.CharField(
         required=False,
-        widget=forms.HiddenInput(attrs={"data-entra-user-id": ""}),
+        widget=forms.HiddenInput(attrs={"data-entra-user-id": "", "id": "id_oid-autocomplete"}),
     )
     email = forms.CharField(
         required=False,
@@ -32,7 +32,9 @@ class ProjectMemberForm(forms.Form):
         choices=ProjectPermission.choices,
         initial=list,
         error_messages={"required": "Choose at least one permission for this member"},
-        widget=forms.CheckboxSelectMultiple(attrs={"class": "govuk-checkboxes__input"}),
+        widget=forms.CheckboxSelectMultiple(
+            attrs={"class": "govuk-checkboxes__input", "id": "id_permissions"}
+        ),
     )
 
     def __init__(
@@ -83,7 +85,12 @@ class ProjectMemberPermissionsForm(forms.Form):
         required=True,
         choices=ProjectPermission.choices,
         error_messages={"required": "Choose at least one permission for this member"},
-        widget=forms.CheckboxSelectMultiple(attrs={"class": "govuk-checkboxes__input"}),
+        widget=forms.CheckboxSelectMultiple(
+            attrs={
+                "class": "govuk-checkboxes__input",
+                "id": "id_permissions",
+            }
+        ),
     )
 
 
@@ -120,7 +127,7 @@ class ProjectCreateAddUsersDecisionForm(forms.Form):
     add_user = forms.ChoiceField(
         label="Do you want to add project members now?",
         choices=(("yes", "Yes"), ("no", "No")),
-        widget=forms.RadioSelect,
+        widget=forms.RadioSelect(attrs={"id": "id_add_user"}),
         error_messages={
             "required": "Choose yes or no",
         },
