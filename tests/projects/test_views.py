@@ -731,7 +731,7 @@ class TestProjectAddUsersFlow:
         capture_exception.assert_called_once()
 
 
-class TestProjectMemberDetailView:
+class TestProjectMemberEditView:
     def test_finds_member(self, client, project, project_owner):
         client.force_login(project_owner)
         membership = ProjectMembership.objects.get(
@@ -739,7 +739,7 @@ class TestProjectMemberDetailView:
             user=project_owner,
         )
         response = client.get(
-            reverse("projects:project_member_detail", args=[project.uuid, membership.pk])
+            reverse("projects:project_member_edit", args=[project.uuid, membership.pk])
         )
 
         assert response.status_code == 200
@@ -753,7 +753,7 @@ class TestProjectMemberDetailView:
             user=project_member,
         )
         response = client.get(
-            reverse("projects:project_member_detail", args=[project.uuid, membership.pk])
+            reverse("projects:project_member_edit", args=[project.uuid, membership.pk])
         )
 
         assert response.status_code == 403
@@ -768,10 +768,47 @@ class TestProjectMemberDetailView:
             user=non_project_user,
         )
         response = client.get(
-            reverse("projects:project_member_detail", args=[project.uuid, membership.pk])
+            reverse("projects:project_member_edit", args=[project.uuid, membership.pk])
         )
 
         assert response.status_code == 404
+
+    def test_valid_form_updates_permissions_and_redirects(
+        self, client, project, project_owner, project_member, project_service
+    ):
+        client.force_login(project_owner)
+        membership = ProjectMembership.objects.get(project=project, user=project_member)
+        response = client.post(
+            reverse("projects:project_member_edit", args=[project.uuid, membership.pk]),
+            data={"permissions": [ProjectPermission.MANAGE_API_KEYS]},
+        )
+
+        assert response.status_code == 302
+        assert response.url == reverse(
+            "projects:project_member_edit", args=[project.uuid, membership.pk]
+        )
+        assert client.session["success_message"] == {"heading": "Permissions updated"}
+        project_service.update_member_permissions.assert_called_once_with(
+            membership=membership,
+            permission_codenames=[ProjectPermission.MANAGE_API_KEYS],
+            updated_by=project_owner,
+        )
+
+    def test_invalid_form_does_not_update_permissions(
+        self, client, project, project_owner, project_member, project_service
+    ):
+        client.force_login(project_owner)
+        membership = ProjectMembership.objects.get(project=project, user=project_member)
+
+        response = client.post(
+            reverse("projects:project_member_edit", args=[project.uuid, membership.pk]),
+            data={"permissions": []},
+        )
+
+        assert response.status_code == 200
+        assert "Choose at least one permission for this member" in response.content.decode()
+        project_service.__enter__.assert_not_called()
+        project_service.update_member_permissions.assert_not_called()
 
 
 class TestProjectsListView:

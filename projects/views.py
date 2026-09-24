@@ -555,6 +555,7 @@ class ProjectMemberEditView(
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["membership"] = self.membership
+        context["success_message"] = self.request.session.pop("success_message", None)
         return context
 
     def get_initial(self):
@@ -563,6 +564,26 @@ class ProjectMemberEditView(
             self.membership.permissions.values_list("permission__codename", flat=True)
         )
         return initial
+
+    def form_valid(self, form):
+        permission_codenames = form.cleaned_data["permissions"]
+        with ProjectService.from_request(self.request) as service:
+            service.update_member_permissions(
+                membership=self.membership,
+                permission_codenames=permission_codenames,
+                updated_by=self.request.user,
+            )
+
+        self.request.session["success_message"] = {
+            "heading": "Permissions updated",
+        }
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse(
+            "projects:project_member_edit",
+            kwargs={"uuid": self.project.uuid, "pk": self.membership.pk},
+        )
 
 
 class ProjectRemoveUserView(

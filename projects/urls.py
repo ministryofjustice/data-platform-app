@@ -49,7 +49,7 @@ urlpatterns = [
     path(
         "<uuid:uuid>/users/<int:pk>/",
         ProjectMemberEditView.as_view(),
-        name="project_member_detail",
+        name="project_member_edit",
     ),
     path(
         "<uuid:uuid>/users/<int:user_id>/remove/",

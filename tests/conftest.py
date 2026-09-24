@@ -6,7 +6,7 @@ from model_bakery import baker
 
 from ai_gateway.services import KeyService
 from projects.models import ProjectMembership, ProjectMembershipPermission, ProjectPermission
-from projects.services import ProjectMembershipNotificationService
+from projects.services import ProjectMembershipNotificationService, ProjectService
 
 
 @pytest.fixture
@@ -149,4 +149,15 @@ def project_membership_notification_service():
     with patch(
         "projects.mixins.ProjectMembershipNotificationService.from_settings", return_value=service
     ):
+        yield service
+
+
+@pytest.fixture
+def project_service():
+    """Patch ProjectService.from_request with an autospecced context-manager instance."""
+    service = create_autospec(ProjectService, instance=True)
+    service.__enter__.return_value = service
+    service.__exit__.return_value = False
+
+    with patch("projects.views.ProjectService.from_request", return_value=service):
         yield service

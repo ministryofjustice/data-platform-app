@@ -59,12 +59,14 @@
       </form>
     </div>
   </div>
-  <hr class="govuk-section-break govuk-section-break--visible">
-  <div class="govuk-grid-row">
-    <div class="govuk-grid-column-full">
-      <h3 class="govuk-heading-s govuk-!-margin-top-6">Other actions</h3>
-      <a href="{% url 'projects:project_user_remove' membership.project.uuid membership.user_id %}"
-         class="govuk-link">Remove member</a>
+  {% if membership.user != project.owner %}
+    <hr class="govuk-section-break govuk-section-break--visible">
+    <div class="govuk-grid-row">
+      <div class="govuk-grid-column-full">
+        <h3 class="govuk-heading-s govuk-!-margin-top-6">Other actions</h3>
+        <a href="{% url 'projects:project_user_remove' membership.project.uuid membership.user_id %}"
+           class="govuk-link">Remove member</a>
+      </div>
     </div>
-  </div>
+  {% endif %}
 {% endblock content %}
