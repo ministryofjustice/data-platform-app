@@ -261,23 +261,23 @@ class ProjectService:
         updated_by: User,
     ) -> None:
         """Update the permissions granted to an existing project member."""
-        requested = set(permission_codenames)
-        existing = set(
-            membership.permissions.values_list(
-                "permission__codename",
-                flat=True,
-            )
-        )
-
-        to_add = requested - existing
-        to_remove = existing - requested
-
-        if not to_add and not to_remove:
-            return
-
-        permissions_by_codename = self._permissions_by_codename()
-
         with transaction.atomic():
+            membership = ProjectMembership.objects.select_for_update().get(pk=membership.pk)
+            requested = set(permission_codenames)
+            existing = set(
+                membership.permissions.values_list(
+                    "permission__codename",
+                    flat=True,
+                )
+            )
+
+            to_add = requested - existing
+            to_remove = existing - requested
+
+            if not to_add and not to_remove:
+                return
+
+            permissions_by_codename = self._permissions_by_codename()
             if to_remove:
                 membership.permissions.filter(
                     permission__codename__in=to_remove,
