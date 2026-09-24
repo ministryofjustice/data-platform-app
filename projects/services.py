@@ -278,11 +278,11 @@ class ProjectService:
                 return
 
             permissions_by_codename = self._permissions_by_codename()
-            if to_remove:
-                membership.permissions.filter(
-                    permission__codename__in=to_remove,
-                ).delete()
-
+            for permission in membership.permissions.filter(
+                permission__codename__in=to_remove,
+            ):
+                permission._history_user = updated_by
+                permission.delete()
             permission_rows = [
                 ProjectMembershipPermission(
                     membership=membership,

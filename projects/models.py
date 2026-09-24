@@ -76,18 +76,23 @@ class ProjectMembership(TimeStampedModel):
         Build a string of permissions, ordered by codename, with only the first permission
         capitalised.
         """
-        permissions = self.permissions.select_related("permission").order_by(
-            "permission__codename"
-        )
+        prefetched_permissions = getattr(self, "_prefetched_objects_cache", {}).get("permissions")
+
+        if prefetched_permissions is not None:
+            permissions = sorted(
+                prefetched_permissions,
+                key=lambda assignment: assignment.permission.codename,
+            )
+        else:
+            permissions = self.permissions.select_related("permission").order_by(
+                "permission__codename"
+            )
+
         display_strings = []
-        for i, permission in enumerate(permissions):
-            if i == 0:
-                display_strings.append(permission.permission.name)
-            else:
-                lower_permission = (
-                    permission.permission.name[0].lower() + permission.permission.name[1:]
-                )
-                display_strings.append(lower_permission)
+        for index, permission in enumerate(permissions):
+            name = permission.permission.name
+            display_strings.append(name if index == 0 else name[0].lower() + name[1:])
+
         return ", ".join(display_strings)
 
 
