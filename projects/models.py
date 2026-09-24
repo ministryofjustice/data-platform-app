@@ -8,8 +8,8 @@ from simple_history.models import HistoricalRecords
 
 
 class ProjectPermission(models.TextChoices):
-    MANAGE_API_KEYS = "manage_api_keys", "Manage API Keys"
-    MANAGE_MEMBERS = "manage_members", "Manage Members"
+    MANAGE_API_KEYS = "manage_api_keys", "Manage API keys"
+    MANAGE_MEMBERS = "manage_members", "Manage members"
 
     @property
     def permission_name(self) -> str:

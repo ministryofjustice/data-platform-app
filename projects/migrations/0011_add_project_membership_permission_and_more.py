@@ -28,8 +28,8 @@ class Migration(migrations.Migration):
             name="project",
             options={
                 "permissions": [
-                    ("manage_api_keys", "Manage API Keys"),
-                    ("manage_members", "Manage Members"),
+                    ("manage_api_keys", "Manage API keys"),
+                    ("manage_members", "Manage members"),
                 ]
             },
         ),
