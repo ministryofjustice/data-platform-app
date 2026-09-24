@@ -472,7 +472,7 @@ class TestProjectAddUsersFlow:
         assert response.status_code == 200
         assert "projects/member_add_review.html" in [t.name for t in response.templates]
         assert selected_user.email in response.content.decode()
-        assert "Manage Members" in response.content.decode()
+        assert "Manage members" in response.content.decode()
 
     def test_review_page_redirects_to_add_member_when_empty(self, client, project, project_owner):
         client.force_login(project_owner)
@@ -1000,7 +1000,7 @@ class TestProjectCreateFlow:
         assert response.status_code == 200
         assert "projects/create_review_members.html" in [t.name for t in response.templates]
         assert selected_user.email in response.content.decode()
-        assert "Manage API Keys" in response.content.decode()
+        assert "Manage API keys" in response.content.decode()
 
     def test_create_review_members_removes_member(self, client, user):
         keep_user = baker.make("users.User", email="keep.create@example.com")
@@ -1050,7 +1050,7 @@ class TestProjectCreateFlow:
         assert "Confirm Project" in response.content.decode()
         assert business_unit.name in response.content.decode()
         assert selected_user.email in response.content.decode()
-        assert "Manage Members" in response.content.decode()
+        assert "Manage members" in response.content.decode()
 
     def test_create_confirm_post_creates_project_and_memberships(self, client, user):
         business_unit = baker.make("projects.BusinessUnit")

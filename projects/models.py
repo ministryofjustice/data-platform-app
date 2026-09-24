@@ -71,6 +71,25 @@ class ProjectMembership(TimeStampedModel):
     def __repr__(self):
         return f"<ProjectMembership user={self.user} project={self.project}>"
 
+    def permissions_display_string(self):
+        """
+        Build a string of permissions, ordered by codename, with only the first permission
+        capitalised.
+        """
+        permissions = self.permissions.select_related("permission").order_by(
+            "permission__codename"
+        )
+        display_strings = []
+        for i, permission in enumerate(permissions):
+            if i == 0:
+                display_strings.append(permission.permission.name)
+            else:
+                lower_permission = (
+                    permission.permission.name[0].lower() + permission.permission.name[1:]
+                )
+                display_strings.append(lower_permission)
+        return ", ".join(display_strings)
+
 
 class BusinessUnit(TimeStampedModel):
     name = models.CharField(max_length=100, unique=True)
