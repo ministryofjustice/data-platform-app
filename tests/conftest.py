@@ -5,8 +5,8 @@ from django.contrib.auth.models import Permission
 from model_bakery import baker
 
 from ai_gateway.services import KeyService
-from projects.models import ProjectMembership, ProjectMembershipPermission
-from projects.services import ProjectMembershipNotificationService
+from projects.models import ProjectMembership, ProjectMembershipPermission, ProjectPermission
+from projects.services import ProjectMembershipNotificationService, ProjectService
 
 
 @pytest.fixture
@@ -20,15 +20,15 @@ def anonymous_user():
 @pytest.fixture
 def user(db):
     """A saved User instance with no special permissions."""
-
-    return baker.make("users.User")
+    return baker.make("users.User", email="user@example.com")
 
 
 @pytest.fixture
 def superuser(db):
     """A superuser who is not a member of any project."""
-
-    return baker.make("users.User", is_staff=True, is_superuser=True)
+    return baker.make(
+        "users.User", email="superuser@example.com", is_staff=True, is_superuser=True
+    )
 
 
 @pytest.fixture
@@ -40,13 +40,15 @@ def project(db, user):
 
 
 @pytest.fixture
-def project_owner(project):
+def project_owner(project, grant_project_permission):
+    for perm in ProjectPermission:
+        grant_project_permission(project, project.owner, perm)
     return project.owner
 
 
 @pytest.fixture
 def project_member(project):
-    user = baker.make("users.User")
+    user = baker.make("users.User", email="project.member@example.com")
     baker.make("projects.ProjectMembership", project=project, user=user)
     return user
 
@@ -147,4 +149,15 @@ def project_membership_notification_service():
     with patch(
         "projects.mixins.ProjectMembershipNotificationService.from_settings", return_value=service
     ):
+        yield service
+
+
+@pytest.fixture
+def project_service():
+    """Patch ProjectService.from_request with an autospecced context-manager instance."""
+    service = create_autospec(ProjectService, instance=True)
+    service.__enter__.return_value = service
+    service.__exit__.return_value = False
+
+    with patch("projects.views.ProjectService.from_request", return_value=service):
         yield service

@@ -8,8 +8,8 @@ from simple_history.models import HistoricalRecords
 
 
 class ProjectPermission(models.TextChoices):
-    MANAGE_API_KEYS = "manage_api_keys", "Manage API Keys"
-    MANAGE_MEMBERS = "manage_members", "Manage Members"
+    MANAGE_API_KEYS = "manage_api_keys", "Manage API keys"
+    MANAGE_MEMBERS = "manage_members", "Manage members"
 
     @property
     def permission_name(self) -> str:
@@ -70,6 +70,30 @@ class ProjectMembership(TimeStampedModel):
 
     def __repr__(self):
         return f"<ProjectMembership user={self.user} project={self.project}>"
+
+    def permissions_display_string(self):
+        """
+        Build a string of permissions, ordered by codename, with only the first permission
+        capitalised.
+        """
+        prefetched_permissions = getattr(self, "_prefetched_objects_cache", {}).get("permissions")
+
+        if prefetched_permissions is not None:
+            permissions = sorted(
+                prefetched_permissions,
+                key=lambda assignment: assignment.permission.codename,
+            )
+        else:
+            permissions = self.permissions.select_related("permission").order_by(
+                "permission__codename"
+            )
+
+        display_strings = []
+        for index, permission in enumerate(permissions):
+            name = permission.permission.name
+            display_strings.append(name if index == 0 else name[0].lower() + name[1:])
+
+        return ", ".join(display_strings)
 
 
 class BusinessUnit(TimeStampedModel):

@@ -12,8 +12,9 @@ from projects.views import (
     ProjectDeleteView,
     ProjectDetailView,
     ProjectListView,
+    ProjectMemberEditView,
     ProjectRemoveUserView,
-    ProjectUsersDetailView,
+    ProjectUsersListView,
 )
 
 app_name = "projects"
@@ -37,7 +38,7 @@ urlpatterns = [
     ),
     path("create/confirm/", ProjectCreateConfirmView.as_view(), name="project_create_confirm"),
     path("<uuid:uuid>/", ProjectDetailView.as_view(), name="project_detail"),
-    path("<uuid:uuid>/users/", ProjectUsersDetailView.as_view(), name="project_users"),
+    path("<uuid:uuid>/users/", ProjectUsersListView.as_view(), name="project_users"),
     path("<uuid:uuid>/users/add/", ProjectAddUsersView.as_view(), name="project_users_add"),
     path(
         "<uuid:uuid>/users/add/review/",
@@ -45,6 +46,11 @@ urlpatterns = [
         name="project_users_add_review",
     ),
     path("<uuid:uuid>/delete/", ProjectDeleteView.as_view(), name="project_delete"),
+    path(
+        "<uuid:uuid>/users/<int:pk>/",
+        ProjectMemberEditView.as_view(),
+        name="project_member_edit",
+    ),
     path(
         "<uuid:uuid>/users/<int:user_id>/remove/",
         ProjectRemoveUserView.as_view(),

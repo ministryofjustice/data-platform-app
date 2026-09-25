@@ -252,3 +252,49 @@ class ProjectService:
         if self._graph_client is None:
             self._graph_client = MicrosoftGraphClient.from_request(self._request)
         return self._graph_client
+
+    def update_member_permissions(
+        self,
+        *,
+        membership: ProjectMembership,
+        permission_codenames: list[str],
+        updated_by: User,
+    ) -> None:
+        """Update the permissions granted to an existing project member."""
+        with transaction.atomic():
+            membership = ProjectMembership.objects.select_for_update().get(pk=membership.pk)
+            requested = set(permission_codenames)
+            existing = set(
+                membership.permissions.values_list(
+                    "permission__codename",
+                    flat=True,
+                )
+            )
+
+            to_add = requested - existing
+            to_remove = existing - requested
+
+            if not to_add and not to_remove:
+                return
+
+            permissions_by_codename = self._permissions_by_codename()
+            for permission in membership.permissions.filter(
+                permission__codename__in=to_remove,
+            ):
+                permission._history_user = updated_by
+                permission.delete()
+            permission_rows = [
+                ProjectMembershipPermission(
+                    membership=membership,
+                    permission=permissions_by_codename[codename],
+                    granted_by=updated_by,
+                )
+                for codename in to_add
+            ]
+
+            if permission_rows:
+                bulk_create_with_history(
+                    permission_rows,
+                    ProjectMembershipPermission,
+                    default_user=updated_by,
+                )

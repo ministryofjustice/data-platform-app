@@ -20,10 +20,10 @@ def grant_existing_members_all_permissions(apps, schema_editor):
     permissions = []
 
     for codename, name in [
-        ("manage_api_keys", "Manage API Keys"),
-        ("manage_members", "Manage Members"),
+        ("manage_api_keys", "Manage API keys"),
+        ("manage_members", "Manage members"),
     ]:
-        permission, _ = Permission.objects.get_or_create(
+        permission, _ = Permission.objects.update_or_create(
             content_type=content_type,
             codename=codename,
             defaults={"name": name},

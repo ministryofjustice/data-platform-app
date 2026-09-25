@@ -54,8 +54,8 @@ class TestDetailView:
         assert response.status_code == 200
 
 
-class TestProjectUsersDetailView:
-    """Tests for the ProjectUsersDetailView at '/projects/<uuid>/users/'"""
+class TestProjectUsersListView:
+    """Tests for the ProjectUsersListView at '/projects/<uuid>/users/'"""
 
     def test_users_page_renders_with_members_active(self, client, project, project_member):
         client.force_login(project_member)
@@ -82,6 +82,17 @@ class TestProjectUsersDetailView:
         response = client.get(reverse("projects:project_users", args=[project.uuid]))
 
         assert response.status_code == 404
+
+    def test_owner_listed_first(self, client, project, project_owner, project_member):
+        client.force_login(project_owner)
+        response = client.get(reverse("projects:project_users", args=[project.uuid]))
+
+        assert response.status_code == 200
+        assert project_owner.email != project_member.email
+        content = response.content.decode()
+        owner_index = content.find(project_owner.email)
+        member_index = content.find(project_member.email)
+        assert owner_index < member_index
 
 
 class TestProjectDeleteView:
@@ -461,7 +472,7 @@ class TestProjectAddUsersFlow:
         assert response.status_code == 200
         assert "projects/member_add_review.html" in [t.name for t in response.templates]
         assert selected_user.email in response.content.decode()
-        assert "Manage Members" in response.content.decode()
+        assert "Manage members" in response.content.decode()
 
     def test_review_page_redirects_to_add_member_when_empty(self, client, project, project_owner):
         client.force_login(project_owner)
@@ -720,6 +731,86 @@ class TestProjectAddUsersFlow:
         capture_exception.assert_called_once()
 
 
+class TestProjectMemberEditView:
+    def test_finds_member(self, client, project, project_owner):
+        client.force_login(project_owner)
+        membership = ProjectMembership.objects.get(
+            project=project,
+            user=project_owner,
+        )
+        response = client.get(
+            reverse("projects:project_member_edit", args=[project.uuid, membership.pk])
+        )
+
+        assert response.status_code == 200
+        assert "membership" in response.context
+        assert response.context["membership"] == membership
+
+    def test_member_without_permission(self, client, project, project_member):
+        client.force_login(project_member)
+        membership = ProjectMembership.objects.get(
+            project=project,
+            user=project_member,
+        )
+        response = client.get(
+            reverse("projects:project_member_edit", args=[project.uuid, membership.pk])
+        )
+
+        assert response.status_code == 403
+
+    def test_other_project_member_not_found(
+        self, client, project, project_owner, non_project_user
+    ):
+        client.force_login(project_owner)
+        other_project = baker.make("projects.Project")
+        membership = ProjectMembership.objects.create(
+            project=other_project,
+            user=non_project_user,
+        )
+        response = client.get(
+            reverse("projects:project_member_edit", args=[project.uuid, membership.pk])
+        )
+
+        assert response.status_code == 404
+
+    def test_valid_form_updates_permissions_and_redirects(
+        self, client, project, project_owner, project_member, project_service
+    ):
+        client.force_login(project_owner)
+        membership = ProjectMembership.objects.get(project=project, user=project_member)
+        response = client.post(
+            reverse("projects:project_member_edit", args=[project.uuid, membership.pk]),
+            data={"permissions": [ProjectPermission.MANAGE_API_KEYS]},
+        )
+
+        assert response.status_code == 302
+        assert response.url == reverse(
+            "projects:project_member_edit", args=[project.uuid, membership.pk]
+        )
+        assert client.session["success_message"] == {"heading": "Permissions updated"}
+        project_service.update_member_permissions.assert_called_once_with(
+            membership=membership,
+            permission_codenames=[ProjectPermission.MANAGE_API_KEYS],
+            updated_by=project_owner,
+        )
+
+    def test_invalid_form_does_not_update_permissions(
+        self, client, project, project_owner, project_member, project_service
+    ):
+        client.force_login(project_owner)
+        membership = ProjectMembership.objects.get(project=project, user=project_member)
+
+        response = client.post(
+            reverse("projects:project_member_edit", args=[project.uuid, membership.pk]),
+            data={"permissions": []},
+        )
+
+        assert response.status_code == 200
+        assert "Choose at least one permission for this member" in response.content.decode()
+        project_service.__enter__.assert_not_called()
+        project_service.update_member_permissions.assert_not_called()
+
+
 class TestProjectsListView:
     """Tests for the login-protected projects ListView."""
 
@@ -909,7 +1000,7 @@ class TestProjectCreateFlow:
         assert response.status_code == 200
         assert "projects/create_review_members.html" in [t.name for t in response.templates]
         assert selected_user.email in response.content.decode()
-        assert "Manage API Keys" in response.content.decode()
+        assert "Manage API keys" in response.content.decode()
 
     def test_create_review_members_removes_member(self, client, user):
         keep_user = baker.make("users.User", email="keep.create@example.com")
@@ -959,7 +1050,7 @@ class TestProjectCreateFlow:
         assert "Confirm Project" in response.content.decode()
         assert business_unit.name in response.content.decode()
         assert selected_user.email in response.content.decode()
-        assert "Manage Members" in response.content.decode()
+        assert "Manage members" in response.content.decode()
 
     def test_create_confirm_post_creates_project_and_memberships(self, client, user):
         business_unit = baker.make("projects.BusinessUnit")

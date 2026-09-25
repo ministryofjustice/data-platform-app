@@ -1,10 +1,11 @@
 import sentry_sdk
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Prefetch
+from django.db.models import Case, F, IntegerField, Prefetch, Value, When
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
-from django.views.generic.base import View
+from django.utils.functional import cached_property
+from django.views.generic.base import TemplateView, View
 from django.views.generic.detail import DetailView
 from django.views.generic.edit import DeleteView, FormView
 from django.views.generic.list import ListView
@@ -16,6 +17,7 @@ from projects.forms import (
     ProjectCreateAddUsersDecisionForm,
     ProjectCreateForm,
     ProjectMemberForm,
+    ProjectMemberPermissionsForm,
 )
 from projects.graph import (
     EntraAuthenticationError,
@@ -374,23 +376,25 @@ class ProjectCreateConfirmView(
         return redirect("projects:project_detail", uuid=project.uuid)
 
 
-class ProjectUsersDetailView(
-    ProjectAccessMixin, ProjectLayoutContextMixin, UUIDObjectMixin, DetailView
-):
+class ProjectUsersListView(ExistingProjectMixin, ProjectLayoutContextMixin, TemplateView):
     template_name = "projects/member_list.html"
-    context_object_name = "project"
-    model = Project
     active_project_section = "members"
 
-    def get_queryset(self):
-        return self.get_accessible_projects(
-            Project.objects.prefetch_related(
-                Prefetch(
-                    "memberships",
-                    queryset=ProjectMembership.objects.select_related("user").prefetch_related(
-                        "permissions__permission"
-                    ),
+    def get_accessible_projects(self):
+        queryset = super().get_accessible_projects()
+        return queryset.prefetch_related(
+            Prefetch(
+                "memberships",
+                queryset=ProjectMembership.objects.select_related("user")
+                .prefetch_related("permissions__permission")
+                .annotate(
+                    owner_order=Case(
+                        When(user_id=F("project__owner_id"), then=Value(0)),
+                        default=Value(1),
+                        output_field=IntegerField(),
+                    )
                 )
+                .order_by("owner_order", "user__email"),
             )
         )
 
@@ -530,6 +534,56 @@ class ProjectAddUsersReviewView(
         }
 
         return redirect("projects:project_users", uuid=project.uuid)
+
+
+class ProjectMemberEditView(
+    ProjectPermissionRequiredMixin,
+    ExistingProjectMixin,
+    FormView,
+):
+    permission_required = ProjectPermission.MANAGE_MEMBERS.permission_name
+    template_name = "projects/member_edit.html"
+    form_class = ProjectMemberPermissionsForm
+
+    @cached_property
+    def membership(self):
+        return get_object_or_404(
+            self.project.memberships.select_related("user", "project"),
+            pk=self.kwargs["pk"],
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["membership"] = self.membership
+        context["success_message"] = self.request.session.pop("success_message", None)
+        return context
+
+    def get_initial(self):
+        initial = super().get_initial()
+        initial["permissions"] = list(
+            self.membership.permissions.values_list("permission__codename", flat=True)
+        )
+        return initial
+
+    def form_valid(self, form):
+        permission_codenames = form.cleaned_data["permissions"]
+        with ProjectService.from_request(self.request) as service:
+            service.update_member_permissions(
+                membership=self.membership,
+                permission_codenames=permission_codenames,
+                updated_by=self.request.user,
+            )
+
+        self.request.session["success_message"] = {
+            "heading": "Permissions updated",
+        }
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse(
+            "projects:project_member_edit",
+            kwargs={"uuid": self.project.uuid, "pk": self.membership.pk},
+        )
 
 
 class ProjectRemoveUserView(

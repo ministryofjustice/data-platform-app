@@ -7,7 +7,7 @@ from notifications_python_client.errors import HTTPError
 
 from data_platform_app.services import GovUKNotificationError, GovUKNotificationsService
 from projects.graph import EntraAuthenticationError, EntraRequestError
-from projects.models import ProjectMembership
+from projects.models import ProjectMembership, ProjectPermission
 from projects.services import (
     ProjectMembershipNotificationService,
     ProjectNotificationError,
@@ -305,6 +305,103 @@ class TestProjectService:
 
         membership = ProjectMembership.objects.get(project=project, user=non_project_user)
         assert membership.permissions.get().granted_by == user
+
+    def test_update_member_permissions_adds_permissions_and_history(
+        self, project, user, project_member_without_permissions
+    ):
+        membership = ProjectMembership.objects.get(
+            project=project, user=project_member_without_permissions
+        )
+        service = ProjectService(graph_client=Mock())
+
+        service.update_member_permissions(
+            membership=membership,
+            permission_codenames=[ProjectPermission.MANAGE_API_KEYS],
+            updated_by=user,
+        )
+
+        permission = membership.permissions.get()
+        assert permission.permission.codename == ProjectPermission.MANAGE_API_KEYS
+        assert permission.granted_by == user
+        history = permission.history.get(history_type="+")
+        assert history.permission_id == permission.permission_id
+        assert history.history_user == user
+
+    def test_update_member_permissions_removes_permissions_and_history(
+        self, project, user, project_member_without_permissions, grant_project_permission
+    ):
+        grant_project_permission(
+            project,
+            project_member_without_permissions,
+            ProjectPermission.MANAGE_API_KEYS,
+        )
+        membership = ProjectMembership.objects.get(
+            project=project, user=project_member_without_permissions
+        )
+        permission = membership.permissions.get()
+        service = ProjectService(graph_client=Mock())
+
+        service.update_member_permissions(
+            membership=membership,
+            permission_codenames=[],
+            updated_by=user,
+        )
+
+        assert not membership.permissions.exists()
+        history = permission.history.get(history_type="-")
+        assert history.permission_id == permission.permission_id
+
+    def test_update_member_permissions_removes_and_adds_permissions_with_history(
+        self, project, user, project_member_without_permissions, grant_project_permission
+    ):
+        grant_project_permission(
+            project,
+            project_member_without_permissions,
+            ProjectPermission.MANAGE_API_KEYS,
+        )
+        membership = ProjectMembership.objects.get(
+            project=project, user=project_member_without_permissions
+        )
+        removed_permission = membership.permissions.get()
+        service = ProjectService(graph_client=Mock())
+
+        service.update_member_permissions(
+            membership=membership,
+            permission_codenames=[ProjectPermission.MANAGE_MEMBERS],
+            updated_by=user,
+        )
+
+        added_permission = membership.permissions.get()
+        assert added_permission.permission.codename == ProjectPermission.MANAGE_MEMBERS
+        assert removed_permission.history.filter(history_type="-").exists()
+        added_history = added_permission.history.get(history_type="+")
+        assert added_history.permission_id == added_permission.permission_id
+        assert added_history.history_user == user
+
+    def test_update_member_permissions_does_nothing_when_permissions_unchanged(
+        self, project, user, project_member_without_permissions, grant_project_permission
+    ):
+        grant_project_permission(
+            project,
+            project_member_without_permissions,
+            ProjectPermission.MANAGE_API_KEYS,
+        )
+        membership = ProjectMembership.objects.get(
+            project=project, user=project_member_without_permissions
+        )
+        permission = membership.permissions.get()
+        history_count = permission.history.count()
+        service = ProjectService(graph_client=Mock())
+
+        service.update_member_permissions(
+            membership=membership,
+            permission_codenames=[ProjectPermission.MANAGE_API_KEYS],
+            updated_by=user,
+        )
+
+        assert membership.permissions.count() == 1
+        assert membership.permissions.get().pk == permission.pk
+        assert permission.history.count() == history_count
 
     def test_from_request_propagates_authentication_error(self, project, user):
         new_oid = str(baker.make("users.User").oid)
