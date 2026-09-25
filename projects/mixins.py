@@ -1,8 +1,10 @@
 import sentry_sdk
+from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.core.exceptions import ImproperlyConfigured
 from django.shortcuts import get_object_or_404
+from django.utils.functional import cached_property
 
-from projects.models import Project
+from projects.models import Project, ProjectPermission
 from projects.services import ProjectMembershipNotificationService, ProjectNotificationError
 
 ADD_USER_SESSION_KEY = "project_user_add_selection"
@@ -13,7 +15,7 @@ USER_BUCKET_SESSION_KEY = "project_create_user_add"
 class ProjectAccessMixin:
     """Limit project querysets to memberships, except for superusers."""
 
-    def get_accessible_projects(self, queryset=None, *, role=None):
+    def get_accessible_projects(self, queryset=None):
 
         if queryset is None:
             queryset = Project.objects.all()
@@ -21,9 +23,7 @@ class ProjectAccessMixin:
         if self.request.user.is_superuser:
             return queryset
 
-        filters = {"user_permissions__user": self.request.user}
-        if role is not None:
-            filters["user_permissions__role"] = role
+        filters = {"memberships__user": self.request.user}
         return queryset.filter(**filters).distinct()
 
 
@@ -32,7 +32,7 @@ class ProjectUserSelectionSessionMixin:
         return None
 
     def get_user_bucket_key(self):
-        raise NotImplementedError
+        return f"project:{self.get_project().id}"
 
     def get_selected_members(self):
         session_map = self.request.session.get(ADD_USER_SESSION_KEY, {})
@@ -48,18 +48,68 @@ class ProjectUserSelectionSessionMixin:
         session_map.pop(self.get_user_bucket_key(), None)
         self.request.session[ADD_USER_SESSION_KEY] = session_map
 
+    def get_member_oids(self) -> set[str]:
+        return {member["oid"] for member in self.get_selected_members()}
+
+    def get_selected_member(self, oid: str) -> dict | None:
+        return next(
+            (member for member in self.get_selected_members() if member["oid"] == oid), None
+        )
+
+    def upsert_selected_member(self, member: dict, editing_oid: str | None = None) -> None:
+        """Add ``member``, replacing the entry for ``editing_oid`` if one is given."""
+        members = [m for m in self.get_selected_members() if m["oid"] != editing_oid]
+        members.append(member)
+        self.set_selected_members(members)
+
+    def remove_selected_member(self, oid: str) -> None:
+        members = [m for m in self.get_selected_members() if m["oid"] != oid]
+        self.set_selected_members(members)
+
+    def get_selected_members_with_permission_labels(self) -> list[dict]:
+        """Return selected members with a ``permission_labels`` list for display."""
+        labels_by_codename = dict(ProjectPermission.choices)
+        return [
+            {
+                **member,
+                "permission_labels": [
+                    labels_by_codename[codename]
+                    for codename in member.get("permissions", [])
+                    if codename in labels_by_codename
+                ],
+            }
+            for member in self.get_selected_members()
+        ]
+
 
 class ExistingProjectMixin(ProjectAccessMixin):
-    def get_project(self):
-        if not hasattr(self, "_project"):
-            self._project = get_object_or_404(
-                self.get_accessible_projects(role="admin"),
-                uuid=self.kwargs["uuid"],
-            )
-        return self._project
+    """Resolve an accessible project from the URL."""
 
-    def get_user_bucket_key(self):
-        return f"project:{self.get_project().id}"
+    @cached_property
+    def project(self) -> Project:
+        return get_object_or_404(
+            self.get_accessible_projects(),
+            uuid=self.kwargs["uuid"],
+        )
+
+    def get_project(self) -> Project:
+        return self.project
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["project"] = self.project
+        return context
+
+
+class ProjectPermissionRequiredMixin(PermissionRequiredMixin):
+    """Require project-level permissions for the project resolved by get_project().
+
+    Must appear before the View subclass in the MRO, alongside a mixin providing get_project(),
+    so has_permission() runs during dispatch() before the view executes.
+    """
+
+    def has_permission(self):
+        return self.request.user.has_perms(self.get_permission_required(), self.get_project())
 
 
 class UUIDObjectMixin:

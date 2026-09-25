@@ -1,10 +1,12 @@
 import sentry_sdk
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db.models import Prefetch
+from django.core.exceptions import PermissionDenied
+from django.db.models import Case, F, IntegerField, Prefetch, Value, When
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
-from django.views.generic.base import View
+from django.utils.functional import cached_property
+from django.views.generic.base import TemplateView, View
 from django.views.generic.detail import DetailView
 from django.views.generic.edit import DeleteView, FormView
 from django.views.generic.list import ListView
@@ -15,7 +17,8 @@ from ai_gateway.services import KeyService
 from projects.forms import (
     ProjectCreateAddUsersDecisionForm,
     ProjectCreateForm,
-    build_project_add_member_formset,
+    ProjectMemberForm,
+    ProjectMemberPermissionsForm,
 )
 from projects.graph import (
     EntraAuthenticationError,
@@ -31,10 +34,11 @@ from projects.mixins import (
     ProjectAccessMixin,
     ProjectLayoutContextMixin,
     ProjectMembershipNotificationMixin,
+    ProjectPermissionRequiredMixin,
     ProjectUserSelectionSessionMixin,
     UUIDObjectMixin,
 )
-from projects.models import BusinessUnit, Project, ProjectUserPermissions
+from projects.models import BusinessUnit, Project, ProjectMembership, ProjectPermission
 from projects.services import ProjectService
 
 
@@ -118,7 +122,7 @@ class ProjectDetailView(
     def get_queryset(self):
         return self.get_accessible_projects(
             Project.objects.select_related("business_unit", "created_by").prefetch_related(
-                "users", "user_permissions__user"
+                "users", "memberships__user"
             )
         )
 
@@ -153,109 +157,146 @@ class ProjectCreateView(FormView):
         return reverse("projects:project_create_add_users")
 
 
-class ProjectUserSelectionFormView(ProjectUserSelectionSessionMixin, FormView):
-    template_name = "projects/user_add.html"
+class ProjectCreateAddUsersView(ProjectUserSelectionSessionMixin, FormView):
+    """The yes/no decision on whether to add members during project creation."""
 
-    def get_success_url(self):
-        raise NotImplementedError
-
-    def get_initial(self):
-        return [
-            {
-                "oid": member["oid"],
-                "email": member.get("email", ""),
-                "display_name": member.get("display_name", ""),
-            }
-            for member in self.get_selected_members()
-        ]
-
-    def get_form(self, form_class=None):
-        data = self.request.POST if self.request.method == "POST" else None
-        initial = self.get_initial() if self.request.method == "GET" else None
-
-        return build_project_add_member_formset(
-            project=self.get_project(),
-            data=data,
-            initial=initial,
-            extra=0 if initial else 1,
-        )
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["formset"] = context["form"]
-        context["project"] = self.get_project()
-        context["error_message"] = self.request.session.pop("error_message", None)
-        return context
-
-    def form_valid(self, form):
-        self.set_selected_members(form.selected_members)
-        return redirect(self.get_success_url())
-
-
-class ProjectCreateAddUsersView(ProjectUserSelectionFormView):
-    template_name = "projects/create_user_add.html"
+    template_name = "projects/create_member_add.html"
+    form_class = ProjectCreateAddUsersDecisionForm
 
     def get_user_bucket_key(self):
         return USER_BUCKET_SESSION_KEY
 
-    def get_success_url(self):
-        return reverse("projects:project_create_confirm")
+    def get_initial(self):
+        return {"add_user": "yes"} if self.get_selected_members() else {}
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["project"] = self.request.session.get(PROJECT_CREATE_SESSION_KEY, {})
-        context.setdefault("decision_form", self.get_decision_form())
+        context["error_message"] = self.request.session.pop("error_message", None)
         return context
 
-    def get_decision_form(self):
-        data = self.request.POST if self.request.method == "POST" else None
-        initial = None
-        if self.request.method == "GET" and self.get_selected_members():
-            initial = {"add_user": "yes"}
-        return ProjectCreateAddUsersDecisionForm(data=data, initial=initial)
-
-    def get_unbound_formset(self):
-        initial = None
-        extra = 1
-        selected_members = self.get_selected_members()
-        if selected_members:
-            initial = [
-                {
-                    "oid": member["oid"],
-                    "email": member.get("email", ""),
-                    "display_name": member.get("display_name", ""),
-                }
-                for member in selected_members
-            ]
-            extra = 0
-
-        return build_project_add_member_formset(
-            project=self.get_project(),
-            data=None,
-            initial=initial,
-            extra=extra,
-        )
-
-    def form_invalid(self, form):
-        return self.render_to_response(
-            self.get_context_data(form=form, decision_form=self.get_decision_form())
-        )
-
-    def post(self, request, *args, **kwargs):
-        decision_form = self.get_decision_form()
-        if not decision_form.is_valid():
-            return self.render_to_response(
-                self.get_context_data(
-                    form=self.get_unbound_formset(),
-                    decision_form=decision_form,
-                )
-            )
-
-        if decision_form.cleaned_data["add_user"] == "no":
+    def form_valid(self, form):
+        if form.cleaned_data["add_user"] == "no":
             self.clear_selected_members()
             return redirect("projects:project_create_confirm")
+        return redirect("projects:project_create_add_member")
 
-        return super().post(request, *args, **kwargs)
+
+class ProjectMemberFormBaseView(ProjectUserSelectionSessionMixin, FormView):
+    """Search for a user and choose their permissions, one member at a time.
+
+    Shared by the project-creation and existing-project add-member flows;
+    subclasses only differ in bucket key, success url and cancel target.
+    """
+
+    template_name = "projects/member_add.html"
+    form_class = ProjectMemberForm
+
+    def get_editing_oid(self):
+        return self.request.GET.get("edit")
+
+    def get_cancel_url(self):
+        raise NotImplementedError
+
+    def get_review_url(self):
+        raise NotImplementedError
+
+    def get_entry_url(self):
+        raise NotImplementedError
+
+    def get_back_url(self):
+        if self.get_editing_oid() or self.get_selected_members():
+            return self.get_review_url()
+        return self.get_entry_url()
+
+    def get_initial(self):
+        editing_oid = self.get_editing_oid()
+        member = self.get_selected_member(editing_oid) if editing_oid else None
+        if not member:
+            return {}
+        return {
+            "oid": member["oid"],
+            "email": member.get("email", ""),
+            "display_name": member.get("display_name", ""),
+            "permissions": member.get("permissions", []),
+        }
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["project"] = self.get_project()
+        kwargs["existing_oids"] = self.get_member_oids()
+        kwargs["editing_oid"] = self.get_editing_oid()
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["project"] = self.get_project()
+        context["cancel_url"] = self.get_cancel_url()
+        context["back_url"] = self.get_back_url()
+        context["error_message"] = self.request.session.pop("error_message", None)
+        return context
+
+    def form_valid(self, form):
+        member = {
+            "oid": form.cleaned_data["oid"],
+            "email": form.cleaned_data.get("email", ""),
+            "display_name": form.cleaned_data.get("display_name", ""),
+            "permissions": form.cleaned_data.get("permissions", []),
+        }
+        self.upsert_selected_member(member, editing_oid=self.get_editing_oid())
+        return redirect(self.get_success_url())
+
+
+class ProjectCreateAddMemberView(ProjectMemberFormBaseView):
+    def get_user_bucket_key(self):
+        return USER_BUCKET_SESSION_KEY
+
+    def get_success_url(self):
+        return reverse("projects:project_create_review_members")
+
+    def get_review_url(self):
+        return reverse("projects:project_create_review_members")
+
+    def get_entry_url(self):
+        return reverse("projects:project_create_add_users")
+
+    def get_cancel_url(self):
+        return reverse("projects:projects_list")
+
+
+class ProjectReviewMembersBaseView(ProjectUserSelectionSessionMixin, View):
+    """Lists members added so far, with add-another/change/remove actions."""
+
+    template_name = "projects/create_review_members.html"
+
+    def get_context_data(self):
+        return {
+            "project": self.get_project(),
+            "selected_members": self.get_selected_members_with_permission_labels(),
+        }
+
+    def get(self, request, *args, **kwargs):
+        return render(request, self.template_name, self.get_context_data())
+
+    def post(self, request, *args, **kwargs):
+        remove_oid = request.POST.get("remove_oid")
+        if remove_oid:
+            self.remove_selected_member(remove_oid)
+        return redirect(request.path)
+
+
+class ProjectCreateReviewMembersView(ProjectReviewMembersBaseView):
+    template_name = "projects/create_review_members.html"
+
+    def get_user_bucket_key(self):
+        return USER_BUCKET_SESSION_KEY
+
+    def get_context_data(self):
+        context = super().get_context_data()
+        context["add_member_url"] = reverse("projects:project_create_add_member")
+        context["continue_url"] = reverse("projects:project_create_confirm")
+        context["cancel_url"] = reverse("projects:projects_list")
+        return context
 
 
 class ProjectCreateConfirmView(
@@ -267,9 +308,6 @@ class ProjectCreateConfirmView(
 
     def get_user_bucket_key(self):
         return USER_BUCKET_SESSION_KEY
-
-    def get_selected_users(self):
-        return self.get_selected_members()
 
     def validate_project_create_session(self, session_data):
 
@@ -295,12 +333,11 @@ class ProjectCreateConfirmView(
 
         business_unit_id = project_data.get("business_unit_id") if project_data else None
         business_unit = get_object_or_404(BusinessUnit, pk=business_unit_id)
-        selected_users = list(self.get_selected_users())
 
         context = {
             "project": project_data,
             "business_unit": business_unit,
-            "selected_users": selected_users,
+            "selected_members": self.get_selected_members_with_permission_labels(),
         }
         return render(request, self.template_name, context)
 
@@ -340,21 +377,25 @@ class ProjectCreateConfirmView(
         return redirect("projects:project_detail", uuid=project.uuid)
 
 
-class ProjectUsersDetailView(
-    ProjectAccessMixin, ProjectLayoutContextMixin, UUIDObjectMixin, DetailView
-):
-    template_name = "projects/user_list.html"
-    context_object_name = "project"
-    model = Project
+class ProjectUsersListView(ExistingProjectMixin, ProjectLayoutContextMixin, TemplateView):
+    template_name = "projects/member_list.html"
     active_project_section = "members"
 
-    def get_queryset(self):
-        return self.get_accessible_projects(
-            Project.objects.prefetch_related(
-                Prefetch(
-                    "user_permissions",
-                    queryset=ProjectUserPermissions.objects.select_related("user"),
+    def get_accessible_projects(self):
+        queryset = super().get_accessible_projects()
+        return queryset.prefetch_related(
+            Prefetch(
+                "memberships",
+                queryset=ProjectMembership.objects.select_related("user")
+                .prefetch_related("permissions__permission")
+                .annotate(
+                    owner_order=Case(
+                        When(user_id=F("project__owner_id"), then=Value(0)),
+                        default=Value(1),
+                        output_field=IntegerField(),
+                    )
                 )
+                .order_by("owner_order", "user__email"),
             )
         )
 
@@ -365,8 +406,8 @@ class ProjectUsersDetailView(
 
 class ProjectDeleteView(ProjectAccessMixin, UUIDObjectMixin, DeleteView):
     """
-    Will need additional checks for user permissions to ensure
-    the user has access to delete the project.
+    View to delete a project. There is no specific permission for deleting a project, it is only
+    accessible to project owners and superusers.
     """
 
     template_name = "projects/delete_confirm.html"
@@ -375,7 +416,10 @@ class ProjectDeleteView(ProjectAccessMixin, UUIDObjectMixin, DeleteView):
     success_url = reverse_lazy("projects:projects_list")
 
     def get_queryset(self):
-        return self.get_accessible_projects(role="admin")
+        queryset = self.get_accessible_projects()
+        if self.request.user.is_superuser:
+            return queryset
+        return queryset.filter(owner=self.request.user)
 
     def form_valid(self, form):
         project = self.object
@@ -406,40 +450,63 @@ class ProjectDeleteView(ProjectAccessMixin, UUIDObjectMixin, DeleteView):
         return response
 
 
-class ProjectAddUsersView(ExistingProjectMixin, ProjectUserSelectionFormView):
-    template_name = "projects/user_add.html"
+class ProjectAddUsersView(
+    ProjectPermissionRequiredMixin, ExistingProjectMixin, ProjectMemberFormBaseView
+):
+    permission_required = ProjectPermission.MANAGE_MEMBERS.permission_name
+    template_name = "projects/member_add.html"
 
     def get_success_url(self):
         return reverse(
-            "projects:project_users_add_confirm",
+            "projects:project_users_add_review",
             kwargs={"uuid": self.get_project().uuid},
         )
 
+    def get_review_url(self):
+        return reverse(
+            "projects:project_users_add_review", kwargs={"uuid": self.get_project().uuid}
+        )
 
-class ProjectAddUsersConfirmView(
+    def get_entry_url(self):
+        return reverse("projects:project_users", kwargs={"uuid": self.get_project().uuid})
+
+    def get_cancel_url(self):
+        return reverse("projects:project_users", kwargs={"uuid": self.get_project().uuid})
+
+
+class ProjectAddUsersReviewView(
+    ProjectPermissionRequiredMixin,
     ProjectMembershipNotificationMixin,
     ExistingProjectMixin,
     ProjectUserSelectionSessionMixin,
     View,
 ):
-    template_name = "projects/user_add_confirm.html"
+    permission_required = ProjectPermission.MANAGE_MEMBERS.permission_name
+    template_name = "projects/member_add_review.html"
 
     def get_selected_users(self):
         return self.get_selected_members()
 
     def get(self, request, *args, **kwargs):
         project = self.get_project()
-        selected_users = list(self.get_selected_users())
-        if not selected_users:
+        if not self.get_selected_members():
             return redirect("projects:project_users_add", uuid=project.uuid)
 
-        context = {"project": project, "selected_users": selected_users}
+        context = {
+            "project": project,
+            "selected_members": self.get_selected_members_with_permission_labels(),
+        }
         return render(request, self.template_name, context)
 
     def post(self, request, *args, **kwargs):
         project = self.get_project()
-        selections = self.get_selected_members()
 
+        remove_oid = request.POST.get("remove_oid")
+        if remove_oid:
+            self.remove_selected_member(remove_oid)
+            return redirect("projects:project_users_add_review", uuid=project.uuid)
+
+        selections = self.get_selected_members()
         if not selections:
             return redirect("projects:project_users_add", uuid=project.uuid)
 
@@ -470,21 +537,78 @@ class ProjectAddUsersConfirmView(
         return redirect("projects:project_users", uuid=project.uuid)
 
 
-class ProjectRemoveUserView(ProjectAccessMixin, ProjectMembershipNotificationMixin, DeleteView):
-    """
-    Will need additional checks for user permissions to ensure
-    the user can remove users from the project.
-    """
+class ProjectMemberEditView(
+    ProjectPermissionRequiredMixin,
+    ExistingProjectMixin,
+    FormView,
+):
+    permission_required = ProjectPermission.MANAGE_MEMBERS.permission_name
+    template_name = "projects/member_edit.html"
+    form_class = ProjectMemberPermissionsForm
 
-    template_name = "projects/user_remove_confirm.html"
+    @cached_property
+    def membership(self):
+        membership = get_object_or_404(
+            self.project.memberships.select_related("user", "project"),
+            pk=self.kwargs["pk"],
+        )
+        if membership.user == self.request.user or membership.user_id == self.project.owner_id:
+            raise PermissionDenied
+        return membership
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["membership"] = self.membership
+        context["success_message"] = self.request.session.pop("success_message", None)
+        return context
+
+    def get_initial(self):
+        initial = super().get_initial()
+        initial["permissions"] = list(
+            self.membership.permissions.values_list("permission__codename", flat=True)
+        )
+        return initial
+
+    def form_valid(self, form):
+        permission_codenames = form.cleaned_data["permissions"]
+        with ProjectService.from_request(self.request) as service:
+            service.update_member_permissions(
+                membership=self.membership,
+                permission_codenames=permission_codenames,
+                updated_by=self.request.user,
+            )
+
+        self.request.session["success_message"] = {
+            "heading": "Permissions updated",
+        }
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse(
+            "projects:project_member_edit",
+            kwargs={"uuid": self.project.uuid, "pk": self.membership.pk},
+        )
+
+
+class ProjectRemoveUserView(
+    ProjectPermissionRequiredMixin,
+    ExistingProjectMixin,
+    ProjectMembershipNotificationMixin,
+    DeleteView,
+):
+    permission_required = ProjectPermission.MANAGE_MEMBERS.permission_name
+    template_name = "projects/member_remove_confirm.html"
     context_object_name = "membership"
-    model = ProjectUserPermissions
+    model = ProjectMembership
 
     def get_object(self, queryset=None):
+        membership_qs = (
+            ProjectMembership.objects.filter(project__in=self.get_accessible_projects())
+            .exclude(project__owner=self.kwargs["user_id"])
+            .select_related("project", "user")
+        )
         return get_object_or_404(
-            ProjectUserPermissions.objects.select_related("project", "user").filter(
-                project__in=self.get_accessible_projects(role="admin")
-            ),
+            membership_qs,
             project__uuid=self.kwargs["uuid"],
             user_id=self.kwargs["user_id"],
         )

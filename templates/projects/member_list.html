@@ -1,0 +1,56 @@
+{% extends "base/project_layout.html" %}
+{% load static %}
+{% load project_permissions %}
+{% block title %}
+  {{ project.name }} members - Justice Data Platform | Ministry of Justice
+{% endblock title %}
+{% block back_link %}
+  <a href="{% url 'projects:projects_list' %}" class="govuk-back-link">Back to projects</a>
+{% endblock back_link %}
+{% block project_main_content %}
+  {% has_project_permission request.user "projects.manage_members" project as can_manage_members %}
+  <div class="govuk-grid-column-two-thirds govuk-!-padding-left-0">
+    <h2 class="govuk-heading-m">Project members</h2>
+  </div>
+  <div class="govuk-grid-column-one-third govuk-!-padding-right-0 govuk-!-text-align-right">
+    {% if can_manage_members %}
+      <a class="govuk-button govuk-button--secondary"
+         href="{% url 'projects:project_users_add' project.uuid %}">Add a member</a>
+    {% endif %}
+  </div>
+  {% if project.memberships.all %}
+    <table class="govuk-table">
+      <thead class="govuk-table__head">
+        <tr class="govuk-table__row">
+          <th scope="col" class="govuk-table__header">Member</th>
+          <th scope="col" class="govuk-table__header">Permissions</th>
+          <th scope="col" class="govuk-table__header">
+            <span class="govuk-visually-hidden">Actions</span>
+          </th>
+        </tr>
+      </thead>
+      <tbody class="govuk-table__body">
+        {% for membership in project.memberships.all %}
+          <tr class="govuk-table__row">
+            <td class="govuk-table__cell">
+              <p class="govuk-body govuk-!-font-weight-bold govuk-!-margin-bottom-2">{{ membership.user.full_name }}</p>
+              <p class="govuk-body-s secondary-text govuk-!-margin-bottom-2">{{ membership.user.email }}</p>
+              {% if membership.user == project.owner %}
+                <p class="govuk-body-s govuk-!-margin-bottom-2"><span class="project-owner">Project owner</span></p>
+              {% endif %}
+            </td>
+            <td class="govuk-table__cell">{{ membership.permissions_display_string }}</td>
+            <td class="govuk-table__cell govuk-!-text-align-right">
+              {% if can_manage_members and membership.user != request.user and membership.user != project.owner %}
+                <a href="{% url 'projects:project_member_edit' project.uuid membership.pk %}"
+                   class="govuk-link">Manage access<span class="govuk-visually-hidden"> {{ membership.user.full_name }}</span></a>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="govuk-body">No users currently have access to this project.</p>
+  {% endif %}
+{% endblock project_main_content %}

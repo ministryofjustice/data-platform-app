@@ -1,6 +1,7 @@
 import uuid
 from unittest.mock import patch
 
+import pytest
 from django.core.exceptions import ImproperlyConfigured
 from django.urls import reverse
 from model_bakery import baker
@@ -8,25 +9,26 @@ from pytest_django.asserts import assertContains, assertInHTML, assertNotContain
 
 from ai_gateway.exceptions import AIGatewayAPIError
 from projects.graph import EntraAuthenticationError, EntraRequestError
-from projects.models import Project, ProjectUserPermissions
+from projects.models import Project, ProjectMembership, ProjectPermission
 from projects.services import ProjectNotificationError
 from users.models import User
 
 
-def member_selection(user):
+def member_selection(user, permissions=None):
     """Build a session/POST selection payload for ``user``'s Entra identity."""
     return {
         "oid": str(user.oid),
         "email": user.email,
         "display_name": user.full_name,
+        "permissions": permissions or [],
     }
 
 
 class TestDetailView:
     """Tests for the ProjectDetailView at '/projects/<uuid>/'."""
 
-    def test_detail_page_renders(self, client, user, project):
-        client.force_login(user)
+    def test_detail_page_renders(self, client, project, project_member):
+        client.force_login(project_member)
         response = client.get(reverse("projects:project_detail", args=[project.uuid]))
         current_overview_link = (
             f'<a href="{reverse("projects:project_detail", args=[project.uuid])}" '
@@ -52,11 +54,11 @@ class TestDetailView:
         assert response.status_code == 200
 
 
-class TestProjectUsersDetailView:
-    """Tests for the ProjectUsersDetailView at '/projects/<uuid>/users/'"""
+class TestProjectUsersListView:
+    """Tests for the ProjectUsersListView at '/projects/<uuid>/users/'"""
 
-    def test_users_page_renders_with_members_active(self, client, user, project):
-        client.force_login(user)
+    def test_users_page_renders_with_members_active(self, client, project, project_member):
+        client.force_login(project_member)
         response = client.get(reverse("projects:project_users", args=[project.uuid]))
         current_members_link = (
             f'<a href="{reverse("projects:project_users", args=[project.uuid])}" '
@@ -64,7 +66,7 @@ class TestProjectUsersDetailView:
         )
 
         assert response.status_code == 200
-        assert "projects/user_list.html" in [t.name for t in response.templates]
+        assert "projects/member_list.html" in [t.name for t in response.templates]
         assertContains(response, 'aria-current="location"', count=1)
         assertInHTML(current_members_link, response.content.decode())
 
@@ -74,6 +76,23 @@ class TestProjectUsersDetailView:
         response = client.get(reverse("projects:project_users", args=[project.uuid]))
 
         assert response.status_code == 200
+
+    def test_users_page_does_not_render_for_non_member(self, client, project, non_project_user):
+        client.force_login(non_project_user)
+        response = client.get(reverse("projects:project_users", args=[project.uuid]))
+
+        assert response.status_code == 404
+
+    def test_owner_listed_first(self, client, project, project_owner, project_member):
+        client.force_login(project_owner)
+        response = client.get(reverse("projects:project_users", args=[project.uuid]))
+
+        assert response.status_code == 200
+        assert project_owner.email != project_member.email
+        content = response.content.decode()
+        owner_index = content.find(project_owner.email)
+        member_index = content.find(project_member.email)
+        assert owner_index < member_index
 
 
 class TestProjectDeleteView:
@@ -92,27 +111,61 @@ class TestProjectDeleteView:
 
         assert response.status_code == 404
 
-    def test_delete_project(self, client, user, project, key_service):
-        client.force_login(user)
-        response = client.post(reverse("projects:project_delete", args=[project.uuid]))
+    def test_project_owner_can_delete_project(self, client, project, project_owner, key_service):
+        client.force_login(project_owner)
+        response = client.get(reverse("projects:project_delete", args=[project.uuid]))
+        assert response.status_code == 200
 
+        response = client.post(reverse("projects:project_delete", args=[project.uuid]))
         assert response.status_code == 302
-        assert not Project.objects.filter(id=project.id).exists()
+        assert Project.objects.filter(id=project.id).exists() is False
+        # no keys to delete
+        key_service.bulk_delete_keys.assert_not_called()
+        key_service.delete_team.assert_not_called()
+
+    def test_superuser_can_delete_project(self, client, project, superuser, key_service):
+        client.force_login(superuser)
+        response = client.get(reverse("projects:project_delete", args=[project.uuid]))
+        assert response.status_code == 200
+
+        response = client.post(reverse("projects:project_delete", args=[project.uuid]))
+        assert response.status_code == 302
+        assert Project.objects.filter(id=project.id).exists() is False
+        # no keys to delete
+        key_service.bulk_delete_keys.assert_not_called()
+        key_service.delete_team.assert_not_called()
+
+    def test_project_member_cannot_delete_project(
+        self, client, project, project_member, key_service
+    ):
+        client.force_login(project_member)
+        response = client.get(reverse("projects:project_delete", args=[project.uuid]))
+        assert response.status_code == 404
+
+        response = client.post(reverse("projects:project_delete", args=[project.uuid]))
+        assert response.status_code == 404
+        assert Project.objects.filter(id=project.id).exists()
         key_service.bulk_delete_keys.assert_not_called()
         key_service.delete_team.assert_not_called()
 
     def test_delete_project_deletes_gateway_keys_and_team(
-        self, client, user, project, key_service
+        self, client, project, project_owner, key_service
     ):
         baker.make("ai_gateway.Team", project=project, litellm_team_id="team-123")
         baker.make(
-            "ai_gateway.Key", project=project, litellm_secret="sk-secret-1", created_by=user
+            "ai_gateway.Key",
+            project=project,
+            litellm_secret="sk-secret-1",
+            created_by=project_owner,
         )
         baker.make(
-            "ai_gateway.Key", project=project, litellm_secret="sk-secret-2", created_by=user
+            "ai_gateway.Key",
+            project=project,
+            litellm_secret="sk-secret-2",
+            created_by=project_owner,
         )
 
-        client.force_login(user)
+        client.force_login(project_owner)
         response = client.post(reverse("projects:project_delete", args=[project.uuid]))
 
         assert response.status_code == 302
@@ -124,15 +177,18 @@ class TestProjectDeleteView:
         assert sorted(deleted_keys) == ["sk-secret-1", "sk-secret-2"]
 
     def test_gateway_error_on_bulk_delete_keys_aborts_project_deletion(
-        self, client, user, project, key_service
+        self, client, project, project_owner, key_service
     ):
         baker.make("ai_gateway.Team", project=project, litellm_team_id="team-123")
         baker.make(
-            "ai_gateway.Key", project=project, litellm_secret="sk-secret-1", created_by=user
+            "ai_gateway.Key",
+            project=project,
+            litellm_secret="sk-secret-1",
+            created_by=project_owner,
         )
         key_service.bulk_delete_keys.side_effect = AIGatewayAPIError(500, "gateway error")
 
-        client.force_login(user)
+        client.force_login(project_owner)
         response = client.post(reverse("projects:project_delete", args=[project.uuid]))
 
         assert response.status_code == 302
@@ -141,15 +197,18 @@ class TestProjectDeleteView:
         key_service.delete_team.assert_not_called()
 
     def test_gateway_error_on_delete_team_aborts_project_deletion(
-        self, client, user, project, key_service
+        self, client, project, project_owner, key_service
     ):
         baker.make("ai_gateway.Team", project=project, litellm_team_id="team-123")
         baker.make(
-            "ai_gateway.Key", project=project, litellm_secret="sk-secret-1", created_by=user
+            "ai_gateway.Key",
+            project=project,
+            litellm_secret="sk-secret-1",
+            created_by=project_owner,
         )
         key_service.delete_team.side_effect = AIGatewayAPIError(500, "gateway error")
 
-        client.force_login(user)
+        client.force_login(project_owner)
         response = client.post(reverse("projects:project_delete", args=[project.uuid]))
 
         assert response.status_code == 302
@@ -160,14 +219,18 @@ class TestProjectDeleteView:
 class TestProjectRemoveUserView:
     """Tests for the ProjectRemoveUserView at '/projects/<uuid>/users/<user_id>/remove/'."""
 
-    def test_remove_user_page_renders(self, client, user, project):
-        client.force_login(user)
+    @pytest.fixture(autouse=True)
+    def _grant_manage_members(self, project, project_owner, grant_project_permission):
+        grant_project_permission(project, project_owner, ProjectPermission.MANAGE_MEMBERS)
+
+    def test_remove_user_page_renders(self, client, project, project_owner, project_member):
+        client.force_login(project_owner)
         response = client.get(
-            reverse("projects:project_user_remove", args=[project.uuid, user.id])
+            reverse("projects:project_user_remove", args=[project.uuid, project_member.id])
         )
 
         assert response.status_code == 200
-        assert "projects/user_remove_confirm.html" in [t.name for t in response.templates]
+        assert "projects/member_remove_confirm.html" in [t.name for t in response.templates]
 
     def test_remove_user_page_fail(self, client, non_project_user, project):
         client.force_login(non_project_user)
@@ -177,36 +240,28 @@ class TestProjectRemoveUserView:
 
         assert response.status_code == 404
 
-    def test_project_member_cannot_remove_another_user(self, client, non_project_user, project):
-        ProjectUserPermissions.objects.create(
-            project=project,
-            user=non_project_user,
-            role="member",
-        )
-        other_user = baker.make("users.User")
-        membership = ProjectUserPermissions.objects.create(
-            project=project,
-            user=other_user,
-            role="member",
-        )
-        client.force_login(non_project_user)
+    def test_remove_user_page_denied_without_manage_members_permission(
+        self, client, project, project_member_without_permissions
+    ):
+        client.force_login(project_member_without_permissions)
 
-        response = client.post(
-            reverse("projects:project_user_remove", args=[project.uuid, other_user.id])
+        response = client.get(
+            reverse(
+                "projects:project_user_remove",
+                args=[project.uuid, project_member_without_permissions.id],
+            )
         )
 
-        assert response.status_code == 404
-        assert ProjectUserPermissions.objects.filter(pk=membership.pk).exists()
+        assert response.status_code == 403
 
     def test_remove_other_user_redirects_to_project_users(
         self, client, user, project, project_membership_notification_service
     ):
         other_user = baker.make("users.User", first_name="Jane", last_name="Doe")
         baker.make(
-            "projects.ProjectUserPermissions",
+            "projects.ProjectMembership",
             project=project,
             user=other_user,
-            role="member",
         )
         client.force_login(user)
 
@@ -216,7 +271,7 @@ class TestProjectRemoveUserView:
 
         assert response.status_code == 302
         assert response.url == reverse("projects:project_users", args=[project.uuid])
-        assert not ProjectUserPermissions.objects.filter(project=project, user=other_user).exists()
+        assert not ProjectMembership.objects.filter(project=project, user=other_user).exists()
         project_membership_notification_service.send_member_removed_email.assert_called_once_with(
             project=project,
             member=other_user,
@@ -224,189 +279,269 @@ class TestProjectRemoveUserView:
         )
 
     def test_remove_self_redirects_to_projects_list(
-        self, client, user, project, project_membership_notification_service
-    ):
-        client.force_login(user)
-
-        response = client.post(
-            reverse("projects:project_user_remove", args=[project.uuid, user.id])
-        )
-
-        assert response.status_code == 302
-        assert response.url == reverse("projects:projects_list")
-        assert not ProjectUserPermissions.objects.filter(project=project, user=user).exists()
-        project_membership_notification_service.send_member_removed_email.assert_called_once_with(
-            project=project,
-            member=user,
-            removed_by=user,
-        )
-
-    def test_remove_user_continues_when_notification_fails(
         self,
         client,
         user,
         project,
+        project_owner,
+        project_member,
+        project_membership_notification_service,
+        grant_project_permission,
+    ):
+        grant_project_permission(
+            project,
+            project_member,
+            ProjectPermission.MANAGE_MEMBERS,
+        )
+        client.force_login(project_member)
+
+        response = client.post(
+            reverse("projects:project_user_remove", args=[project.uuid, project_member.id])
+        )
+
+        assert response.status_code == 302
+        assert response.url == reverse("projects:projects_list")
+        assert not ProjectMembership.objects.filter(project=project, user=project_member).exists()
+        project_membership_notification_service.send_member_removed_email.assert_called_once_with(
+            project=project,
+            member=project_member,
+            removed_by=project_member,
+        )
+
+    def test_remove_member_continues_when_notification_fails(
+        self,
+        client,
+        project,
+        project_owner,
+        project_member,
         project_membership_notification_service,
     ):
         project_membership_notification_service.send_member_removed_email.side_effect = (
             ProjectNotificationError("Notify failed")
         )
 
-        client.force_login(user)
+        client.force_login(project_owner)
         with patch("projects.views.sentry_sdk.capture_exception") as capture_exception:
             response = client.post(
-                reverse("projects:project_user_remove", args=[project.uuid, user.id])
+                reverse("projects:project_user_remove", args=[project.uuid, project_member.id])
             )
 
         assert response.status_code == 302
-        assert response.url == reverse("projects:projects_list")
-        assert not ProjectUserPermissions.objects.filter(project=project, user=user).exists()
+        assert response.url == reverse("projects:project_users", args=[project.uuid])
+        assert not ProjectMembership.objects.filter(project=project, user=project_member).exists()
         capture_exception.assert_called_once()
+
+    def test_removing_owner_returns_404(
+        self, client, project, project_owner, project_member, grant_project_permission
+    ):
+        grant_project_permission(
+            project,
+            project_member,
+            ProjectPermission.MANAGE_MEMBERS,
+        )
+        client.force_login(project_member)
+
+        response = client.post(
+            reverse("projects:project_user_remove", args=[project.uuid, project_owner.id])
+        )
+
+        assert response.status_code == 404
 
 
 class TestProjectAddUsersFlow:
-    """Tests for the ProjectAddUsersView and ProjectAddUsersConfirmView."""
+    """Tests for the ProjectAddUsersView and ProjectAddUsersReviewView."""
 
-    def test_add_users_page_renders(self, client, user, project):
-        client.force_login(user)
+    @pytest.fixture(autouse=True)
+    def _grant_manage_members(self, project, project_owner, grant_project_permission):
+        grant_project_permission(project, project_owner, ProjectPermission.MANAGE_MEMBERS)
+
+    def test_add_member_page_renders(self, client, project, project_owner):
+        client.force_login(project_owner)
 
         response = client.get(reverse("projects:project_users_add", args=[project.uuid]))
 
         assert response.status_code == 200
-        assert "projects/user_add.html" in [t.name for t in response.templates]
+        assert "projects/member_add.html" in [t.name for t in response.templates]
 
-    def test_add_users_page_fail(self, client, non_project_user, project):
+    def test_add_member_page_fail(self, client, non_project_user, project):
         client.force_login(non_project_user)
 
         response = client.get(reverse("projects:project_users_add", args=[project.uuid]))
 
         assert response.status_code == 404
 
-    def test_add_users_page_context_contains_formset(self, client, user, project):
-        client.force_login(user)
+    def test_add_users_page_denied_without_manage_members_permission(
+        self, client, project, project_member_without_permissions
+    ):
+        client.force_login(project_member_without_permissions)
+
+        response = client.get(reverse("projects:project_users_add", args=[project.uuid]))
+
+        assert response.status_code == 403
+
+    def test_review_page_denied_without_manage_members_permission(
+        self, client, project, project_member_without_permissions
+    ):
+        client.force_login(project_member_without_permissions)
+
+        response = client.get(reverse("projects:project_users_add_review", args=[project.uuid]))
+
+        assert response.status_code == 403
+
+    def test_add_member_page_context_contains_form(self, client, project, project_owner):
+        client.force_login(project_owner)
 
         response = client.get(reverse("projects:project_users_add", args=[project.uuid]))
 
         assert response.status_code == 200
-        assert "formset" in response.context
+        assert "form" in response.context
 
-    def test_add_users_page_repopulates_selected_users_from_session(self, client, user, project):
-        selected_user_one = baker.make("users.User", email="member.five@example.com")
-        selected_user_two = baker.make("users.User", email="member.six@example.com")
-        client.force_login(user)
+    def test_add_member_page_prefills_when_editing(self, client, project, project_owner):
+        selected_user = baker.make("users.User", email="editable.member@example.com")
+        client.force_login(project_owner)
 
         session = client.session
         session["project_user_add_selection"] = {
             f"project:{project.id}": [
-                member_selection(selected_user_one),
-                member_selection(selected_user_two),
+                member_selection(selected_user, permissions=["manage_api_keys"])
             ]
         }
         session.save()
 
-        response = client.get(reverse("projects:project_users_add", args=[project.uuid]))
+        response = client.get(
+            reverse("projects:project_users_add", args=[project.uuid]),
+            {"edit": str(selected_user.oid)},
+        )
 
         assert response.status_code == 200
-        formset = response.context["formset"]
-        assert formset.total_form_count() == 2
-        assert formset.forms[0].initial["oid"] == str(selected_user_one.oid)
-        assert formset.forms[1].initial["oid"] == str(selected_user_two.oid)
+        form = response.context["form"]
+        assert form.initial["oid"] == str(selected_user.oid)
+        assert form.initial["permissions"] == ["manage_api_keys"]
 
-    def test_add_users_page_submits_and_redirects_to_confirm(self, client, user, project):
-
+    def test_add_member_submits_and_redirects_to_review(self, client, project, project_owner):
         user_to_add = baker.make("users.User", email="member.one@example.com")
-        client.force_login(user)
+        client.force_login(project_owner)
 
         response = client.post(
             reverse("projects:project_users_add", args=[project.uuid]),
             data={
-                "members-TOTAL_FORMS": "1",
-                "members-INITIAL_FORMS": "0",
-                "members-MIN_NUM_FORMS": "0",
-                "members-MAX_NUM_FORMS": "1000",
-                "members-0-oid": str(user_to_add.oid),
+                "oid": str(user_to_add.oid),
+                "email": user_to_add.email,
+                "permissions": ["manage_members"],
             },
         )
 
         assert response.status_code == 302
-        assert response.url == reverse("projects:project_users_add_confirm", args=[project.uuid])
+        assert response.url == reverse("projects:project_users_add_review", args=[project.uuid])
 
-    def test_add_users_page_deduplicates_repeated_user_submission(self, client, user, project):
+        session = client.session
+        stored = session["project_user_add_selection"][f"project:{project.id}"]
+        assert stored == [member_selection(user_to_add, permissions=["manage_members"])]
 
-        user_to_add = baker.make("users.User", email="member.two@example.com")
-        client.force_login(user)
+    def test_add_member_rejects_duplicate_already_selected(self, client, project, project_owner):
+        already_selected = baker.make("users.User", email="member.two@example.com")
+        client.force_login(project_owner)
 
-        response = client.post(
-            reverse("projects:project_users_add", args=[project.uuid]),
-            data={
-                "members-TOTAL_FORMS": "2",
-                "members-INITIAL_FORMS": "0",
-                "members-MIN_NUM_FORMS": "0",
-                "members-MAX_NUM_FORMS": "1000",
-                "members-0-oid": str(user_to_add.oid),
-                "members-1-oid": str(user_to_add.oid),
-            },
-        )
-
-        assert response.status_code == 302
-        assert response.url == reverse("projects:project_users_add_confirm", args=[project.uuid])
-
-    def test_confirm_page_renders_selected_users(self, client, user, project):
-
-        selected_user = baker.make("users.User", email="member.three@example.com")
-        client.force_login(user)
         session = client.session
         session["project_user_add_selection"] = {
-            f"project:{project.id}": [member_selection(selected_user)]
+            f"project:{project.id}": [member_selection(already_selected)]
         }
         session.save()
 
-        response = client.get(reverse("projects:project_users_add_confirm", args=[project.uuid]))
+        response = client.post(
+            reverse("projects:project_users_add", args=[project.uuid]),
+            data={"oid": str(already_selected.oid)},
+        )
 
         assert response.status_code == 200
-        assert "projects/user_add_confirm.html" in [t.name for t in response.templates]
-        assert selected_user.email in response.content.decode()
+        assert "This person has already been added" in response.content.decode()
 
-    def test_confirm_adds_users_to_project(
+    def test_review_page_renders_selected_members(self, client, project, project_owner):
+        selected_user = baker.make("users.User", email="member.three@example.com")
+        client.force_login(project_owner)
+        session = client.session
+        session["project_user_add_selection"] = {
+            f"project:{project.id}": [
+                member_selection(selected_user, permissions=["manage_members"])
+            ]
+        }
+        session.save()
+
+        response = client.get(reverse("projects:project_users_add_review", args=[project.uuid]))
+
+        assert response.status_code == 200
+        assert "projects/member_add_review.html" in [t.name for t in response.templates]
+        assert selected_user.email in response.content.decode()
+        assert "Manage members" in response.content.decode()
+
+    def test_review_page_redirects_to_add_member_when_empty(self, client, project, project_owner):
+        client.force_login(project_owner)
+
+        response = client.get(reverse("projects:project_users_add_review", args=[project.uuid]))
+
+        assert response.status_code == 302
+        assert response.url == reverse("projects:project_users_add", args=[project.uuid])
+
+    def test_review_removes_member(self, client, project, project_owner):
+        keep_user = baker.make("users.User", email="keep.member@example.com")
+        remove_user = baker.make("users.User", email="remove.member@example.com")
+        client.force_login(project_owner)
+        session = client.session
+        session["project_user_add_selection"] = {
+            f"project:{project.id}": [member_selection(keep_user), member_selection(remove_user)]
+        }
+        session.save()
+
+        response = client.post(
+            reverse("projects:project_users_add_review", args=[project.uuid]),
+            data={"remove_oid": str(remove_user.oid)},
+        )
+
+        assert response.status_code == 302
+        assert response.url == reverse("projects:project_users_add_review", args=[project.uuid])
+        session = client.session
+        stored = session["project_user_add_selection"][f"project:{project.id}"]
+        assert stored == [member_selection(keep_user)]
+
+    def test_review_continue_adds_users_to_project(
         self,
         client,
         django_capture_on_commit_callbacks,
-        user,
+        project_owner,
         project,
         project_membership_notification_service,
     ):
 
         selected_user = baker.make("users.User", email="member.four@example.com")
-        client.force_login(user)
+        client.force_login(project_owner)
         session = client.session
         session["project_user_add_selection"] = {
-            f"project:{project.id}": [member_selection(selected_user)]
+            f"project:{project.id}": [
+                member_selection(selected_user, permissions=["manage_api_keys"])
+            ]
         }
         session.save()
 
         with django_capture_on_commit_callbacks(execute=True):
             response = client.post(
-                reverse("projects:project_users_add_confirm", args=[project.uuid])
+                reverse("projects:project_users_add_review", args=[project.uuid])
             )
 
         assert response.status_code == 302
         assert response.url == reverse("projects:project_users", args=[project.uuid])
-        assert ProjectUserPermissions.objects.filter(
-            project=project,
-            user=selected_user,
-            role="admin",
-        ).exists()
+        membership = ProjectMembership.objects.get(project=project, user=selected_user)
+        assert membership.permissions.filter(permission__codename="manage_api_keys").exists()
         project_membership_notification_service.send_member_added_email.assert_called_once_with(
             project=project,
             member=selected_user,
-            added_by=user,
+            added_by=project_owner,
         )
 
-    def test_confirm_adds_users_continues_when_notification_fails(
+    def test_review_continue_continues_when_notification_fails(
         self,
         client,
         django_capture_on_commit_callbacks,
-        user,
+        project_owner,
         project,
         project_membership_notification_service,
     ):
@@ -415,7 +550,7 @@ class TestProjectAddUsersFlow:
         project_membership_notification_service.send_member_added_email.side_effect = (
             ProjectNotificationError("Notify failed")
         )
-        client.force_login(user)
+        client.force_login(project_owner)
         session = client.session
         session["project_user_add_selection"] = {
             f"project:{project.id}": [member_selection(selected_user)]
@@ -427,28 +562,27 @@ class TestProjectAddUsersFlow:
             django_capture_on_commit_callbacks(execute=True),
         ):
             response = client.post(
-                reverse("projects:project_users_add_confirm", args=[project.uuid])
+                reverse("projects:project_users_add_review", args=[project.uuid])
             )
 
         assert response.status_code == 302
         assert response.url == reverse("projects:project_users", args=[project.uuid])
-        assert ProjectUserPermissions.objects.filter(
+        assert ProjectMembership.objects.filter(
             project=project,
             user=selected_user,
-            role="admin",
         ).exists()
         capture_exception.assert_called_once()
 
-    def test_confirm_adds_users_captures_misconfigured_notification_service(
+    def test_review_continue_captures_misconfigured_notification_service(
         self,
         client,
         django_capture_on_commit_callbacks,
-        user,
+        project_owner,
         project,
     ):
 
         selected_user = baker.make("users.User", email="member.config.fail@example.com")
-        client.force_login(user)
+        client.force_login(project_owner)
         session = client.session
         session["project_user_add_selection"] = {
             f"project:{project.id}": [member_selection(selected_user)]
@@ -464,45 +598,46 @@ class TestProjectAddUsersFlow:
             django_capture_on_commit_callbacks(execute=True),
         ):
             response = client.post(
-                reverse("projects:project_users_add_confirm", args=[project.uuid])
+                reverse("projects:project_users_add_review", args=[project.uuid])
             )
 
         assert response.status_code == 302
         assert response.url == reverse("projects:project_users", args=[project.uuid])
-        assert ProjectUserPermissions.objects.filter(
+        assert ProjectMembership.objects.filter(
             project=project,
             user=selected_user,
-            role="admin",
         ).exists()
         capture_exception.assert_called_once()
 
-    def test_confirm_adds_users_records_membership_history_with_user(self, client, user, project):
+    def test_review_continue_records_membership_history_with_user(
+        self, client, project, project_owner
+    ):
         """Regression: bulk_create_with_history must record history_user for added memberships."""
         selected_user = baker.make("users.User", email="history.add@example.com")
-        client.force_login(user)
+        client.force_login(project_owner)
         session = client.session
         session["project_user_add_selection"] = {
             f"project:{project.id}": [member_selection(selected_user)]
         }
         session.save()
 
-        client.post(reverse("projects:project_users_add_confirm", args=[project.uuid]))
+        client.post(reverse("projects:project_users_add_review", args=[project.uuid]))
 
-        membership = ProjectUserPermissions.objects.get(project=project, user=selected_user)
+        membership = ProjectMembership.objects.get(project=project, user=selected_user)
         historical = membership.history.filter(history_type="+")
         assert historical.exists()
-        assert historical.first().history_user == user
+        assert historical.first().history_user == project_owner
 
-    def test_confirm_adds_new_entra_user_creates_stub_account(
+    def test_review_continue_adds_new_entra_user_creates_stub_account(
         self,
         client,
         django_capture_on_commit_callbacks,
-        user,
+        project_owner,
         project,
         project_membership_notification_service,
     ):
         new_oid = str(uuid.uuid4())
-        client.force_login(user)
+        client.force_login(project_owner)
         session = client.session
         session["project_user_add_selection"] = {
             f"project:{project.id}": [
@@ -510,6 +645,7 @@ class TestProjectAddUsersFlow:
                     "oid": new_oid,
                     "email": "new.hire@example.com",
                     "display_name": "New Hire",
+                    "permissions": [],
                 }
             ]
         }
@@ -529,7 +665,7 @@ class TestProjectAddUsersFlow:
         ):
             from_request.return_value.get_user.return_value = graph_user
             response = client.post(
-                reverse("projects:project_users_add_confirm", args=[project.uuid])
+                reverse("projects:project_users_add_review", args=[project.uuid])
             )
 
         assert response.status_code == 302
@@ -538,19 +674,20 @@ class TestProjectAddUsersFlow:
         assert created_user.email == "new.hire@example.com"
         assert created_user.first_name == "New"
         assert created_user.last_name == "Hire"
-        assert ProjectUserPermissions.objects.filter(
+        assert ProjectMembership.objects.filter(
             project=project,
             user=created_user,
-            role="admin",
         ).exists()
 
-    def test_confirm_add_redirects_when_entra_auth_missing(self, client, user, project):
+    def test_review_continue_redirects_when_entra_auth_missing(
+        self, client, project, project_owner
+    ):
         new_oid = str(uuid.uuid4())
-        client.force_login(user)
+        client.force_login(project_owner)
         session = client.session
         session["project_user_add_selection"] = {
             f"project:{project.id}": [
-                {"oid": new_oid, "email": "x@example.com", "display_name": "X"}
+                {"oid": new_oid, "email": "x@example.com", "display_name": "X", "permissions": []}
             ]
         }
         session.save()
@@ -558,7 +695,7 @@ class TestProjectAddUsersFlow:
         with patch("projects.services.MicrosoftGraphClient.from_request") as from_request:
             from_request.side_effect = EntraAuthenticationError("no token")
             response = client.post(
-                reverse("projects:project_users_add_confirm", args=[project.uuid])
+                reverse("projects:project_users_add_review", args=[project.uuid])
             )
 
         assert response.status_code == 302
@@ -566,13 +703,15 @@ class TestProjectAddUsersFlow:
         assert not User.objects.filter(oid=new_oid).exists()
         assert "error_message" in client.session
 
-    def test_confirm_add_redirects_when_entra_lookup_fails(self, client, user, project):
+    def test_review_continue_redirects_when_entra_lookup_fails(
+        self, client, project, project_owner
+    ):
         new_oid = str(uuid.uuid4())
-        client.force_login(user)
+        client.force_login(project_owner)
         session = client.session
         session["project_user_add_selection"] = {
             f"project:{project.id}": [
-                {"oid": new_oid, "email": "x@example.com", "display_name": "X"}
+                {"oid": new_oid, "email": "x@example.com", "display_name": "X", "permissions": []}
             ]
         }
         session.save()
@@ -583,13 +722,124 @@ class TestProjectAddUsersFlow:
         ):
             from_request.return_value.get_user.side_effect = EntraRequestError("boom")
             response = client.post(
-                reverse("projects:project_users_add_confirm", args=[project.uuid])
+                reverse("projects:project_users_add_review", args=[project.uuid])
             )
 
         assert response.status_code == 302
         assert response.url == reverse("projects:project_users_add", args=[project.uuid])
         assert not User.objects.filter(oid=new_oid).exists()
         capture_exception.assert_called_once()
+
+
+class TestProjectMemberEditView:
+    def test_finds_member(self, client, project, project_owner, project_member):
+        client.force_login(project_owner)
+        membership = ProjectMembership.objects.get(
+            project=project,
+            user=project_member,
+        )
+        response = client.get(
+            reverse("projects:project_member_edit", args=[project.uuid, membership.pk])
+        )
+
+        assert response.status_code == 200
+        assert "membership" in response.context
+        assert response.context["membership"] == membership
+
+    def test_member_without_permission(self, client, project, project_member):
+        client.force_login(project_member)
+        membership = ProjectMembership.objects.get(
+            project=project,
+            user=project_member,
+        )
+        response = client.get(
+            reverse("projects:project_member_edit", args=[project.uuid, membership.pk])
+        )
+
+        assert response.status_code == 403
+
+    def test_other_project_member_not_found(
+        self, client, project, project_owner, non_project_user
+    ):
+        client.force_login(project_owner)
+        other_project = baker.make("projects.Project")
+        membership = ProjectMembership.objects.create(
+            project=other_project,
+            user=non_project_user,
+        )
+        response = client.get(
+            reverse("projects:project_member_edit", args=[project.uuid, membership.pk])
+        )
+
+        assert response.status_code == 404
+
+    def test_valid_form_updates_permissions_and_redirects(
+        self, client, project, project_owner, project_member, project_service
+    ):
+        client.force_login(project_owner)
+        membership = ProjectMembership.objects.get(project=project, user=project_member)
+        response = client.post(
+            reverse("projects:project_member_edit", args=[project.uuid, membership.pk]),
+            data={"permissions": [ProjectPermission.MANAGE_API_KEYS]},
+        )
+
+        assert response.status_code == 302
+        assert response.url == reverse(
+            "projects:project_member_edit", args=[project.uuid, membership.pk]
+        )
+        assert client.session["success_message"] == {"heading": "Permissions updated"}
+        project_service.update_member_permissions.assert_called_once_with(
+            membership=membership,
+            permission_codenames=[ProjectPermission.MANAGE_API_KEYS],
+            updated_by=project_owner,
+        )
+
+    def test_invalid_form_does_not_update_permissions(
+        self, client, project, project_owner, project_member, project_service
+    ):
+        client.force_login(project_owner)
+        membership = ProjectMembership.objects.get(project=project, user=project_member)
+
+        response = client.post(
+            reverse("projects:project_member_edit", args=[project.uuid, membership.pk]),
+            data={"permissions": []},
+        )
+
+        assert response.status_code == 200
+        assert "Choose at least one permission for this member" in response.content.decode()
+        project_service.__enter__.assert_not_called()
+        project_service.update_member_permissions.assert_not_called()
+
+    def test_cannot_edit_own_permissions(self, client, project, project_owner):
+        client.force_login(project_owner)
+        membership = ProjectMembership.objects.get(project=project, user=project_owner)
+
+        response = client.post(
+            reverse("projects:project_member_edit", args=[project.uuid, membership.pk]),
+            data={"permissions": [ProjectPermission.MANAGE_API_KEYS]},
+        )
+
+        assert response.status_code == 403
+
+        membership.refresh_from_db()
+        assert set(membership.permissions.values_list("permission__codename", flat=True)) == {
+            ProjectPermission.MANAGE_API_KEYS,
+            ProjectPermission.MANAGE_MEMBERS,
+        }
+
+    def test_cannot_edit_project_owner_permissions(
+        self, client, project, project_owner, project_member, grant_project_permission
+    ):
+        grant_project_permission(project, project_member, ProjectPermission.MANAGE_MEMBERS)
+        client.force_login(project_member)
+        membership = ProjectMembership.objects.get(project=project, user=project_owner)
+
+        response = client.post(
+            reverse("projects:project_member_edit", args=[project.uuid, membership.pk]),
+            data={"permissions": [ProjectPermission.MANAGE_API_KEYS]},
+        )
+
+        assert response.status_code == 403
 
 
 class TestProjectsListView:
@@ -677,9 +927,8 @@ class TestProjectCreateFlow:
         response = client.get(reverse("projects:project_create_add_users"))
 
         assert response.status_code == 200
-        assert "projects/create_user_add.html" in [t.name for t in response.templates]
-        assert "decision_form" in response.context
-        assert "formset" in response.context
+        assert "projects/create_member_add.html" in [t.name for t in response.templates]
+        assert "form" in response.context
 
     def test_create_add_users_shows_decision_error_when_missing(self, client, user):
         client.force_login(user)
@@ -710,31 +959,16 @@ class TestProjectCreateFlow:
         session = client.session
         assert session["project_user_add_selection"] == {}
 
-    def test_create_add_users_yes_submits_and_stores_selection(self, client, user):
-        selected_user = baker.make("users.User", email="create.member@example.com")
+    def test_create_add_users_yes_redirects_to_add_member(self, client, user):
         client.force_login(user)
 
         response = client.post(
             reverse("projects:project_create_add_users"),
-            data={
-                "add_user": "yes",
-                "members-TOTAL_FORMS": "1",
-                "members-INITIAL_FORMS": "0",
-                "members-MIN_NUM_FORMS": "0",
-                "members-MAX_NUM_FORMS": "1000",
-                "members-0-oid": str(selected_user.oid),
-                "members-0-email": selected_user.email,
-                "members-0-display_name": selected_user.full_name,
-            },
+            data={"add_user": "yes"},
         )
 
         assert response.status_code == 302
-        assert response.url == reverse("projects:project_create_confirm")
-
-        session = client.session
-        assert session["project_user_add_selection"]["project_create_user_add"] == [
-            member_selection(selected_user)
-        ]
+        assert response.url == reverse("projects:project_create_add_member")
 
     def test_create_add_users_prefills_yes_when_selection_exists(self, client, user):
         selected_user = baker.make("users.User", email="existing.selection@example.com")
@@ -749,8 +983,78 @@ class TestProjectCreateFlow:
         response = client.get(reverse("projects:project_create_add_users"))
 
         assert response.status_code == 200
-        decision_form = response.context["decision_form"]
-        assert decision_form["add_user"].value() == "yes"
+        assert response.context["form"]["add_user"].value() == "yes"
+
+    def test_create_add_member_page_renders(self, client, user):
+        client.force_login(user)
+
+        response = client.get(reverse("projects:project_create_add_member"))
+
+        assert response.status_code == 200
+        assert "projects/member_add.html" in [t.name for t in response.templates]
+
+    def test_create_add_member_submits_and_redirects_to_review(self, client, user):
+        selected_user = baker.make("users.User", email="create.member@example.com")
+        client.force_login(user)
+
+        response = client.post(
+            reverse("projects:project_create_add_member"),
+            data={
+                "oid": str(selected_user.oid),
+                "email": selected_user.email,
+                "display_name": selected_user.full_name,
+                "permissions": ["manage_members"],
+            },
+        )
+
+        assert response.status_code == 302
+        assert response.url == reverse("projects:project_create_review_members")
+
+        session = client.session
+        assert session["project_user_add_selection"]["project_create_user_add"] == [
+            member_selection(selected_user, permissions=["manage_members"])
+        ]
+
+    def test_create_review_members_page_renders(self, client, user):
+        selected_user = baker.make("users.User", email="review.member@example.com")
+        client.force_login(user)
+        session = client.session
+        session["project_user_add_selection"] = {
+            "project_create_user_add": [
+                member_selection(selected_user, permissions=["manage_api_keys"])
+            ]
+        }
+        session.save()
+
+        response = client.get(reverse("projects:project_create_review_members"))
+
+        assert response.status_code == 200
+        assert "projects/create_review_members.html" in [t.name for t in response.templates]
+        assert selected_user.email in response.content.decode()
+        assert "Manage API keys" in response.content.decode()
+
+    def test_create_review_members_removes_member(self, client, user):
+        keep_user = baker.make("users.User", email="keep.create@example.com")
+        remove_user = baker.make("users.User", email="remove.create@example.com")
+        client.force_login(user)
+        session = client.session
+        session["project_user_add_selection"] = {
+            "project_create_user_add": [
+                member_selection(keep_user),
+                member_selection(remove_user),
+            ]
+        }
+        session.save()
+
+        response = client.post(
+            reverse("projects:project_create_review_members"),
+            data={"remove_oid": str(remove_user.oid)},
+        )
+
+        assert response.status_code == 302
+        session = client.session
+        stored = session["project_user_add_selection"]["project_create_user_add"]
+        assert stored == [member_selection(keep_user)]
 
     def test_create_confirm_page_renders_project_data_and_members(self, client, user):
         business_unit = baker.make("projects.BusinessUnit", name="Data Unit")
@@ -764,7 +1068,9 @@ class TestProjectCreateFlow:
             "business_unit_id": business_unit.id,
         }
         session["project_user_add_selection"] = {
-            "project_create_user_add": [member_selection(selected_user)]
+            "project_create_user_add": [
+                member_selection(selected_user, permissions=["manage_members"])
+            ]
         }
         session.save()
 
@@ -775,6 +1081,7 @@ class TestProjectCreateFlow:
         assert "Confirm Project" in response.content.decode()
         assert business_unit.name in response.content.decode()
         assert selected_user.email in response.content.decode()
+        assert "Manage members" in response.content.decode()
 
     def test_create_confirm_post_creates_project_and_memberships(self, client, user):
         business_unit = baker.make("projects.BusinessUnit")
@@ -788,7 +1095,9 @@ class TestProjectCreateFlow:
             "business_unit_id": business_unit.id,
         }
         session["project_user_add_selection"] = {
-            "project_create_user_add": [member_selection(selected_user)]
+            "project_create_user_add": [
+                member_selection(selected_user, permissions=["manage_api_keys"])
+            ]
         }
         session.save()
 
@@ -797,13 +1106,29 @@ class TestProjectCreateFlow:
         project = Project.objects.get(name="Final Creation Project")
         assert response.status_code == 302
         assert response.url == reverse("projects:project_detail", args=[project.uuid])
-        assert ProjectUserPermissions.objects.filter(
-            project=project,
-            user=selected_user,
-            role="admin",
-        ).exists()
+        membership = ProjectMembership.objects.get(project=project, user=selected_user)
+        assert membership.permissions.filter(permission__codename="manage_api_keys").exists()
         assert "project_create" not in client.session
         assert "project_user_add_selection" not in client.session
+
+    def test_create_confirm_post_grants_creator_all_permissions(self, client, user):
+        business_unit = baker.make("projects.BusinessUnit")
+        client.force_login(user)
+
+        session = client.session
+        session["project_create"] = {
+            "name": "Creator Permissions Project",
+            "description": "desc",
+            "business_unit_id": business_unit.id,
+        }
+        session.save()
+
+        client.post(reverse("projects:project_create_confirm"))
+
+        project = Project.objects.get(name="Creator Permissions Project")
+        membership = ProjectMembership.objects.get(project=project, user=user)
+        granted = set(membership.permissions.values_list("permission__codename", flat=True))
+        assert granted == {"manage_api_keys", "manage_members"}
 
     def test_create_confirm_post_records_membership_history_with_user(self, client, user):
         """Regression: bulk_create_with_history must record history_user for new memberships."""
@@ -825,7 +1150,7 @@ class TestProjectCreateFlow:
         client.post(reverse("projects:project_create_confirm"))
 
         project = Project.objects.get(name="History Test Project")
-        for membership in ProjectUserPermissions.objects.filter(project=project):
+        for membership in ProjectMembership.objects.filter(project=project):
             historical = membership.history.filter(history_type="+")
             assert historical.exists(), f"No creation history record for user {membership.user}"
             assert historical.first().history_user == user

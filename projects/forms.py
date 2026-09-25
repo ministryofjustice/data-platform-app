@@ -2,18 +2,21 @@ import uuid
 
 from django import forms
 from django.core.exceptions import ValidationError
-from django.forms import BaseFormSet, formset_factory
 
-from projects.models import Project, ProjectUserPermissions
+from projects.models import Project, ProjectMembership, ProjectPermission
 
 
-class ProjectAddMemberForm(forms.Form):
-    # The visible search box is rendered by the Entra autocomplete component;
-    # these hidden fields carry the chosen Entra object id plus a snapshot of
-    # the email/name for redisplay and confirmation.
+class ProjectMemberForm(forms.Form):
+    """A single project member plus the permissions to grant them.
+
+    The visible search box is rendered by the Entra autocomplete component;
+    these hidden fields carry the chosen Entra object id plus a snapshot of
+    the email/name for redisplay and confirmation.
+    """
+
     oid = forms.CharField(
         required=False,
-        widget=forms.HiddenInput(attrs={"data-entra-user-id": ""}),
+        widget=forms.HiddenInput(attrs={"data-entra-user-id": "", "id": "id_oid-autocomplete"}),
     )
     email = forms.CharField(
         required=False,
@@ -23,87 +26,71 @@ class ProjectAddMemberForm(forms.Form):
         required=False,
         widget=forms.HiddenInput(attrs={"data-entra-user-name": ""}),
     )
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # MOJ Add Another clones rows and rewrites %index% in data-name/data-id,
-        # so the hidden fields must advertise their formset-indexed names.
-        formset_prefix = self.prefix.rsplit("-", 1)[0]
-        for name in ("oid", "email", "display_name"):
-            self.fields[name].widget.attrs.update(
-                {
-                    "data-name": f"{formset_prefix}-%index%-{name}",
-                    "data-id": f"id_{formset_prefix}-%index%-{name}",
-                }
-            )
-
-
-class BaseProjectAddMemberFormSet(BaseFormSet):
-    def __init__(self, *args, project=None, **kwargs):
-        self.project = project
-        self.selected_members: list[dict] = []
-        super().__init__(*args, **kwargs)
-
-    def clean(self):
-        super().clean()
-
-        if any(self.errors):
-            return
-
-        selected_members = []
-        seen = set()
-        for form in self.forms:
-            oid = (form.cleaned_data.get("oid") or "").strip()
-            if not oid:
-                continue
-            try:
-                # Canonicalise so downstream lookups keyed on str(user.oid) match.
-                oid = str(uuid.UUID(oid))
-            except ValueError as error:
-                raise ValidationError("Enter a valid email address") from error
-            if oid in seen:
-                continue
-            seen.add(oid)
-            selected_members.append(
-                {
-                    "oid": oid,
-                    "email": (form.cleaned_data.get("email") or "").strip(),
-                    "display_name": (form.cleaned_data.get("display_name") or "").strip(),
-                }
-            )
-
-        if not selected_members:
-            raise ValidationError("Enter a valid email address")
-
-        if not self.project:
-            self.selected_members = selected_members
-            return
-
-        selected_oids = [member["oid"] for member in selected_members]
-        existing_memberships = ProjectUserPermissions.objects.filter(
-            project=self.project,
-            user__oid__in=selected_oids,
-        )
-        if existing_memberships.exists():
-            raise ValidationError(
-                "One or more selected users are already members of this project."
-            )
-
-        self.selected_members = selected_members
-
-
-def build_project_add_member_formset(*, project, data=None, initial=None, extra=1):
-    formset_class = formset_factory(
-        ProjectAddMemberForm,
-        formset=BaseProjectAddMemberFormSet,
-        extra=extra,
+    permissions = forms.MultipleChoiceField(
+        label="Permissions",
+        required=True,
+        choices=ProjectPermission.choices,
+        initial=list,
+        error_messages={"required": "Choose at least one permission for this member"},
+        widget=forms.CheckboxSelectMultiple(
+            attrs={"class": "govuk-checkboxes__input", "id": "id_permissions"}
+        ),
     )
 
-    return formset_class(
-        data=data,
-        initial=initial,
-        prefix="members",
-        project=project,
+    def __init__(
+        self,
+        *args,
+        existing_oids: set[str] | None = None,
+        editing_oid: str | None = None,
+        project: Project | None = None,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.existing_oids = existing_oids or set()
+        self.editing_oid = editing_oid
+        self.project = project
+
+    def clean_oid(self) -> str:
+        oid = (self.cleaned_data.get("oid") or "").strip()
+        if not oid:
+            raise ValidationError("Search for and select a project member")
+        try:
+            # Canonicalise so downstream lookups keyed on str(user.oid) match.
+            return str(uuid.UUID(oid))
+        except ValueError as error:
+            raise ValidationError("Enter a valid email address") from error
+
+    def clean(self):
+        cleaned_data = super().clean()
+        oid = cleaned_data.get("oid")
+        if not oid:
+            return cleaned_data
+
+        if oid in self.existing_oids and oid != self.editing_oid:
+            self.add_error("oid", "This person has already been added")
+            return cleaned_data
+
+        if (
+            self.project
+            and ProjectMembership.objects.filter(project=self.project, user__oid=oid).exists()
+        ):
+            self.add_error("oid", "This person is already a member of this project")
+
+        return cleaned_data
+
+
+class ProjectMemberPermissionsForm(forms.Form):
+    permissions = forms.MultipleChoiceField(
+        label="Permissions",
+        required=True,
+        choices=ProjectPermission.choices,
+        error_messages={"required": "Choose at least one permission for this member"},
+        widget=forms.CheckboxSelectMultiple(
+            attrs={
+                "class": "govuk-checkboxes__input",
+                "id": "id_permissions",
+            }
+        ),
     )
 
 
@@ -140,7 +127,7 @@ class ProjectCreateAddUsersDecisionForm(forms.Form):
     add_user = forms.ChoiceField(
         label="Do you want to add project members now?",
         choices=(("yes", "Yes"), ("no", "No")),
-        widget=forms.RadioSelect,
+        widget=forms.RadioSelect(attrs={"id": "id_add_user"}),
         error_messages={
             "required": "Choose yes or no",
         },

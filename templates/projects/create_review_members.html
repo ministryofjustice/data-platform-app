@@ -1,0 +1,67 @@
+{% extends "base/base.html" %}
+{% block title %}
+  Create a project - project members - Justice Data Platform | Ministry of Justice
+{% endblock title %}
+{% block back_link %}
+  <a href="{% url 'projects:project_create_add_member' %}"
+     class="govuk-back-link">Back</a>
+{% endblock back_link %}
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      <h1 class="govuk-heading-l">Members</h1>
+      {% if selected_members %}
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {% for member in selected_members %}
+            <div class="govuk-summary-card">
+              <div class="govuk-summary-card__title-wrapper">
+                <h2 class="govuk-summary-card__title">{{ member.email }}</h2>
+                <ul class="govuk-summary-card__actions">
+                  <li class="govuk-summary-card__action">
+                    <a class="govuk-link"
+                       href="{% url 'projects:project_create_add_member' %}?edit={{ member.oid }}">Change<span class="govuk-visually-hidden"> {{ member.email }}</span></a>
+                  </li>
+                  <li class="govuk-summary-card__action">
+                    <button type="submit"
+                            name="remove_oid"
+                            value="{{ member.oid }}"
+                            class="govuk-link app-link-button">Remove<span class="govuk-visually-hidden"> {{ member.email }}</span></button>
+                  </li>
+                </ul>
+              </div>
+              <div class="govuk-summary-card__content">
+                <dl class="govuk-summary-list">
+                  <div class="govuk-summary-list__row govuk-summary-list__row--no-actions">
+                    <dt class="govuk-summary-list__key">Permissions</dt>
+                    <dd class="govuk-summary-list__value">
+                      {% if member.permission_labels %}
+                        <ul class="govuk-list govuk-list--bullet govuk-!-margin-bottom-0">
+                          {% for label in member.permission_labels %}
+                            <li>{{ label }}</li>
+                          {% endfor %}
+                        </ul>
+                      {% else %}
+                        No permissions
+                      {% endif %}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            </div>
+          {% endfor %}
+        </form>
+      {% else %}
+        <p class="govuk-body">No members added yet.</p>
+      {% endif %}
+      <div class="govuk-button-group">
+        <a href="{{ add_member_url }}"
+           class="govuk-button govuk-button--secondary">Add another member</a>
+      </div>
+      <div class="govuk-button-group">
+        <a href="{{ continue_url }}" class="govuk-button">Continue</a>
+        <a href="{{ cancel_url }}" class="govuk-link">Cancel</a>
+      </div>
+    </div>
+  </div>
+{% endblock content %}

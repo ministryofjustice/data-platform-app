@@ -7,7 +7,7 @@ from notifications_python_client.errors import HTTPError
 
 from data_platform_app.services import GovUKNotificationError, GovUKNotificationsService
 from projects.graph import EntraAuthenticationError, EntraRequestError
-from projects.models import ProjectUserPermissions
+from projects.models import ProjectMembership, ProjectPermission
 from projects.services import (
     ProjectMembershipNotificationService,
     ProjectNotificationError,
@@ -216,9 +216,7 @@ class TestProjectService:
 
         graph_client.get_user.assert_not_called()
         assert [member.oid for member in added] == [non_project_user.oid]
-        assert ProjectUserPermissions.objects.filter(
-            project=project, user=non_project_user
-        ).exists()
+        assert ProjectMembership.objects.filter(project=project, user=non_project_user).exists()
 
     def test_add_members_is_idempotent_for_existing_membership(
         self, project, user, non_project_user
@@ -231,7 +229,7 @@ class TestProjectService:
             added_by=non_project_user,
         )
 
-        assert ProjectUserPermissions.objects.filter(project=project, user=user).count() == 1
+        assert ProjectMembership.objects.filter(project=project, user=user).count() == 1
 
     def test_add_members_creates_stub_for_unknown_oid(self, project, user):
         new_oid = str(baker.make("users.User").oid)
@@ -252,7 +250,7 @@ class TestProjectService:
         assert created.first_name == "New"
         assert created.last_name == "Hire"
         assert [str(member.oid) for member in added] == [new_oid]
-        assert ProjectUserPermissions.objects.filter(project=project, user=created).exists()
+        assert ProjectMembership.objects.filter(project=project, user=created).exists()
 
     def test_add_members_propagates_graph_errors(self, project, user):
         new_oid = str(baker.make("users.User").oid)
@@ -267,6 +265,143 @@ class TestProjectService:
                 selections=[{"oid": new_oid}],
                 added_by=user,
             )
+
+    def test_add_members_creates_permission_rows_for_selected_codenames(
+        self, project, user, non_project_user
+    ):
+        service = ProjectService(graph_client=Mock())
+
+        service.add_members(
+            project=project,
+            selections=[{"oid": str(non_project_user.oid), "permissions": ["manage_api_keys"]}],
+            added_by=user,
+        )
+
+        membership = ProjectMembership.objects.get(project=project, user=non_project_user)
+        assert list(membership.permissions.values_list("permission__codename", flat=True)) == [
+            "manage_api_keys"
+        ]
+
+    def test_add_members_allows_zero_permissions(self, project, user, non_project_user):
+        service = ProjectService(graph_client=Mock())
+
+        service.add_members(
+            project=project,
+            selections=[{"oid": str(non_project_user.oid), "permissions": []}],
+            added_by=user,
+        )
+
+        membership = ProjectMembership.objects.get(project=project, user=non_project_user)
+        assert not membership.permissions.exists()
+
+    def test_add_members_records_granted_by_on_permission(self, project, user, non_project_user):
+        service = ProjectService(graph_client=Mock())
+
+        service.add_members(
+            project=project,
+            selections=[{"oid": str(non_project_user.oid), "permissions": ["manage_members"]}],
+            added_by=user,
+        )
+
+        membership = ProjectMembership.objects.get(project=project, user=non_project_user)
+        assert membership.permissions.get().granted_by == user
+
+    def test_update_member_permissions_adds_permissions_and_history(
+        self, project, user, project_member_without_permissions
+    ):
+        membership = ProjectMembership.objects.get(
+            project=project, user=project_member_without_permissions
+        )
+        service = ProjectService(graph_client=Mock())
+
+        service.update_member_permissions(
+            membership=membership,
+            permission_codenames=[ProjectPermission.MANAGE_API_KEYS],
+            updated_by=user,
+        )
+
+        permission = membership.permissions.get()
+        assert permission.permission.codename == ProjectPermission.MANAGE_API_KEYS
+        assert permission.granted_by == user
+        history = permission.history.get(history_type="+")
+        assert history.permission_id == permission.permission_id
+        assert history.history_user == user
+
+    def test_update_member_permissions_removes_permissions_and_history(
+        self, project, user, project_member_without_permissions, grant_project_permission
+    ):
+        grant_project_permission(
+            project,
+            project_member_without_permissions,
+            ProjectPermission.MANAGE_API_KEYS,
+        )
+        membership = ProjectMembership.objects.get(
+            project=project, user=project_member_without_permissions
+        )
+        permission = membership.permissions.get()
+        service = ProjectService(graph_client=Mock())
+
+        service.update_member_permissions(
+            membership=membership,
+            permission_codenames=[],
+            updated_by=user,
+        )
+
+        assert not membership.permissions.exists()
+        history = permission.history.get(history_type="-")
+        assert history.permission_id == permission.permission_id
+
+    def test_update_member_permissions_removes_and_adds_permissions_with_history(
+        self, project, user, project_member_without_permissions, grant_project_permission
+    ):
+        grant_project_permission(
+            project,
+            project_member_without_permissions,
+            ProjectPermission.MANAGE_API_KEYS,
+        )
+        membership = ProjectMembership.objects.get(
+            project=project, user=project_member_without_permissions
+        )
+        removed_permission = membership.permissions.get()
+        service = ProjectService(graph_client=Mock())
+
+        service.update_member_permissions(
+            membership=membership,
+            permission_codenames=[ProjectPermission.MANAGE_MEMBERS],
+            updated_by=user,
+        )
+
+        added_permission = membership.permissions.get()
+        assert added_permission.permission.codename == ProjectPermission.MANAGE_MEMBERS
+        assert removed_permission.history.filter(history_type="-").exists()
+        added_history = added_permission.history.get(history_type="+")
+        assert added_history.permission_id == added_permission.permission_id
+        assert added_history.history_user == user
+
+    def test_update_member_permissions_does_nothing_when_permissions_unchanged(
+        self, project, user, project_member_without_permissions, grant_project_permission
+    ):
+        grant_project_permission(
+            project,
+            project_member_without_permissions,
+            ProjectPermission.MANAGE_API_KEYS,
+        )
+        membership = ProjectMembership.objects.get(
+            project=project, user=project_member_without_permissions
+        )
+        permission = membership.permissions.get()
+        history_count = permission.history.count()
+        service = ProjectService(graph_client=Mock())
+
+        service.update_member_permissions(
+            membership=membership,
+            permission_codenames=[ProjectPermission.MANAGE_API_KEYS],
+            updated_by=user,
+        )
+
+        assert membership.permissions.count() == 1
+        assert membership.permissions.get().pk == permission.pk
+        assert permission.history.count() == history_count
 
     def test_from_request_propagates_authentication_error(self, project, user):
         new_oid = str(baker.make("users.User").oid)
@@ -300,11 +435,10 @@ class TestProjectService:
 
         assert project.name == "My Project"
         assert project.created_by == user
+        assert project.owner == user
         assert {member.oid for member in members} == {user.oid, non_project_user.oid}
-        assert ProjectUserPermissions.objects.filter(project=project, user=user).exists()
-        assert ProjectUserPermissions.objects.filter(
-            project=project, user=non_project_user
-        ).exists()
+        assert ProjectMembership.objects.filter(project=project, user=user).exists()
+        assert ProjectMembership.objects.filter(project=project, user=non_project_user).exists()
 
     def test_create_project_includes_owner_when_no_members_selected(self, user):
         business_unit = baker.make("projects.BusinessUnit")
@@ -319,7 +453,24 @@ class TestProjectService:
         )
 
         assert [member.oid for member in members] == [user.oid]
-        assert ProjectUserPermissions.objects.filter(project=project, user=user).exists()
+        assert ProjectMembership.objects.filter(project=project, user=user).exists()
+        assert project.owner == user
+
+    def test_create_project_grants_creator_both_permissions(self, user):
+        business_unit = baker.make("projects.BusinessUnit")
+        service = ProjectService(graph_client=Mock())
+
+        project, _members = service.create_project(
+            name="Owner Permissions Project",
+            description="A description",
+            business_unit_id=business_unit.id,
+            created_by=user,
+            selected_members=[],
+        )
+
+        membership = ProjectMembership.objects.get(project=project, user=user)
+        granted = set(membership.permissions.values_list("permission__codename", flat=True))
+        assert granted == {"manage_api_keys", "manage_members"}
 
     def test_close_closes_graph_client(self):
         graph_client = Mock()
