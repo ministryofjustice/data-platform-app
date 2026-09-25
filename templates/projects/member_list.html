@@ -41,7 +41,7 @@
             </td>
             <td class="govuk-table__cell">{{ membership.permissions_display_string }}</td>
             <td class="govuk-table__cell govuk-!-text-align-right">
-              {% if can_manage_members %}
+              {% if can_manage_members and membership.user != request.user and membership.user != project.owner %}
                 <a href="{% url 'projects:project_member_edit' project.uuid membership.pk %}"
                    class="govuk-link">Manage access<span class="govuk-visually-hidden"> {{ membership.user.full_name }}</span></a>
               {% endif %}

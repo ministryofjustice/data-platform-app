@@ -1,5 +1,6 @@
 import sentry_sdk
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import PermissionDenied
 from django.db.models import Case, F, IntegerField, Prefetch, Value, When
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -547,10 +548,13 @@ class ProjectMemberEditView(
 
     @cached_property
     def membership(self):
-        return get_object_or_404(
+        membership = get_object_or_404(
             self.project.memberships.select_related("user", "project"),
             pk=self.kwargs["pk"],
         )
+        if membership.user == self.request.user or membership.user_id == self.project.owner_id:
+            raise PermissionDenied
+        return membership
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
