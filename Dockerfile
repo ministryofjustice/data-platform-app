@@ -1,14 +1,14 @@
 ##### BUILD PYTHON
 
-FROM docker.io/library/ubuntu:26.04@sha256:da6fc2be547864451aa253836dd926da33623312df4a9a243e35dc877c378a78 AS build-python
+FROM docker.io/library/ubuntu:26.04@sha256:513c074113a871b51a8d16ab445c88779d6452d937a164fb5cc479f32668a41d AS build-python
 
 SHELL ["/bin/bash", "-e", "-u", "-o", "pipefail", "-c"]
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN <<EOF
-apt-get -o Acquire::Retries=3 update --quiet --yes
-apt-get -o Acquire::Retries=3 install --quiet --yes \
+apt-get update --quiet --yes
+apt-get install --quiet --yes \
     --no-install-recommends \
     ca-certificates \
     python3.14-dev
@@ -57,7 +57,7 @@ EOF
 
 ##### FINAL
 
-FROM docker.io/library/ubuntu:26.04@sha256:da6fc2be547864451aa253836dd926da33623312df4a9a243e35dc877c378a78 AS final
+FROM docker.io/library/ubuntu:26.04@sha256:513c074113a871b51a8d16ab445c88779d6452d937a164fb5cc479f32668a41d AS final
 
 ARG VERSION="unknown"
 ARG COMMIT_SHA="unknown"
@@ -94,12 +94,12 @@ useradd \
 EOF
 
 RUN <<EOF
-apt-get -o Acquire::Retries=3 update --quiet --yes
+apt-get update --quiet --yes
 
 # Pick up security updates published since the base image was built
-apt-get -o Acquire::Retries=3 upgrade --quiet --yes
+apt-get upgrade --quiet --yes
 
-apt-get -o Acquire::Retries=3 install --quiet --yes \
+apt-get install --quiet --yes \
     --no-install-recommends \
     ca-certificates \
     python3.14
