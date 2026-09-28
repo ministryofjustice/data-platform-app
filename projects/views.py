@@ -552,7 +552,7 @@ class ProjectMemberEditView(
             self.project.memberships.select_related("user", "project"),
             pk=self.kwargs["pk"],
         )
-        if membership.user == self.request.user or membership.user_id == self.project.owner_id:
+        if membership.user_id == self.project.owner_id:
             raise PermissionDenied
         return membership
 
@@ -584,6 +584,9 @@ class ProjectMemberEditView(
         return super().form_valid(form)
 
     def get_success_url(self):
+        if not self.has_permission():
+            return self.project.get_absolute_url()
+
         return reverse(
             "projects:project_member_edit",
             kwargs={"uuid": self.project.uuid, "pk": self.membership.pk},

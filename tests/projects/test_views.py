@@ -810,7 +810,27 @@ class TestProjectMemberEditView:
         project_service.__enter__.assert_not_called()
         project_service.update_member_permissions.assert_not_called()
 
-    def test_cannot_edit_own_permissions(self, client, project, project_owner):
+    def test_member_can_edit_own_permissions(
+        self, client, project, project_member, grant_project_permission
+    ):
+        grant_project_permission(project, project_member, ProjectPermission.MANAGE_MEMBERS)
+        client.force_login(project_member)
+        membership = ProjectMembership.objects.get(project=project, user=project_member)
+
+        response = client.post(
+            reverse("projects:project_member_edit", args=[project.uuid, membership.pk]),
+            data={"permissions": [ProjectPermission.MANAGE_API_KEYS]},
+        )
+
+        assert response.status_code == 302
+        assert response.url == project.get_absolute_url()
+
+        membership.refresh_from_db()
+        assert list(membership.permissions.values_list("permission__codename", flat=True)) == [
+            ProjectPermission.MANAGE_API_KEYS
+        ]
+
+    def test_project_owner_cannot_edit_own_permissions(self, client, project, project_owner):
         client.force_login(project_owner)
         membership = ProjectMembership.objects.get(project=project, user=project_owner)
 
@@ -820,12 +840,6 @@ class TestProjectMemberEditView:
         )
 
         assert response.status_code == 403
-
-        membership.refresh_from_db()
-        assert set(membership.permissions.values_list("permission__codename", flat=True)) == {
-            ProjectPermission.MANAGE_API_KEYS,
-            ProjectPermission.MANAGE_MEMBERS,
-        }
 
     def test_cannot_edit_project_owner_permissions(
         self, client, project, project_owner, project_member, grant_project_permission

@@ -2,8 +2,10 @@ import sentry_sdk
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.core.exceptions import ImproperlyConfigured
 from django.shortcuts import get_object_or_404
+from django.template.loader import render_to_string
 from django.utils.functional import cached_property
 
+from projects.helpers import lowercase_first_char
 from projects.models import Project, ProjectPermission
 from projects.services import ProjectMembershipNotificationService, ProjectNotificationError
 
@@ -107,6 +109,18 @@ class ProjectPermissionRequiredMixin(PermissionRequiredMixin):
     Must appear before the View subclass in the MRO, alongside a mixin providing get_project(),
     so has_permission() runs during dispatch() before the view executes.
     """
+
+    def get_permission_denied_message(self):
+        permission = ProjectPermission(self.permission_required.split(".")[-1])
+        return render_to_string(
+            "includes/permission_denied.html",
+            {
+                "email": self.request.user.email,
+                "owner_email": self.project.owner.email,
+                "permission": lowercase_first_char(permission.label),
+                "project_name": self.project.name,
+            },
+        )
 
     def has_permission(self):
         return self.request.user.has_perms(self.get_permission_required(), self.get_project())

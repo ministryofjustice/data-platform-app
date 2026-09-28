@@ -13,11 +13,11 @@ class StubView:
 
 class ProjectScopedStubView(ProjectPermissionRequiredMixin, StubView):
     def __init__(self, project, permission_required):
-        self._project = project
+        self.project = project
         self.permission_required = permission_required
 
     def get_project(self):
-        return self._project
+        return self.project
 
 
 class TestProjectPermissionRequiredMixin:

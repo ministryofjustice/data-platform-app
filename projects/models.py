@@ -6,6 +6,8 @@ from django.urls import reverse
 from django_extensions.db.models import TimeStampedModel
 from simple_history.models import HistoricalRecords
 
+from projects.helpers import lowercase_first_char
+
 
 class ProjectPermission(models.TextChoices):
     MANAGE_API_KEYS = "manage_api_keys", "Manage API keys"
@@ -91,7 +93,7 @@ class ProjectMembership(TimeStampedModel):
         display_strings = []
         for index, permission in enumerate(permissions):
             name = permission.permission.name
-            display_strings.append(name if index == 0 else name[0].lower() + name[1:])
+            display_strings.append(name if index == 0 else lowercase_first_char(name))
 
         return ", ".join(display_strings)
 
