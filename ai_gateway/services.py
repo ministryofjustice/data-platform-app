@@ -113,15 +113,6 @@ class UsageService:
         """
         return datetime.fromisoformat(self.team_info.get("created_at")).date().replace(day=1)
 
-    @cached_property
-    def models_indexed_by_id(self) -> dict[str, str]:
-        """Return models keyed by their ID."""
-        models = {}
-        for model_info in self._client.list_models_v1_info():
-            model_name = model_info.get("model_name")
-            models[model_name] = model_info
-        return models
-
     def get_usage_month_choices(self) -> list[date]:
         """Return months from the team's creation month to the current month."""
         choices = []
@@ -608,6 +599,15 @@ class KeyService:
         """
         self._client.update_team_access_groups(team.litellm_team_id, access_group_ids)
         return self.reconcile_team_keys_to_allowed_models(team, changed_by=changed_by)
+
+    @cached_property
+    def models_indexed_by_id(self) -> dict[str, dict[str, Any]]:
+        """Return models keyed by their ID."""
+        models = {}
+        for model_info in self._client.list_models_v1_info():
+            model_name = model_info.get("model_name")
+            models[model_name] = model_info
+        return models
 
     @staticmethod
     def _record_applied_models(
