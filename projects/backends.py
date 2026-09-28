@@ -9,7 +9,7 @@ class ProjectPermissionBackend(BaseBackend):
     """
 
     def has_perm(self, user_obj, perm, obj=None) -> bool:
-        if not user_obj.is_authenticated:
+        if not user_obj.is_authenticated or not user_obj.is_active:
             return False
 
         if not isinstance(obj, Project):

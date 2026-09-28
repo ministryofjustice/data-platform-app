@@ -10,7 +10,7 @@
         {{ exception|safe }}
       {% else %}
         <p class="govuk-body">Your account {% if request.user %}{{ request.user.email }}{% endif %} does not have access to view this page.</p>
-        <p class="govuk-body">If you believe you should have access, contact <a href="mailto:justicedataplatform@justice.gov.uk.">justicedataplatform@justice.gov.uk</a>.</p>
+        <p class="govuk-body">If you believe you should have access, contact <a href="mailto:justicedataplatform@justice.gov.uk">justicedataplatform@justice.gov.uk</a>.</p>
       {% endif %}
     </div>
   </div>
