@@ -7,7 +7,7 @@
     <div class="govuk-grid-column-two-thirds">
       <h1 class="govuk-heading-l">You do not have permission to view this page</h1>
       {% if exception %}
-        {{ exception|safe }}
+        {{ exception }}
       {% else %}
         <p class="govuk-body">Your account {% if request.user %}{{ request.user.email }}{% endif %} does not have access to view this page.</p>
         <p class="govuk-body">If you believe you should have access, contact <a href="mailto:justicedataplatform@justice.gov.uk">justicedataplatform@justice.gov.uk</a>.</p>
