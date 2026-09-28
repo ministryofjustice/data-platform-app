@@ -256,7 +256,7 @@ class UsageService:
         }
 
     def _build_model_usage(self, daily_results: list[dict[str, Any]]) -> dict[str, Any]:
-        totals = self._breakdown_totals(daily_results, "models")
+        totals = self._breakdown_totals(daily_results, "model_groups")
         rows = [
             {
                 "label": model_name,

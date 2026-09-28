@@ -105,7 +105,7 @@ class TestUsageServiceGetUsage:
                                     "metadata": {"key_alias": key.litellm_alias},
                                 }
                             },
-                            "models": {"gpt-4": {"metrics": {"spend": 10}}},
+                            "model_groups": {"gpt-4": {"metrics": {"spend": 10}}},
                         },
                     }
                 ]
@@ -234,7 +234,7 @@ class TestUsageServiceGetUsage:
                                     "metadata": {"key_alias": "cancelling-key"},
                                 },
                             },
-                            "models": {
+                            "model_groups": {
                                 "gpt-4": {"metrics": {"spend": 10}},
                                 "unused-model": {"metrics": {"spend": 0}},
                             },
@@ -250,7 +250,7 @@ class TestUsageServiceGetUsage:
                                     "metadata": {"key_alias": "cancelling-key"},
                                 },
                             },
-                            "models": {},
+                            "model_groups": {},
                         },
                     },
                 ]
