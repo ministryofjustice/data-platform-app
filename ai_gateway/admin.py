@@ -180,11 +180,14 @@ class KeyAuditAdmin(admin.ModelAdmin):
         "name",
         "project",
         "masked_key",
-        "models",
         "created_by",
         "history_type_display",
         "history_date",
         "history_user",
+        "models",
+        "has_model_changes",
+        "models_added",
+        "models_removed",
     )
     list_filter = ("history_type",)
     search_fields = ("name", "project__name")

@@ -21,6 +21,49 @@ class Team(TimeStampedModel):
         return f"AI Gateway team for {self.project.name}"
 
 
+class KeyHistoricalModel(models.Model):
+    class Meta:
+        abstract = True
+
+    def _changes(self, source: list[str], comparison: list[str]) -> list:
+        """Return sorted items present in source but not comparison."""
+        changes = list(set(source) - set(comparison))
+        changes.sort()
+        return changes
+
+    @property
+    def models_added(self) -> list:
+        if not self.prev_record:
+            return []
+        return self._changes(source=self.models, comparison=self.prev_record.models)
+
+    @property
+    def models_removed(self) -> list:
+        if not self.prev_record:
+            return []
+        return self._changes(source=self.prev_record.models, comparison=self.models)
+
+    @property
+    def has_models_added_and_removed(self) -> bool:
+        return bool(self.models_added and self.models_removed)
+
+    @property
+    def has_model_changes(self) -> bool:
+        return bool(self.models_added or self.models_removed)
+
+    @property
+    def model_change_type(self) -> str | None:
+        if self.history_type == "+":
+            return "Key created"
+        if self.has_models_added_and_removed:
+            return "Models changed"
+        if self.models_added:
+            return "Models added"
+        if self.models_removed:
+            return "Models removed"
+        return None
+
+
 class Key(TimeStampedModel):
     project = models.ForeignKey(
         "projects.Project",
@@ -46,6 +89,7 @@ class Key(TimeStampedModel):
         ),
     )
     history = HistoricalRecords(
+        bases=(KeyHistoricalModel,),
         table_name="ai_gateway_key_history",
         excluded_fields=["litellm_secret"],
     )
