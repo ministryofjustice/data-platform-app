@@ -3,115 +3,101 @@ import uuid
 import pytest
 from model_bakery import baker
 
-from projects.forms import build_project_add_member_formset
-
-
-def management_form(total_forms):
-    return {
-        "members-TOTAL_FORMS": str(total_forms),
-        "members-INITIAL_FORMS": "0",
-        "members-MIN_NUM_FORMS": "0",
-        "members-MAX_NUM_FORMS": "1000",
-    }
+from projects.forms import ProjectMemberForm
+from projects.models import ProjectPermission
 
 
 @pytest.mark.django_db
-class TestProjectAddMemberFormSet:
-    def test_valid_selection_collects_member(self, project):
+class TestProjectMemberForm:
+    def test_valid_selection_is_accepted(self, project):
         selected_oid = str(uuid.uuid4())
-        data = management_form(1) | {
-            "members-0-oid": selected_oid,
-            "members-0-email": "chosen.member@example.com",
-            "members-0-display_name": "Chosen Member",
+        data = {
+            "oid": selected_oid,
+            "email": "chosen.member@example.com",
+            "display_name": "Chosen Member",
+            "permissions": [ProjectPermission.MANAGE_API_KEYS],
         }
 
-        formset = build_project_add_member_formset(project=project, data=data)
+        form = ProjectMemberForm(data=data)
 
-        assert formset.is_valid()
-        assert formset.selected_members == [
-            {
-                "oid": selected_oid,
-                "email": "chosen.member@example.com",
-                "display_name": "Chosen Member",
-            }
-        ]
+        assert form.is_valid()
+        assert form.cleaned_data["oid"] == selected_oid
+        assert form.cleaned_data["permissions"] == [ProjectPermission.MANAGE_API_KEYS]
 
-    def test_missing_selection_is_rejected(self, project):
-        data = management_form(1) | {
-            "members-0-oid": "",
-            "members-0-email": "",
-            "members-0-display_name": "",
+    def test_permissions_are_required(self, project):
+        data = {
+            "oid": str(uuid.uuid4()),
+            "email": "chosen.member@example.com",
+            "display_name": "Chosen Member",
         }
 
-        formset = build_project_add_member_formset(project=project, data=data)
+        form = ProjectMemberForm(data=data)
 
-        assert not formset.is_valid()
-        assert "Enter a valid email address" in formset.non_form_errors()
+        assert not form.is_valid()
 
-    def test_canonicalises_oid_casing(self, project):
+    def test_missing_selection_is_rejected(self):
+        form = ProjectMemberForm(data={"oid": "", "email": "", "display_name": ""})
+
+        assert not form.is_valid()
+        assert "Search for and select a project member" in form.errors["oid"]
+
+    def test_canonicalises_oid_casing(self):
         selected_oid = uuid.uuid4()
-        data = management_form(1) | {
-            "members-0-oid": str(selected_oid).upper(),
-            "members-0-email": "chosen.member@example.com",
-            "members-0-display_name": "Chosen Member",
+        data = {
+            "oid": str(selected_oid).upper(),
+            "email": "a@example.com",
+            "permissions": [ProjectPermission.MANAGE_API_KEYS],
         }
 
-        formset = build_project_add_member_formset(project=project, data=data)
+        form = ProjectMemberForm(data=data)
 
-        assert formset.is_valid()
-        assert formset.selected_members[0]["oid"] == str(selected_oid)
+        assert form.is_valid()
+        assert form.cleaned_data["oid"] == str(selected_oid)
 
-    def test_malformed_oid_is_rejected(self, project):
-        data = management_form(1) | {
-            "members-0-oid": "not-a-uuid",
-            "members-0-email": "chosen.member@example.com",
-            "members-0-display_name": "Chosen Member",
-        }
-
-        formset = build_project_add_member_formset(project=project, data=data)
-
-        assert not formset.is_valid()
-        assert "Enter a valid email address" in formset.non_form_errors()
-
-    def test_duplicate_selection_is_deduplicated(self, project):
-        selected_oid = str(uuid.uuid4())
-        data = management_form(2) | {
-            "members-0-oid": selected_oid,
-            "members-0-email": "chosen.member@example.com",
-            "members-0-display_name": "Chosen Member",
-            "members-1-oid": selected_oid,
-            "members-1-email": "chosen.member@example.com",
-            "members-1-display_name": "Chosen Member",
-        }
-
-        formset = build_project_add_member_formset(project=project, data=data)
-
-        assert formset.is_valid()
-        assert formset.selected_members == [
-            {
-                "oid": selected_oid,
-                "email": "chosen.member@example.com",
-                "display_name": "Chosen Member",
+    def test_malformed_oid_is_rejected(self):
+        form = ProjectMemberForm(
+            data={
+                "oid": "not-a-uuid",
+                "email": "a@example.com",
+                "permissions": [ProjectPermission.MANAGE_API_KEYS],
             }
-        ]
+        )
+
+        assert not form.is_valid()
+        assert "Enter a valid email address" in form.errors["oid"]
+
+    def test_duplicate_in_session_is_rejected(self):
+        selected_oid = str(uuid.uuid4())
+        form = ProjectMemberForm(
+            data={"oid": selected_oid, "email": "a@example.com"},
+            existing_oids={selected_oid},
+        )
+
+        assert not form.is_valid()
+        assert "This person has already been added" in form.errors["oid"]
+
+    def test_editing_oid_is_exempt_from_duplicate_check(self):
+        selected_oid = str(uuid.uuid4())
+        form = ProjectMemberForm(
+            data={
+                "oid": selected_oid,
+                "email": "a@example.com",
+                "permissions": [ProjectPermission.MANAGE_API_KEYS],
+            },
+            existing_oids={selected_oid},
+            editing_oid=selected_oid,
+        )
+
+        assert form.is_valid()
 
     def test_existing_member_is_rejected(self, project):
         existing_member = baker.make("users.User", email="already.member@example.com")
-        baker.make(
-            "projects.ProjectUserPermissions",
+        baker.make("projects.ProjectMembership", project=project, user=existing_member)
+
+        form = ProjectMemberForm(
+            data={"oid": str(existing_member.oid), "email": existing_member.email},
             project=project,
-            user=existing_member,
-            role="member",
         )
-        data = management_form(1) | {
-            "members-0-oid": str(existing_member.oid),
-            "members-0-email": existing_member.email,
-        }
 
-        formset = build_project_add_member_formset(project=project, data=data)
-
-        assert not formset.is_valid()
-        assert (
-            "One or more selected users are already members of this project."
-            in formset.non_form_errors()
-        )
+        assert not form.is_valid()
+        assert "This person is already a member of this project" in form.errors["oid"]

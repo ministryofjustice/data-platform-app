@@ -2,16 +2,19 @@ from django.urls import path
 
 from projects.views import (
     EntraUserSearchView,
-    ProjectAddUsersConfirmView,
+    ProjectAddUsersReviewView,
     ProjectAddUsersView,
+    ProjectCreateAddMemberView,
     ProjectCreateAddUsersView,
     ProjectCreateConfirmView,
+    ProjectCreateReviewMembersView,
     ProjectCreateView,
     ProjectDeleteView,
     ProjectDetailView,
     ProjectListView,
+    ProjectMemberEditView,
     ProjectRemoveUserView,
-    ProjectUsersDetailView,
+    ProjectUsersListView,
 )
 
 app_name = "projects"
@@ -23,16 +26,31 @@ urlpatterns = [
     path(
         "create/add-users/", ProjectCreateAddUsersView.as_view(), name="project_create_add_users"
     ),
+    path(
+        "create/add-users/member/",
+        ProjectCreateAddMemberView.as_view(),
+        name="project_create_add_member",
+    ),
+    path(
+        "create/add-users/review/",
+        ProjectCreateReviewMembersView.as_view(),
+        name="project_create_review_members",
+    ),
     path("create/confirm/", ProjectCreateConfirmView.as_view(), name="project_create_confirm"),
     path("<uuid:uuid>/", ProjectDetailView.as_view(), name="project_detail"),
-    path("<uuid:uuid>/users/", ProjectUsersDetailView.as_view(), name="project_users"),
+    path("<uuid:uuid>/users/", ProjectUsersListView.as_view(), name="project_users"),
     path("<uuid:uuid>/users/add/", ProjectAddUsersView.as_view(), name="project_users_add"),
     path(
-        "<uuid:uuid>/users/add/confirm/",
-        ProjectAddUsersConfirmView.as_view(),
-        name="project_users_add_confirm",
+        "<uuid:uuid>/users/add/review/",
+        ProjectAddUsersReviewView.as_view(),
+        name="project_users_add_review",
     ),
     path("<uuid:uuid>/delete/", ProjectDeleteView.as_view(), name="project_delete"),
+    path(
+        "<uuid:uuid>/users/<int:pk>/",
+        ProjectMemberEditView.as_view(),
+        name="project_member_edit",
+    ),
     path(
         "<uuid:uuid>/users/<int:user_id>/remove/",
         ProjectRemoveUserView.as_view(),

@@ -283,16 +283,28 @@ $masthead-background-color: #381a62;
   white-space: nowrap;
 }
 
-.app-check-details-table__column--35 {
-  width: 35%;
+.app-link-button {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  font: inherit;
+  cursor: pointer;
+  font-family: "GDS Transport";
+  color: govuk-colour("blue", $variant: "shade-10");
 }
 
-.app-check-details-table__column--50 {
-  width: 50%;
+.app-summary-list--member {
+  margin-bottom: govuk-spacing(4);
+  padding-bottom: govuk-spacing(4);
+  border-bottom: 1px solid govuk-colour("mid-grey");
 }
 
-.app-check-details-table__column--15 {
-  width: 15%;
+.app-summary-list--member.app-summary-list--last {
+  margin-bottom: govuk-spacing(0);
+  padding-bottom: govuk-spacing(0);
+  border-bottom: 0;
 }
 
 .ai-gateway-key-detail {
@@ -349,4 +361,14 @@ $masthead-background-color: #381a62;
 
 .app-usage-view .govuk-table {
   margin-bottom: 30px;
+}
+
+.secondary-text {
+  color: govuk-functional-colour("secondary-text");
+}
+
+.project-owner {
+  color: govuk-colour("purple", $variant: "shade-25");
+  background-color: govuk-colour("purple", $variant: "tint-80");
+  padding: 5px 8px 4px 8px;
 }

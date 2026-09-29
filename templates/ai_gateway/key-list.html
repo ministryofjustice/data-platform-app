@@ -1,5 +1,6 @@
 {% extends "base/project_layout.html" %}
 {% load static %}
+{% load project_permissions %}
 {% block title %}
   AI Gateway - {{ project.name }} - Justice Data Platform | Ministry of Justice
 {% endblock title %}
@@ -13,8 +14,11 @@
       <h2 class="govuk-heading-m govuk-!-margin-bottom-0">API keys</h2>
     </div>
     <div class="govuk-grid-column-one-third govuk-!-text-align-right">
-      <a class="govuk-button govuk-button--secondary"
-         href="{% url 'ai_gateway:key_create' project.uuid %}">Create API key</a>
+      {% has_project_permission request.user "projects.manage_api_keys" project as can_manage_api_keys %}
+      {% if can_manage_api_keys %}
+        <a class="govuk-button govuk-button--secondary"
+           href="{% url 'ai_gateway:key_create' project.uuid %}">Create API key</a>
+      {% endif %}
     </div>
   </div>
   <div class="govuk-grid-row">

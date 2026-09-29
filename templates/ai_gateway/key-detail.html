@@ -1,4 +1,5 @@
 {% extends "base/base.html" %}
+{% load project_permissions %}
 {% block title %}
   Manage {{ key.name }} - AI Gateway key - {{ project.name }} - Justice Data Platform | Ministry of Justice
 {% endblock title %}
@@ -7,6 +8,7 @@
      class="govuk-back-link">Back to {{ project.name }}</a>
 {% endblock back_link %}
 {% block content %}
+  {% has_project_permission request.user "projects.manage_api_keys" project as can_manage_api_keys %}
   <div class="govuk-grid-row">
     {% if success_message %}
       <div class="govuk-grid-column-full">
@@ -52,10 +54,12 @@
               {% endfor %}
             </dd>
             <dd class="govuk-summary-list__actions">
-              <a class="govuk-link"
-                 href="{% url 'ai_gateway:key_model_change' project.uuid key.pk %}">
-                Change models
-              </a>
+              {% if can_manage_api_keys %}
+                <a class="govuk-link"
+                   href="{% url 'ai_gateway:key_model_change' project.uuid key.pk %}">
+                  Change models
+                </a>
+              {% endif %}
             </dd>
           </div>
         </dl>
@@ -84,8 +88,10 @@
     <div class="govuk-grid-column-two-thirds">
       <h2 class="govuk-heading-m">Regenerate key</h2>
       <p class="govuk-body">Replace the current key. You'll need to update applications with the new key. You will only be able to view the new key once.</p>
-      <a href="{% url 'ai_gateway:key_regenerate' project.uuid key.pk %}"
-         class="govuk-button govuk-button--secondary">Regenerate</a>
+      {% if can_manage_api_keys %}
+        <a href="{% url 'ai_gateway:key_regenerate' project.uuid key.pk %}"
+           class="govuk-button govuk-button--secondary">Regenerate</a>
+      {% endif %}
     </div>
   </div>
   <div class="govuk-grid-row">
@@ -100,8 +106,10 @@
         Permanently disable this API key. Applications using this key will stop working.
         This cannot be undone.
       </p>
-      <a href="{% url 'ai_gateway:key_revoke' project.uuid key.pk %}"
-         class="govuk-button govuk-button--secondary">Revoke</a>
+      {% if can_manage_api_keys %}
+        <a href="{% url 'ai_gateway:key_revoke' project.uuid key.pk %}"
+           class="govuk-button govuk-button--secondary">Revoke</a>
+      {% endif %}
     </div>
   </div>
 {% endblock content %}

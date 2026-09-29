@@ -39,11 +39,11 @@ const App = {
     initMoj();
     initXGovuk();
 
-    AddAnotherAutocomplete.init();
     AutoSubmitSelect.init();
     CopyButton.init();
     EntraUserAutocomplete.init();
     UsageChart.init();
+    AddAnotherAutocomplete.init();
     ViewToggle.init();
 
     document.body.addEventListener("htmx:afterSwap", function (event) {

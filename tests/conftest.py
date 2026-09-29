@@ -1,10 +1,12 @@
 from unittest.mock import create_autospec, patch
 
 import pytest
+from django.contrib.auth.models import Permission
 from model_bakery import baker
 
 from ai_gateway.services import KeyService
-from projects.services import ProjectMembershipNotificationService
+from projects.models import ProjectMembership, ProjectMembershipPermission, ProjectPermission
+from projects.services import ProjectMembershipNotificationService, ProjectService
 
 
 @pytest.fixture
@@ -18,23 +20,63 @@ def anonymous_user():
 @pytest.fixture
 def user(db):
     """A saved User instance with no special permissions."""
-
-    return baker.make("users.User")
+    return baker.make("users.User", email="user@example.com")
 
 
 @pytest.fixture
 def superuser(db):
     """A superuser who is not a member of any project."""
-
-    return baker.make("users.User", is_staff=True, is_superuser=True)
+    return baker.make(
+        "users.User", email="superuser@example.com", is_staff=True, is_superuser=True
+    )
 
 
 @pytest.fixture
 def project(db, user):
     """A project with the test user as an admin member."""
-    project = baker.make("projects.Project", name="Example Project", created_by=user)
-    baker.make("projects.ProjectUserPermissions", project=project, user=user, role="admin")
+    project = baker.make("projects.Project", name="Example Project", created_by=user, owner=user)
+    baker.make("projects.ProjectMembership", project=project, user=user)
     return project
+
+
+@pytest.fixture
+def project_owner(project, grant_project_permission):
+    for perm in ProjectPermission:
+        grant_project_permission(project, project.owner, perm)
+    return project.owner
+
+
+@pytest.fixture
+def project_member(project):
+    user = baker.make("users.User", email="project.member@example.com")
+    baker.make("projects.ProjectMembership", project=project, user=user)
+    return user
+
+
+@pytest.fixture
+def project_member_without_permissions(db, project):
+    """A project member with no project-level permissions granted."""
+    member = baker.make("users.User")
+    baker.make("projects.ProjectMembership", project=project, user=member)
+    return member
+
+
+@pytest.fixture
+def grant_project_permission():
+    """Factory fixture for granting a project member a specific permission."""
+
+    def _grant_project_permission(project, user, perm):
+        membership = ProjectMembership.objects.get(project=project, user=user)
+        permission = Permission.objects.get(
+            codename=perm.value, content_type__app_label="projects", content_type__model="project"
+        )
+        ProjectMembershipPermission.objects.get_or_create(
+            membership=membership,
+            permission=permission,
+            defaults={"granted_by": user},
+        )
+
+    return _grant_project_permission
 
 
 @pytest.fixture
@@ -107,4 +149,15 @@ def project_membership_notification_service():
     with patch(
         "projects.mixins.ProjectMembershipNotificationService.from_settings", return_value=service
     ):
+        yield service
+
+
+@pytest.fixture
+def project_service():
+    """Patch ProjectService.from_request with an autospecced context-manager instance."""
+    service = create_autospec(ProjectService, instance=True)
+    service.__enter__.return_value = service
+    service.__exit__.return_value = False
+
+    with patch("projects.views.ProjectService.from_request", return_value=service):
         yield service
