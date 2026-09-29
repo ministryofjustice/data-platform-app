@@ -33,6 +33,9 @@ class KeyHistoricalModel(models.Model):
 
     @property
     def models_added(self) -> list:
+        if self.history_type == "+":
+            return self.models
+
         if not self.prev_record:
             return []
         return self._changes(source=self.models, comparison=self.prev_record.models)

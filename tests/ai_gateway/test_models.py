@@ -95,3 +95,12 @@ class TestKeyHistoricalModel:
         latest_history = history_model.objects.filter(id=key.pk).latest()
 
         assert latest_history.model_change_type is None
+
+    def test_models_added_creation_record(self, key):
+        history_model = key.history.model
+        latest_history = history_model.objects.filter(id=key.pk).latest()
+
+        assert latest_history.models_added == ["gpt-4"]
+        assert latest_history.models_removed == []
+        assert latest_history.has_models_added_and_removed is False
+        assert latest_history.has_model_changes is True

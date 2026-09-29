@@ -12,4 +12,5 @@ def key(db, project, user):
         litellm_secret="sk-full-secret",
         masked_key="sk-abc...secret",
         created_by=user,
+        models=["gpt-4"],
     )
