@@ -70,7 +70,9 @@
             </div>
             <hr class="govuk-section-break govuk-section-break--m govuk-section-break--visible">
             <div class="moj-add-another app-model-usage-rows"
-                 data-module="moj-add-another">
+                 data-module="moj-add-another"
+                 data-item-label="Model"
+                 data-layout="inline">
               <div class="govuk-form-group{% if formset_has_errors %} govuk-form-group--error{% endif %}"
                    id="models-usage-rates">
                 <h4 class="govuk-heading-m">Models and usage rates</h4>
@@ -80,96 +82,109 @@
                   </p>
                 {% endif %}
                 {{ formset.management_form }}
-                {% for form in formset %}
-                  <div class="moj-add-another__item">
-                    <div class="govuk-form-group{% if form.provider.errors %} govuk-form-group--error{% endif %}">
-                      <label class="govuk-label govuk-label-s app-model-usage-label{% if not forloop.first %} app-model-usage-label--repeated{% endif %}"
-                             for="{{ form.provider.id_for_label }}">Provider</label>
-                      <select class="govuk-select govuk-!-width-full"
-                              id="{{ form.provider.id_for_label }}"
-                              name="{{ form.provider.html_name }}"
-                              hx-get="{% url 'ai_cost_usage_calculator' %}"
-                              hx-target="next .model-select"
-                              hx-trigger="change"
-                              hx-vals='js:{provider: this.value}'
-                              aria-label="Provider"
-                              data-name="{{ formset.prefix }}-%index%-provider"
-                              data-id="id_{{ formset.prefix }}-%index%-provider">
-                        <option value="">Select a provider</option>
-                        {% for value, label in form.provider.field.choices %}
-                          <option value="{{ value }}"
-                                  {% if form.provider.value == value %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                      </select>
+                <div class="moj-add-another__items">
+                  {% for form in formset %}
+                    <div class="moj-add-another__item moj-add-another__item--inline">
+                      <fieldset class="govuk-fieldset moj-add-another__fieldset">
+                        <legend class="govuk-fieldset__legend moj-add-another__item-title govuk-fieldset__legend--m">Model {{ forloop.counter }}</legend>
+                        <div class="moj-add-another__item-container">
+                          <div class="moj-add-another__item-row">
+                            <div class="govuk-form-group{% if form.provider.errors %} govuk-form-group--error{% endif %}">
+                              <label class="govuk-label govuk-label-s"
+                                     for="{{ form.provider.id_for_label }}">Provider</label>
+                              <select class="govuk-select govuk-!-width-full{% if form.provider.errors %} govuk-select--error{% endif %}"
+                                      id="{{ form.provider.id_for_label }}"
+                                      name="{{ form.provider.html_name }}"
+                                      hx-get="{% url 'ai_cost_usage_calculator' %}"
+                                      hx-target="next .model-select"
+                                      hx-trigger="change"
+                                      hx-vals='js:{provider: this.value}'
+                                      data-name="{{ formset.prefix }}-%index%-provider"
+                                      data-id="id_{{ formset.prefix }}-%index%-provider"
+                                      data-label="Provider">
+                                <option value="">Select a provider</option>
+                                {% for value, label in form.provider.field.choices %}
+                                  <option value="{{ value }}"
+                                          {% if form.provider.value == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                              </select>
+                            </div>
+                            <div class="govuk-form-group{% if form.model.errors %} govuk-form-group--error{% endif %}">
+                              <label class="govuk-label govuk-label-s"
+                                     for="{{ form.model.id_for_label }}">Model</label>
+                              <select class="govuk-select govuk-!-width-full model-select{% if form.model.errors %} govuk-select--error{% endif %}"
+                                      id="{{ form.model.id_for_label }}"
+                                      name="{{ form.model.html_name }}"
+                                      data-name="{{ formset.prefix }}-%index%-model"
+                                      data-id="id_{{ formset.prefix }}-%index%-model"
+                                      data-label="Model">
+                                <option value="">Select a model</option>
+                                {% for value, label in form.model.field.choices %}
+                                  <option value="{{ value }}"
+                                          {% if form.model.value == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                              </select>
+                            </div>
+                            <div class="govuk-form-group{% if form.input_tokens.errors %} govuk-form-group--error{% endif %}">
+                              <label class="govuk-label govuk-label-s"
+                                     for="{{ form.input_tokens.id_for_label }}">Input tokens</label>
+                              <input class="govuk-input govuk-!-width-full{% if form.input_tokens.errors %} govuk-input--error{% endif %}"
+                                     id="{{ form.input_tokens.id_for_label }}"
+                                     name="{{ form.input_tokens.html_name }}"
+                                     type="text"
+                                     inputmode="numeric"
+                                     value="{{ form.input_tokens.value|default:'' }}"
+                                     data-name="{{ formset.prefix }}-%index%-input_tokens"
+                                     data-id="id_{{ formset.prefix }}-%index%-input_tokens"
+                                     data-label="Input tokens">
+                            </div>
+                            <div class="govuk-form-group{% if form.output_tokens.errors %} govuk-form-group--error{% endif %}">
+                              <label class="govuk-label govuk-label-s"
+                                     for="{{ form.output_tokens.id_for_label }}">Output tokens</label>
+                              <input class="govuk-input govuk-!-width-full{% if form.output_tokens.errors %} govuk-input--error{% endif %}"
+                                     id="{{ form.output_tokens.id_for_label }}"
+                                     name="{{ form.output_tokens.html_name }}"
+                                     type="text"
+                                     inputmode="numeric"
+                                     value="{{ form.output_tokens.value|default:'' }}"
+                                     data-name="{{ formset.prefix }}-%index%-output_tokens"
+                                     data-id="id_{{ formset.prefix }}-%index%-output_tokens"
+                                     data-label="Output tokens">
+                            </div>
+                            <div class="govuk-form-group{% if form.requests_per_period.errors %} govuk-form-group--error{% endif %}">
+                              <label class="govuk-label govuk-label-s"
+                                     for="{{ form.requests_per_period.id_for_label }}">Requests</label>
+                              <input class="govuk-input govuk-!-width-full{% if form.requests_per_period.errors %} govuk-input--error{% endif %}"
+                                     id="{{ form.requests_per_period.id_for_label }}"
+                                     name="{{ form.requests_per_period.html_name }}"
+                                     type="text"
+                                     inputmode="numeric"
+                                     value="{{ form.requests_per_period.value|default:'' }}"
+                                     data-name="{{ formset.prefix }}-%index%-requests_per_period"
+                                     data-id="id_{{ formset.prefix }}-%index%-requests_per_period"
+                                     data-label="Requests">
+                            </div>
+                          </div>
+                          <div class="moj-add-another__remove-button-container">
+                            {% if formset.total_form_count > 1 %}
+                              <button type="button"
+                                      class="govuk-button govuk-button--secondary moj-add-another__remove-button">
+                                Remove
+                              </button>
+                            {% endif %}
+                          </div>
+                        </div>
+                      </fieldset>
                     </div>
-                    <div class="govuk-form-group{% if form.model.errors %} govuk-form-group--error{% endif %}">
-                      <label class="govuk-label govuk-label-s app-model-usage-label{% if not forloop.first %} app-model-usage-label--repeated{% endif %}"
-                             for="{{ form.model.id_for_label }}">Model</label>
-                      <select class="govuk-select govuk-!-width-full model-select"
-                              id="{{ form.model.id_for_label }}"
-                              name="{{ form.model.html_name }}"
-                              aria-label="Model"
-                              data-name="{{ formset.prefix }}-%index%-model"
-                              data-id="id_{{ formset.prefix }}-%index%-model">
-                        <option value="">Select a model</option>
-                        {% for value, label in form.model.field.choices %}
-                          <option value="{{ value }}"
-                                  {% if form.model.value == value %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                      </select>
-                    </div>
-                    <div class="govuk-form-group{% if form.input_tokens.errors %} govuk-form-group--error{% endif %}">
-                      <label class="govuk-label govuk-label-s app-model-usage-label{% if not forloop.first %} app-model-usage-label--repeated{% endif %}"
-                             for="{{ form.input_tokens.id_for_label }}">Input tokens</label>
-                      <input class="govuk-input govuk-!-width-full{% if form.input_tokens.errors %} govuk-input--error{% endif %}"
-                             id="{{ form.input_tokens.id_for_label }}"
-                             name="{{ form.input_tokens.html_name }}"
-                             aria-label="Input tokens"
-                             type="text"
-                             inputmode="numeric"
-                             value="{{ form.input_tokens.value|default:'' }}"
-                             data-name="{{ formset.prefix }}-%index%-input_tokens"
-                             data-id="id_{{ formset.prefix }}-%index%-input_tokens">
-                    </div>
-                    <div class="govuk-form-group{% if form.output_tokens.errors %} govuk-form-group--error{% endif %}">
-                      <label class="govuk-label govuk-label-s app-model-usage-label{% if not forloop.first %} app-model-usage-label--repeated{% endif %}"
-                             for="{{ form.output_tokens.id_for_label }}">Output tokens</label>
-                      <input class="govuk-input govuk-!-width-full{% if form.output_tokens.errors %} govuk-input--error{% endif %}"
-                             id="{{ form.output_tokens.id_for_label }}"
-                             name="{{ form.output_tokens.html_name }}"
-                             aria-label="Output tokens"
-                             type="text"
-                             inputmode="numeric"
-                             value="{{ form.output_tokens.value|default:'' }}"
-                             data-name="{{ formset.prefix }}-%index%-output_tokens"
-                             data-id="id_{{ formset.prefix }}-%index%-output_tokens">
-                    </div>
-                    <div class="govuk-form-group{% if form.requests_per_period.errors %} govuk-form-group--error{% endif %}">
-                      <label class="govuk-label govuk-label-s app-model-usage-label{% if not forloop.first %} app-model-usage-label--repeated{% endif %}"
-                             for="{{ form.requests_per_period.id_for_label }}">Requests</label>
-                      <input class="govuk-input govuk-!-width-full{% if form.requests_per_period.errors %} govuk-input--error{% endif %}"
-                             id="{{ form.requests_per_period.id_for_label }}"
-                             name="{{ form.requests_per_period.html_name }}"
-                             aria-label="Requests"
-                             type="text"
-                             inputmode="numeric"
-                             value="{{ form.requests_per_period.value|default:'' }}"
-                             data-name="{{ formset.prefix }}-%index%-requests_per_period"
-                             data-id="id_{{ formset.prefix }}-%index%-requests_per_period">
-                    </div>
-                    {% if formset.total_form_count > 1 %}
-                      <button type="button"
-                              class="govuk-button govuk-button--secondary moj-add-another__remove-button">
-                        Remove
-                      </button>
-                    {% endif %}
-                  </div>
-                {% endfor %}
+                  {% endfor %}
+                </div>
               </div>
-              <button type="button"
-                      class="govuk-button govuk-button--secondary moj-add-another__add-button">
-                Add another model
-              </button>
+              <div class="moj-add-another__add-button-container">
+                <button type="button"
+                        class="govuk-button govuk-button--secondary moj-add-another__add-button">
+                  Add another model
+                </button>
+              </div>
             </div>
             <hr class="govuk-section-break govuk-section-break--m govuk-section-break--visible">
             <button type="submit"

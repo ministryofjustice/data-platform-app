@@ -70,25 +70,29 @@ $masthead-background-color: #381a62;
   flex-wrap: wrap;
 }
 
-@include govuk-media-query($from: desktop) {
-  .app-model-usage-label--repeated {
-    @include govuk-visually-hidden;
-  }
-}
-
 .app-model-usage-rows {
+  @include govuk-media-query($from: desktop) {
+    .moj-add-another__item:not(:first-child) .govuk-label {
+      @include govuk-visually-hidden;
+    }
+  }
+
   .moj-add-another__item {
+    margin-top: govuk-spacing(2);
+    margin-bottom: govuk-spacing(4);
+  }
+
+  .moj-add-another__item-row {
     display: grid;
     grid-template-columns: 1fr;
     row-gap: govuk-spacing(3);
-    margin-top: govuk-spacing(2);
 
     .govuk-form-group {
       margin-bottom: 0;
     }
 
     @include govuk-media-query($from: desktop) {
-      grid-template-columns: 2fr 3fr 1.1fr 1.1fr 1.1fr 80px;
+      grid-template-columns: 2fr 3fr 1.1fr 1.1fr 1.1fr;
       column-gap: govuk-spacing(3);
       row-gap: 0;
       align-items: stretch;
