@@ -324,9 +324,9 @@ class ModelSelectionContextMixin(AvailableModelsMixin):
         # Pinned models don't count toward the visible limit.
         visible_models = [*pinned_models, *visible_matches]
 
-        if len(visible_models) == 0:
-            logger.debug("No visible models after filtering.")
-            sentry_sdk.capture_message("No visible models after filtering.")
+        if not self.available_models:
+            logger.warning("no_available_models_returned_by_ai_gateway")
+            sentry_sdk.capture_message("No available models returned by AI Gateway.")
 
         hidden_selected_models = self._hidden_selected_models(selected_model_ids, visible_models)
 
