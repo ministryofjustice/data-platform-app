@@ -73,8 +73,8 @@ class ProjectMembershipNotificationService:
             logger.debug(
                 "sending_member_added_email",
                 project_id=project.pk,
-                member_email=member.email,
-                added_by_email=added_by.email,
+                member_id=member.pk,
+                added_by_id=added_by.pk,
             )
             self._notifications_service.send_email(
                 email_address=member.email,
