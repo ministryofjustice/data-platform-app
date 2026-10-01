@@ -166,7 +166,7 @@ class ProjectService:
         logger.debug(
             "creating_project",
             project_name=name,
-            created_by_email=created_by.email,
+            created_by_id=created_by.pk,
         )
         with transaction.atomic():
             project = Project.objects.create(
