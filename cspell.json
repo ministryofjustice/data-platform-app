@@ -94,6 +94,7 @@
     "runserver",
     "slugifies",
     "staticfiles",
+    "structlog",
     "teardown",
     "testpaths",
     "tmproj",

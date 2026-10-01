@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 import os
 from pathlib import Path
 
+import structlog
 from django.urls import reverse_lazy
 
 from data_platform_app.utils import get_azure_redirect_uri
@@ -63,6 +64,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.LoginRequiredMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "django_structlog.middlewares.RequestMiddleware",
     "django_htmx.middleware.HtmxMiddleware",
     "simple_history.middleware.HistoryRequestMiddleware",
 ]
@@ -210,3 +212,69 @@ FEATURE_FLAGS = {
     "AI_GATEWAY_COSTS": os.environ.get("FEATURE_AI_GATEWAY_COSTS", "False").strip().lower()
     == "true",
 }
+
+# Logging configuration
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "plain_console": {
+            "()": structlog.stdlib.ProcessorFormatter,
+            "processor": structlog.dev.ConsoleRenderer(),
+        },
+        "json_formatter": {
+            "()": structlog.stdlib.ProcessorFormatter,
+            "processor": structlog.processors.JSONRenderer(),
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "json_formatter",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": LOG_LEVEL,
+    },
+    "loggers": {
+        "data_platform_app": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "projects": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "ai_gateway": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "django_structlog": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+    },
+}
+
+structlog.configure(
+    processors=[
+        structlog.contextvars.merge_contextvars,
+        structlog.stdlib.filter_by_level,
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.stdlib.add_logger_name,
+        structlog.stdlib.add_log_level,
+        structlog.stdlib.PositionalArgumentsFormatter(),
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
+        structlog.processors.UnicodeDecoder(),
+        structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+    ],
+    logger_factory=structlog.stdlib.LoggerFactory(),
+    cache_logger_on_first_use=True,
+)
