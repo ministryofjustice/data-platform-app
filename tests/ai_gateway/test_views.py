@@ -858,6 +858,83 @@ class TestKeyDetailView:
         assert response.status_code == 404
 
 
+class TestKeyHistoryView:
+    @pytest.fixture(autouse=True)
+    def _grant_manage_api_keys(self, project, user, grant_project_permission):
+        grant_project_permission(project, user, ProjectPermission.MANAGE_API_KEYS)
+
+    def test_renders_key_history(self, client, user, project, key):
+        user.first_name = "Foo"
+        user.last_name = "Bar"
+        user.save(update_fields=["first_name", "last_name"])
+
+        key.models = ["claude-3"]
+        key._history_user = user
+        key.save(update_fields=["models", "modified"])
+        latest_record = key.history.latest()
+        client.force_login(user)
+
+        response = client.get(reverse("ai_gateway:key_history", args=[project.uuid, key.pk]))
+
+        assert response.status_code == 200
+        assertTemplateUsed(response, "ai_gateway/key-history.html")
+        assert latest_record in response.context["history_records"]
+        assertContains(response, "data-sort-value=")
+        assertContains(response, "Model changed")
+        assertContains(response, "claude-3")
+        assertContains(response, "gpt-4")
+        assertContains(response, "Foo Bar")
+
+    def test_does_not_show_another_keys_history(self, client, user, project, key):
+        other_key = baker.make(
+            "ai_gateway.Key",
+            project=project,
+            name="other-key",
+            litellm_secret="sk-other-key-secret",
+            litellm_alias="other-key-alias",
+            litellm_token="other-key-token",
+            masked_key="sk-masked-and-secret",
+            created_by=user,
+            models=["other-key-only-model"],
+        )
+        client.force_login(user)
+
+        response = client.get(reverse("ai_gateway:key_history", args=[project.uuid, key.pk]))
+
+        assert response.status_code == 200
+        assertContains(response, "gpt-4")
+        assertNotContains(response, "other-key-only-model")
+        assert other_key.history.latest().models == ["other-key-only-model"]
+
+    def test_key_from_another_project_gets_404(self, client, user, project):
+        other_project = baker.make("projects.Project", created_by=user)
+        baker.make("projects.ProjectMembership", project=other_project, user=user)
+        other_key = baker.make(
+            "ai_gateway.Key",
+            project=other_project,
+            name="other-project-key",
+            litellm_secret="sk-other-project-secret",
+            litellm_alias="other-project-key-alias",
+            litellm_token="other-project-key-token",
+            masked_key="sk-masked-and-secret",
+            created_by=user,
+        )
+        client.force_login(user)
+
+        response = client.get(reverse("ai_gateway:key_history", args=[project.uuid, other_key.pk]))
+
+        assert response.status_code == 404
+
+    def test_denied_without_manage_api_keys_permission(
+        self, client, project, key, project_member_without_permissions
+    ):
+        client.force_login(project_member_without_permissions)
+
+        response = client.get(reverse("ai_gateway:key_history", args=[project.uuid, key.pk]))
+
+        assert response.status_code == 403
+
+
 class TestKeyRegenerateView:
     @pytest.fixture(autouse=True)
     def _grant_manage_api_keys(self, project, user, grant_project_permission):

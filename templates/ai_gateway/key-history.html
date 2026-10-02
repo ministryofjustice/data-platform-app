@@ -1,0 +1,58 @@
+{% extends "base/base.html" %}
+{% load project_permissions %}
+{% block title %}
+  History of {{ key.name }} - AI Gateway key - {{ project.name }} - Justice Data Platform | Ministry of Justice
+{% endblock title %}
+{% block back_link %}
+  <a href="{% url 'ai_gateway:key_list' project.uuid %}"
+     class="govuk-back-link">Back to {{ key.name }}</a>
+{% endblock back_link %}
+{% block content %}
+  {% has_project_permission request.user "projects.manage_api_keys" project as can_manage_api_keys %}
+  <div class="govuk-grid-row">
+    <span class="govuk-caption-l">{{ key.name }}</span>
+    <h1 class="govuk-heading-l">Changes</h1>
+  </div>
+  <table class="govuk-table" data-module="moj-sortable-table">
+    <thead class="govuk-table__head">
+      <tr class="govuk-table__row">
+        <th scope="col" class="govuk-table__header" aria-sort="descending">Date and time</th>
+        <th scope="col" class="govuk-table__header" aria-sort="none">Change type</th>
+        <th scope="col" class="govuk-table__header" aria-sort="none">Details</th>
+        <th scope="col" class="govuk-table__header" aria-sort="none">Changed by</th>
+      </tr>
+    </thead>
+    <tbody class="govuk-table__body">
+      {% for record in history_records %}
+        <tr class="govuk-table__row">
+          <td class="govuk-table__cell"
+              data-sort-value="{{ record.history_date|date:'YmdHis' }}">{{ record.history_date|date:"j M Y H:i" }}</td>
+          <td class="govuk-table__cell">{{ record.model_change_type }}</td>
+          <td class="govuk-table__cell">
+            {% if record.models_added %}
+              Model{{ record.models_added|length|pluralize }} added:
+              <ul class="govuk-list">
+                {% for model in record.models_added %}
+                  <li>{{ model }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+            {% if record.models_removed %}
+              Model{{ record.models_removed|length|pluralize }} removed:
+              <ul class="govuk-list">
+                {% for model in record.models_removed %}
+                  <li>{{ model }}</li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+          </td>
+          <td class="govuk-table__cell">{{ record.history_user.get_full_name }}</td>
+        </tr>
+      {% empty %}
+        <tr class="govuk-table__row">
+          <td class="govuk-table__cell" colspan="4">No history available.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock content %}
