@@ -59,11 +59,11 @@ class KeyHistoricalModel(models.Model):
         if self.history_type == "+":
             return "Key created"
         if self.has_models_added_and_removed:
-            return "Models changed"
+            return "Model changed"
         if self.models_added:
-            return "Models added"
+            return "Model added"
         if self.models_removed:
-            return "Models removed"
+            return "Model removed"
         return None
 
 

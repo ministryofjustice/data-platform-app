@@ -743,3 +743,10 @@ class KeyHistoryView(
     permission_required = ProjectPermission.MANAGE_API_KEYS.permission_name
     template_name = "ai_gateway/key-history.html"
     context_object_name = "key"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["history_records"] = self.key.history.all().order_by(
+            "-history_date", "-history_id"
+        )
+        return context
