@@ -4,7 +4,7 @@
   "description": "Data Platform App",
   "main": "index.js",
   "dependencies": {
-    "@ministryofjustice/frontend": "9.0.0",
+    "@ministryofjustice/frontend": "11.1.0",
     "@x-govuk/govuk-prototype-components": "6.0.0",
     "accessible-autocomplete": "3.0.1",
     "echarts": "6.1.0",
