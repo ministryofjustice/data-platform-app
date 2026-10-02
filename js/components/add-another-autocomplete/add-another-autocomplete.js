@@ -100,6 +100,7 @@ const AddAnotherAutocomplete = {
 
       const providerSelect = newItem.querySelector('[name$="-provider"]');
       if (providerSelect) {
+        providerSelect.value = "";
         htmx.trigger(providerSelect, "change");
       }
     };
