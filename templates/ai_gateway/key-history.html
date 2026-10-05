@@ -4,7 +4,7 @@
   History of {{ key.name }} - AI Gateway key - {{ project.name }} - Justice Data Platform | Ministry of Justice
 {% endblock title %}
 {% block back_link %}
-  <a href="{% url 'ai_gateway:key_list' project.uuid %}"
+  <a href="{% url 'ai_gateway:key_detail' project.uuid key.pk %}"
      class="govuk-back-link">Back to {{ key.name }}</a>
 {% endblock back_link %}
 {% block content %}
@@ -30,7 +30,9 @@
           <td class="govuk-table__cell">{{ record.model_change_type }}</td>
           <td class="govuk-table__cell">
             {% if record.models_added %}
-              Model{{ record.models_added|length|pluralize }} added:
+              {% if record.has_models_added_and_removed %}
+                Model{{ record.models_added|length|pluralize }} added:
+              {% endif %}
               <ul class="govuk-list">
                 {% for model in record.models_added %}
                   <li>{{ model }}</li>
@@ -38,7 +40,9 @@
               </ul>
             {% endif %}
             {% if record.models_removed %}
-              Model{{ record.models_removed|length|pluralize }} removed:
+              {% if record.has_models_added_and_removed %}
+                Model{{ record.models_removed|length|pluralize }} removed:
+              {% endif %}
               <ul class="govuk-list">
                 {% for model in record.models_removed %}
                   <li>{{ model }}</li>
