@@ -746,7 +746,7 @@ class KeyHistoryView(
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["history_records"] = self.key.history.all().order_by(
+        context["history_records"] = self.key.history.select_related("history_user").order_by(
             "-history_date", "-history_id"
         )
         return context

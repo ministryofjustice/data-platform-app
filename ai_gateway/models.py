@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils.functional import cached_property
 from django_extensions.db.models import TimeStampedModel
 from simple_history.models import HistoricalRecords
 
@@ -31,30 +32,34 @@ class KeyHistoricalModel(models.Model):
         changes.sort()
         return changes
 
-    @property
+    @cached_property
+    def previous_record(self):
+        return self.prev_record
+
+    @cached_property
     def models_added(self) -> list:
         if self.history_type == "+":
             return self.models
 
-        if not self.prev_record:
+        if not self.previous_record:
             return []
-        return self._changes(source=self.models, comparison=self.prev_record.models)
+        return self._changes(source=self.models, comparison=self.previous_record.models)
 
-    @property
+    @cached_property
     def models_removed(self) -> list:
-        if not self.prev_record:
+        if not self.previous_record:
             return []
-        return self._changes(source=self.prev_record.models, comparison=self.models)
+        return self._changes(source=self.previous_record.models, comparison=self.models)
 
     @property
     def has_models_added_and_removed(self) -> bool:
         return bool(self.models_added and self.models_removed)
 
-    @property
+    @cached_property
     def has_model_changes(self) -> bool:
         return bool(self.models_added or self.models_removed)
 
-    @property
+    @cached_property
     def model_change_type(self) -> str | None:
         if self.history_type == "+":
             return "Key created"
