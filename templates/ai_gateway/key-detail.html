@@ -20,7 +20,7 @@
         {% include "includes/error_message.html" with heading=error_message.heading message=error_message.message only %}
       </div>
     {% endif %}
-    <div class="govuk-grid-column-two-thirds">
+    <div class="govuk-grid-column-one-half">
       <span class="govuk-caption-l">Manage</span>
       <h1 class="govuk-heading-l">{{ key.name }}</h1>
       <div class="ai-gateway-key-detail">
@@ -66,20 +66,20 @@
       </div>
     </div>
   </div>
-  <div class="govuk-grid-row">
+  <div class="govuk-grid-row govuk-!-margin-top-6">
     <div class="govuk-grid-column-full">
-      <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
+      <h2 class="govuk-heading-m">History</h2>
     </div>
   </div>
   <div class="govuk-grid-row app-equal-height-panels">
     <div class="govuk-grid-column-one-half">
-      <h2 class="govuk-heading-m">Usage</h2>
+      <p class="govuk-body govuk-!-font-weight-bold">Usage</p>
       <p class="govuk-body">See usage and spend for this API key, including spend history.</p>
       <a href="{% url 'ai_gateway:usage' project.uuid %}#spend-per-key"
          class="govuk-link">See usage</a>
     </div>
     <div class="govuk-grid-column-one-half">
-      <h2 class="govuk-heading-m">Changes</h2>
+      <p class="govuk-body govuk-!-font-weight-bold">Changes</p>
       <p class="govuk-body">See when changes were made to this key, and who made them.</p>
       <a href="{% url 'ai_gateway:key_history' project.uuid key.pk %}"
          class="govuk-link">See changes</a>
@@ -108,7 +108,6 @@
   </div>
   <div class="govuk-grid-row">
     <div class="govuk-grid-column-one-half">
-      <h2 class="govuk-heading-m">Revoke key</h2>
       <p class="govuk-body govuk-!-font-weight-bold">Revoke</p>
       <p class="govuk-body">
         Permanently disable this API key. Applications using this key will stop working.

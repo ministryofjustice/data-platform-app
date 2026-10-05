@@ -30,7 +30,7 @@
           <td class="govuk-table__cell">{{ record.model_change_type }}</td>
           <td class="govuk-table__cell">
             {% if record.models_added %}
-              {% if record.has_models_added_and_removed %}
+              {% if record.history_type == "+" or record.has_models_added_and_removed %}
                 Model{{ record.models_added|length|pluralize }} added:
               {% endif %}
               <ul class="govuk-list">
