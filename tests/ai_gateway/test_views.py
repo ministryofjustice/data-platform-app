@@ -164,14 +164,12 @@ class TestKeyCreateView:
         assert not Key.objects.filter(project=project).exists()
         key_service.create_key.assert_not_called()
 
-    def test_denied_without_manage_api_keys_permission(
-        self, client, project, key_service, project_member_without_permissions
-    ):
-        client.force_login(project_member_without_permissions)
+    def test_member_can_access(self, client, user, project, key_service):
+        client.force_login(user)
 
         response = client.get(reverse("ai_gateway:key_create", args=[project.uuid]))
 
-        assert response.status_code == 403
+        assert response.status_code == 200
 
 
 class TestKeyCreateViewFiltering:
@@ -859,10 +857,6 @@ class TestKeyDetailView:
 
 
 class TestKeyHistoryView:
-    @pytest.fixture(autouse=True)
-    def _grant_manage_api_keys(self, project, user, grant_project_permission):
-        grant_project_permission(project, user, ProjectPermission.MANAGE_API_KEYS)
-
     def test_renders_key_history(self, client, user, project, key):
         user.first_name = "Foo"
         user.last_name = "Bar"
@@ -925,14 +919,15 @@ class TestKeyHistoryView:
 
         assert response.status_code == 404
 
-    def test_denied_without_manage_api_keys_permission(
+    def test_member_without_manage_api_keys_permission_can_view(
         self, client, project, key, project_member_without_permissions
     ):
         client.force_login(project_member_without_permissions)
 
         response = client.get(reverse("ai_gateway:key_history", args=[project.uuid, key.pk]))
 
-        assert response.status_code == 403
+        assert response.status_code == 200
+        assertTemplateUsed(response, "ai_gateway/key-history.html")
 
 
 class TestKeyRegenerateView:

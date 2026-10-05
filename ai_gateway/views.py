@@ -737,10 +737,7 @@ class KeyRevokeView(ProjectPermissionRequiredMixin, ExistingProjectMixin, Delete
         return HttpResponseRedirect(self.get_success_url())
 
 
-class KeyHistoryView(
-    KeyScopedMixin, ProjectPermissionRequiredMixin, ExistingProjectMixin, TemplateView
-):
-    permission_required = ProjectPermission.MANAGE_API_KEYS.permission_name
+class KeyHistoryView(KeyScopedMixin, ExistingProjectMixin, TemplateView):
     template_name = "ai_gateway/key-history.html"
     context_object_name = "key"
 
