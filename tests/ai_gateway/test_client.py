@@ -170,12 +170,12 @@ class TestGenerateKey:
         def handler(request):
             assert request.method == "POST"
             assert request.url.path == "/key/generate"
-            assert json.loads(request.read()) == {"team_id": "team-123"}
+            assert json.loads(request.read()) == {"team_id": "team-123", "user_id": "user-456"}
             return httpx.Response(200, json={"key": "sk-generated", "token": "hash-1"})
 
         client = build_client(handler)
 
-        assert client.generate_key("team-123") == {
+        assert client.generate_key("team-123", user_id="user-456") == {
             "key": "sk-generated",
             "token": "hash-1",
         }
@@ -184,13 +184,14 @@ class TestGenerateKey:
         def handler(request):
             assert json.loads(request.read()) == {
                 "team_id": "team-123",
+                "user_id": "user-456",
                 "key_alias": "proj-abcd1234",
             }
             return httpx.Response(200, json={"key": "sk-generated", "token": "hash-1"})
 
         client = build_client(handler)
 
-        result = client.generate_key("team-123", key_alias="proj-abcd1234")
+        result = client.generate_key("team-123", user_id="user-456", key_alias="proj-abcd1234")
 
         assert result["key"] == "sk-generated"
 
@@ -198,6 +199,7 @@ class TestGenerateKey:
         def handler(request):
             assert json.loads(request.read()) == {
                 "team_id": "team-123",
+                "user_id": "user-456",
                 "key_alias": "proj-abcd1234",
                 "models": ["gpt-4", "claude-3"],
             }
@@ -206,7 +208,7 @@ class TestGenerateKey:
         client = build_client(handler)
 
         result = client.generate_key(
-            "team-123", key_alias="proj-abcd1234", models=["gpt-4", "claude-3"]
+            "team-123", user_id="user-456", key_alias="proj-abcd1234", models=["gpt-4", "claude-3"]
         )
 
         assert result["key"] == "sk-generated"
@@ -313,6 +315,22 @@ class TestUpdateKeyModels:
         client.update_key_models("hash-1", ["gpt-4"])
 
         assert captured["body"] == {"key": "hash-1", "models": ["gpt-4"]}
+
+
+class TestUpdateKeyUserId:
+    def test_posts_key_and_user_id(self):
+        captured = {}
+
+        def handler(request):
+            assert request.method == "POST"
+            assert request.url.path == "/key/update"
+            captured["body"] = json.loads(request.read())
+            return httpx.Response(200, json={})
+
+        client = build_client(handler)
+        client.update_key_user_id("hash-1", "user-456")
+
+        assert captured["body"] == {"key": "hash-1", "user_id": "user-456"}
 
 
 class TestTeamInfo:

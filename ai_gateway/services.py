@@ -450,7 +450,10 @@ class KeyService:
             key_alias=litellm_alias,
         )
         data = self._client.generate_key(
-            team.litellm_team_id, key_alias=litellm_alias, models=models
+            team.litellm_team_id,
+            user_id=str(created_by.oid),
+            key_alias=litellm_alias,
+            models=models,
         )
 
         plaintext_key = data["key"]
