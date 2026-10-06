@@ -158,7 +158,8 @@ class AIGatewayClient:
         key_alias: str | None = None,
         models: list[str] | None = None,
     ) -> dict[str, Any]:
-        """Generate a virtual key for ``team_id`` and return the gateway response.
+        """Generate a virtual key for ``team_id`` by a given user ``user_id`` and return
+        the gateway response.
 
         ``key_alias`` tags the key so it can be managed later (for example deleted
         by alias) without the plaintext. ``models`` scopes the key to the given

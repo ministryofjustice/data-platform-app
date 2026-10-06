@@ -172,6 +172,7 @@ class TestKeyServiceCreateKey:
 
         gateway_client.generate_key.assert_called_once()
         assert gateway_client.generate_key.call_args.args == ("team-xyz",)
+        assert gateway_client.generate_key.call_args.kwargs["user_id"] == str(user.oid)
         assert gateway_client.generate_key.call_args.kwargs["models"] == ["gpt-4"]
         alias_sent = gateway_client.generate_key.call_args.kwargs["key_alias"]
         assert alias_sent.startswith(f"{project.uuid}-primary-key-")
@@ -196,6 +197,7 @@ class TestKeyServiceCreateKey:
         gateway_client.create_team.assert_not_called()
         gateway_client.generate_key.assert_called_once()
         assert gateway_client.generate_key.call_args.args == ("existing-team",)
+        assert gateway_client.generate_key.call_args.kwargs["user_id"] == str(user.oid)
         assert gateway_client.generate_key.call_args.kwargs["key_alias"].startswith(
             f"{project.uuid}-primary-key-"
         )
