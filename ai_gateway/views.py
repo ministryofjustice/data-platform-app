@@ -743,3 +743,18 @@ class KeyRevokeView(ProjectPermissionRequiredMixin, ExistingProjectMixin, Delete
             "message": f"You've revoked {self.object.name}",
         }
         return HttpResponseRedirect(self.get_success_url())
+
+
+class KeyHistoryView(
+    KeyScopedMixin, ProjectPermissionRequiredMixin, ExistingProjectMixin, TemplateView
+):
+    permission_required = ProjectPermission.MANAGE_API_KEYS.permission_name
+    template_name = "ai_gateway/key-history.html"
+    context_object_name = "key"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["history_records"] = self.key.history.select_related("history_user").order_by(
+            "-history_date", "-history_id"
+        )
+        return context

@@ -76,19 +76,19 @@ class TestKeyHistoricalModel:
         key.save()
         latest_history = history_model.objects.filter(id=key.pk).latest()
 
-        assert latest_history.model_change_type == "Models changed"
+        assert latest_history.model_change_type == "Model changed"
 
         key.models = ["claude-3", "gemini-2"]
         key.save()
         latest_history = history_model.objects.filter(id=key.pk).latest()
 
-        assert latest_history.model_change_type == "Models added"
+        assert latest_history.model_change_type == "Model added"
 
         key.models = ["gemini-2"]
         key.save()
         latest_history = history_model.objects.filter(id=key.pk).latest()
 
-        assert latest_history.model_change_type == "Models removed"
+        assert latest_history.model_change_type == "Model removed"
 
         key.models = ["gemini-2"]
         key.save()
