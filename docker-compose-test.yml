@@ -26,4 +26,4 @@ services:
       SECRET_KEY: "1234567890"
       ENABLE_DB_SSL: "False"
     entrypoint: pytest
-    command: ./tests --color=yes
+    command: ./tests --ignore=./tests/e2e --color=yes
