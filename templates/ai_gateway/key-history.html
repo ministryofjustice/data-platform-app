@@ -9,10 +9,8 @@
 {% endblock back_link %}
 {% block content %}
   {% has_project_permission request.user "projects.manage_api_keys" project as can_manage_api_keys %}
-  <div class="govuk-grid-row">
-    <span class="govuk-caption-l">{{ key.name }}</span>
-    <h1 class="govuk-heading-l">Changes</h1>
-  </div>
+  <span class="govuk-caption-l">{{ key.name }}</span>
+  <h1 class="govuk-heading-l">Changes</h1>
   <table class="govuk-table" data-module="moj-sortable-table">
     <thead class="govuk-table__head">
       <tr class="govuk-table__row">
@@ -31,9 +29,11 @@
           <td class="govuk-table__cell">
             {% if record.models_added %}
               {% if record.history_type == "+" or record.has_models_added_and_removed %}
-                Model{{ record.models_added|length|pluralize }} added:
+                <p class="govuk-body govuk-!-margin-bottom-1">
+                  Model{{ record.models_added|length|pluralize }} added:
+                </p>
               {% endif %}
-              <ul class="govuk-list">
+              <ul class="govuk-list{% if record.has_models_added_and_removed %} govuk-!-margin-bottom-4{% else %} govuk-!-margin-bottom-0{% endif %}">
                 {% for model in record.models_added %}
                   <li>{{ model }}</li>
                 {% endfor %}
@@ -43,7 +43,7 @@
               {% if record.has_models_added_and_removed %}
                 Model{{ record.models_removed|length|pluralize }} removed:
               {% endif %}
-              <ul class="govuk-list">
+              <ul class="govuk-list govuk-!-margin-bottom-0">
                 {% for model in record.models_removed %}
                   <li>{{ model }}</li>
                 {% endfor %}

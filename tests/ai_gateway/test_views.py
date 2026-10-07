@@ -874,7 +874,7 @@ class TestKeyHistoryView:
         assertTemplateUsed(response, "ai_gateway/key-history.html")
         assert latest_record in response.context["history_records"]
         assertContains(response, "data-sort-value=")
-        assertContains(response, "Model changed")
+        assertContains(response, "Models changed")
         assertContains(response, "claude-3")
         assertContains(response, "gpt-4")
         assertContains(response, "Foo Bar")
