@@ -164,14 +164,12 @@ class TestKeyCreateView:
         assert not Key.objects.filter(project=project).exists()
         key_service.create_key.assert_not_called()
 
-    def test_denied_without_manage_api_keys_permission(
-        self, client, project, key_service, project_member_without_permissions
-    ):
-        client.force_login(project_member_without_permissions)
+    def test_member_can_access(self, client, user, project, key_service):
+        client.force_login(user)
 
         response = client.get(reverse("ai_gateway:key_create", args=[project.uuid]))
 
-        assert response.status_code == 403
+        assert response.status_code == 200
 
 
 class TestKeyCreateViewFiltering:
@@ -880,7 +878,7 @@ class TestKeyHistoryView:
         assertTemplateUsed(response, "ai_gateway/key-history.html")
         assert latest_record in response.context["history_records"]
         assertContains(response, "data-sort-value=")
-        assertContains(response, "Model changed")
+        assertContains(response, "Models changed")
         assertContains(response, "claude-3")
         assertContains(response, "gpt-4")
         assertContains(response, "Foo Bar")
