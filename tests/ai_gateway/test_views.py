@@ -171,6 +171,15 @@ class TestKeyCreateView:
 
         assert response.status_code == 200
 
+    def test_denied_without_manage_api_keys_permission(
+        self, client, project, project_member_without_permissions
+    ):
+        client.force_login(project_member_without_permissions)
+
+        response = client.get(reverse("ai_gateway:key_create", args=[project.uuid]))
+
+        assert response.status_code == 403
+
 
 class TestKeyCreateViewFiltering:
     @pytest.fixture(autouse=True)
