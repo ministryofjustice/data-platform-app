@@ -164,7 +164,9 @@ class TestKeyCreateView:
         assert not Key.objects.filter(project=project).exists()
         key_service.create_key.assert_not_called()
 
-    def test_member_can_access(self, client, user, project, key_service):
+    def test_member_with_manage_api_keys_permission_can_access(
+        self, client, user, project, key_service
+    ):
         client.force_login(user)
 
         response = client.get(reverse("ai_gateway:key_create", args=[project.uuid]))
