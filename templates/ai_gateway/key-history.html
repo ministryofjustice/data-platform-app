@@ -1,5 +1,4 @@
 {% extends "base/base.html" %}
-{% load project_permissions %}
 {% block title %}
   History of {{ key.name }} - AI Gateway key - {{ project.name }} - Justice Data Platform | Ministry of Justice
 {% endblock title %}
@@ -8,7 +7,6 @@
      class="govuk-back-link">Back to {{ key.name }}</a>
 {% endblock back_link %}
 {% block content %}
-  {% has_project_permission request.user "projects.manage_api_keys" project as can_manage_api_keys %}
   <span class="govuk-caption-l">{{ key.name }}</span>
   <h1 class="govuk-heading-l">Changes</h1>
   <table class="govuk-table" data-module="moj-sortable-table">
