@@ -63,6 +63,9 @@ select = [
 DJANGO_SETTINGS_MODULE = "data_platform_app.settings.test"
 addopts = "-v --tb=auto --cov=data_platform_app --cov=users --cov=projects --cov=ai_gateway --cov-branch --cov-report=term-missing --cov-report=xml --cov-fail-under=90"
 testpaths = ["tests"]
+markers = [
+    "e2e: end-to-end tests",
+]
 
 [tool.coverage.run]
 omit = [
