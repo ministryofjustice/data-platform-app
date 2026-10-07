@@ -66,14 +66,14 @@ test:
 	DB_USER=data_platform_app \
 	DB_PASSWORD=data_platform_app \
 	DB_NAME=data_platform_app \
-	uv run pytest --failed-first --maxfail=5 $(ARGS)
+	uv run pytest -m "not e2e" --failed-first --maxfail=5 $(ARGS)
 
 test-e2e:
 	DB_USER=data_platform_app \
 	DB_PASSWORD=data_platform_app \
 	DB_NAME=data_platform_app \
 	DJANGO_ALLOW_ASYNC_UNSAFE=1 \
-	uv run pytest tests/e2e --no-cov $(ARGS)
+	uv run pytest -m e2e tests/e2e --no-cov $(ARGS)
 
 start-ai-gateway:
 	bash contrib/ai-gateway/start.sh
