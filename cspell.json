@@ -33,6 +33,7 @@
     "dataplatform",
     "describedby",
     "dbname",
+    "debugpy",
     "delenv",
     "djlint",
     "docstrings",
