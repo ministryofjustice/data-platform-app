@@ -164,8 +164,17 @@ class TestKeyCreateView:
         assert not Key.objects.filter(project=project).exists()
         key_service.create_key.assert_not_called()
 
+    def test_member_with_manage_api_keys_permission_can_access(
+        self, client, user, project, key_service
+    ):
+        client.force_login(user)
+
+        response = client.get(reverse("ai_gateway:key_create", args=[project.uuid]))
+
+        assert response.status_code == 200
+
     def test_denied_without_manage_api_keys_permission(
-        self, client, project, key_service, project_member_without_permissions
+        self, client, project, project_member_without_permissions
     ):
         client.force_login(project_member_without_permissions)
 
@@ -821,6 +830,11 @@ class TestKeyDetailView:
 
         response = client.get(reverse("ai_gateway:key_detail", args=[project.uuid, key.pk]))
 
+        assert response.status_code == 200
+        assertContains(
+            response,
+            f'href="{reverse("ai_gateway:key_history", args=[project.uuid, key.pk])}"',
+        )
         assertNotContains(
             response,
             f'href="{reverse("ai_gateway:key_model_change", args=[project.uuid, key.pk])}"',
@@ -880,7 +894,7 @@ class TestKeyHistoryView:
         assertTemplateUsed(response, "ai_gateway/key-history.html")
         assert latest_record in response.context["history_records"]
         assertContains(response, "data-sort-value=")
-        assertContains(response, "Model changed")
+        assertContains(response, "Models changed")
         assertContains(response, "claude-3")
         assertContains(response, "gpt-4")
         assertContains(response, "Foo Bar")
@@ -925,14 +939,22 @@ class TestKeyHistoryView:
 
         assert response.status_code == 404
 
-    def test_denied_without_manage_api_keys_permission(
+    def test_member_without_manage_api_keys_permission_can_view_history(
         self, client, project, key, project_member_without_permissions
     ):
         client.force_login(project_member_without_permissions)
 
         response = client.get(reverse("ai_gateway:key_history", args=[project.uuid, key.pk]))
 
-        assert response.status_code == 403
+        assert response.status_code == 200
+        assertTemplateUsed(response, "ai_gateway/key-history.html")
+
+    def test_non_member_gets_404(self, client, non_project_user, project, key):
+        client.force_login(non_project_user)
+
+        response = client.get(reverse("ai_gateway:key_history", args=[project.uuid, key.pk]))
+
+        assert response.status_code == 404
 
 
 class TestKeyRegenerateView:
