@@ -899,6 +899,23 @@ class TestKeyHistoryView:
         assertContains(response, "gpt-4")
         assertContains(response, "Foo Bar")
 
+    def test_does_not_render_history_record_without_model_changes(
+        self, client, user, project, key
+    ):
+        user.first_name = "Unchanged"
+        user.last_name = "Snapshot"
+        user.save(update_fields=["first_name", "last_name"])
+        key._history_user = user
+        key.save()
+        unchanged_record = key.history.latest()
+        client.force_login(user)
+
+        response = client.get(reverse("ai_gateway:key_history", args=[project.uuid, key.pk]))
+
+        assert unchanged_record.model_change_type is None
+        assert response.status_code == 200
+        assertNotContains(response, "Unchanged Snapshot")
+
     def test_does_not_show_another_keys_history(self, client, user, project, key):
         other_key = baker.make(
             "ai_gateway.Key",
