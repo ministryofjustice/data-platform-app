@@ -20,38 +20,40 @@
     </thead>
     <tbody class="govuk-table__body">
       {% for record in history_records %}
-        <tr class="govuk-table__row">
-          <td class="govuk-table__cell"
-              data-sort-value="{{ record.history_date|date:'YmdHis' }}">{{ record.history_date|date:"j M Y H:i" }}</td>
-          <td class="govuk-table__cell">{{ record.model_change_type }}</td>
-          <td class="govuk-table__cell">
-            {% if record.models_added %}
-              {% if record.history_type == "+" or record.has_models_added_and_removed %}
-                <p class="govuk-body govuk-!-margin-bottom-1">
-                  Model{{ record.models_added|length|pluralize }} added:
-                </p>
+        {% if record.model_change_type %}
+          <tr class="govuk-table__row">
+            <td class="govuk-table__cell"
+                data-sort-value="{{ record.history_date|date:'YmdHis' }}">{{ record.history_date|date:"j M Y H:i" }}</td>
+            <td class="govuk-table__cell">{{ record.model_change_type }}</td>
+            <td class="govuk-table__cell">
+              {% if record.models_added %}
+                {% if record.history_type == "+" or record.has_models_added_and_removed %}
+                  <p class="govuk-body govuk-!-margin-bottom-1">
+                    Model{{ record.models_added|length|pluralize }} added:
+                  </p>
+                {% endif %}
+                <ul class="govuk-list{% if record.has_models_added_and_removed %} govuk-!-margin-bottom-4{% else %} govuk-!-margin-bottom-0{% endif %}">
+                  {% for model in record.models_added %}
+                    <li>{{ model }}</li>
+                  {% endfor %}
+                </ul>
               {% endif %}
-              <ul class="govuk-list{% if record.has_models_added_and_removed %} govuk-!-margin-bottom-4{% else %} govuk-!-margin-bottom-0{% endif %}">
-                {% for model in record.models_added %}
-                  <li>{{ model }}</li>
-                {% endfor %}
-              </ul>
-            {% endif %}
-            {% if record.models_removed %}
-              {% if record.has_models_added_and_removed %}
-                <p class="govuk-body govuk-!-margin-bottom-1">
-                  Model{{ record.models_removed|length|pluralize }} removed:
-                </p>
+              {% if record.models_removed %}
+                {% if record.has_models_added_and_removed %}
+                  <p class="govuk-body govuk-!-margin-bottom-1">
+                    Model{{ record.models_removed|length|pluralize }} removed:
+                  </p>
+                {% endif %}
+                <ul class="govuk-list govuk-!-margin-bottom-1">
+                  {% for model in record.models_removed %}
+                    <li>{{ model }}</li>
+                  {% endfor %}
+                </ul>
               {% endif %}
-              <ul class="govuk-list govuk-!-margin-bottom-1">
-                {% for model in record.models_removed %}
-                  <li>{{ model }}</li>
-                {% endfor %}
-              </ul>
-            {% endif %}
-          </td>
-          <td class="govuk-table__cell">{{ record.history_user.get_full_name }}</td>
-        </tr>
+            </td>
+            <td class="govuk-table__cell">{{ record.history_user.get_full_name }}</td>
+          </tr>
+        {% endif %}
       {% empty %}
         <tr class="govuk-table__row">
           <td class="govuk-table__cell" colspan="4">No history available.</td>
