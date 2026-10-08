@@ -5,7 +5,7 @@ from playwright.sync_api import expect
 pytestmark = pytest.mark.e2e
 
 
-def test_creates_project(page, live_server, user, client):
+def test_creates_project(page, live_server, user, client, business_unit):
     client.force_login(user)
 
     session_cookie = client.cookies[settings.SESSION_COOKIE_NAME]
@@ -26,7 +26,7 @@ def test_creates_project(page, live_server, user, client):
     page.get_by_role("link", name="Create a project", exact=True).click()
 
     page.get_by_role("textbox", name="Name").fill("My Test Project")
-    page.get_by_role("combobox", name="Business unit").select_option("1")
+    page.get_by_role("combobox", name="Business unit").select_option(label=business_unit.name)
     page.get_by_role("textbox", name="Description").fill("This is a test project description.")
     page.get_by_role("button", name="Continue").click()
 

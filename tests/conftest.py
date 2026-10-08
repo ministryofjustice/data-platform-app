@@ -32,6 +32,12 @@ def superuser(db):
 
 
 @pytest.fixture
+def business_unit(db):
+    """A business unit instance."""
+    return baker.make("projects.BusinessUnit", name="Example Business Unit", code="ebu")
+
+
+@pytest.fixture
 def project(db, user):
     """A project with the test user as an admin member."""
     project = baker.make("projects.Project", name="Example Project", created_by=user, owner=user)
