@@ -80,6 +80,7 @@
     "projectuserpermissions",
     "projectmembership",
     "psycopg",
+    "pytestmark",
     "OCTO",
     "overengineering",
     "pycache",
