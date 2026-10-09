@@ -1,6 +1,12 @@
+import hmac
+
+from django.conf import settings
+from django.contrib.auth import get_user_model, login
 from django.contrib.auth.decorators import login_not_required
-from django.http import HttpResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 from django.views.generic import TemplateView
 
 
@@ -48,3 +54,25 @@ def healthcheck(request):
     Healthcheck view for the app.
     """
     return HttpResponse("OK")
+
+
+@csrf_exempt
+@require_POST
+@login_not_required
+def e2e_login(request: HttpRequest) -> HttpResponse:
+    provided_token = request.headers.get("X-E2E-Token", "").encode()
+    configured_token = settings.E2E_AUTH_TOKEN.encode()
+    if not hmac.compare_digest(provided_token, configured_token):
+        return HttpResponse(status=403)
+
+    user_model = get_user_model()
+    try:
+        user = user_model.objects.get(email__iexact=settings.E2E_USER_EMAIL)
+    except user_model.DoesNotExist, user_model.MultipleObjectsReturned:
+        return HttpResponse(status=403)
+
+    if not user.is_active:
+        return HttpResponse(status=403)
+
+    login(request, user, backend=settings.AUTHENTICATION_BACKENDS[0])
+    return JsonResponse({"authenticated": True})

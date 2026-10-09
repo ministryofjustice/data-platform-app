@@ -19,6 +19,7 @@ from azure_auth.views import azure_auth_callback, azure_auth_login, azure_auth_l
 from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth.decorators import login_not_required
+from django.core.exceptions import ImproperlyConfigured
 from django.urls import path
 from django.urls.conf import include
 
@@ -29,6 +30,7 @@ from data_platform_app.views import (
     HomeView,
     LandingView,
     RoadmapView,
+    e2e_login,
     healthcheck,
 )
 
@@ -55,6 +57,14 @@ urlpatterns = [
     path("logout/", login_not_required(azure_auth_logout), name="logout"),
     path("sso/callback/", login_not_required(azure_auth_callback), name="auth_callback"),
 ]
+
+if settings.E2E_AUTH_ENABLED:
+    if settings.APP_ENV != "test":
+        raise ImproperlyConfigured("E2E authentication can only be enabled in APP_ENV=test.")
+    if not settings.E2E_AUTH_TOKEN or not settings.E2E_USER_EMAIL:
+        raise ImproperlyConfigured("E2E_AUTH_TOKEN and E2E_USER_EMAIL are required.")
+
+    urlpatterns.append(path("__e2e__/login/", e2e_login, name="e2e_login"))
 
 if settings.DEBUG and "debug_toolbar" in settings.INSTALLED_APPS:
     # Third-party

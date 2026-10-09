@@ -196,3 +196,46 @@ class TestHealthcheckView:
 
         assert response.status_code == 200
         assert response.content == b"OK"
+
+
+def test_e2e_login_route_is_not_registered_by_default(client):
+    response = client.post("/__e2e__/login/")
+
+    assert response.status_code == 404
+
+
+@pytest.mark.urls("tests.data_platform_app.e2e_urls")
+class TestE2ELoginView:
+    def test_only_accepts_post(self, client):
+        response = client.get("/__e2e__/login/")
+
+        assert response.status_code == 405
+
+    def test_rejects_invalid_token(self, client, settings):
+        settings.E2E_AUTH_TOKEN = "expected-token"
+
+        response = client.post("/__e2e__/login/", HTTP_X_E2E_TOKEN="wrong-token")
+
+        assert response.status_code == 403
+
+    def test_logs_in_only_the_configured_user(self, client, user, settings):
+        settings.E2E_AUTH_TOKEN = "expected-token"
+        settings.E2E_USER_EMAIL = user.email
+        response = client.post(
+            "/__e2e__/login/",
+            {"email": "different-user@example.com"},
+            HTTP_X_E2E_TOKEN="expected-token",
+        )
+
+        assert response.status_code == 200
+        assert client.session["_auth_user_id"] == str(user.pk)
+        assert client.session["_auth_user_backend"] == settings.AUTHENTICATION_BACKENDS[0]
+        assert settings.SESSION_COOKIE_NAME in response.cookies
+
+    def test_rejects_unknown_configured_user(self, client, db, settings):
+        settings.E2E_AUTH_TOKEN = "expected-token"
+        settings.E2E_USER_EMAIL = "missing@example.com"
+
+        response = client.post("/__e2e__/login/", HTTP_X_E2E_TOKEN="expected-token")
+
+        assert response.status_code == 403
