@@ -2,6 +2,7 @@ import pytest
 from django.conf import settings
 from playwright.sync_api import expect
 
+# TODO: Decide whether to keep this local-only project creation test or remove it.
 pytestmark = pytest.mark.e2e
 
 
