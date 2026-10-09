@@ -35,6 +35,57 @@ from projects.models import Project, ProjectPermission
 logger = structlog.get_logger(__name__)
 
 
+class AIModelAvailabilityView(TemplateView):
+    """Show the live AI Gateway model catalogue and its configured availability."""
+
+    template_name = "ai_gateway/model-availability.html"
+
+    def get(self, request, *args, **kwargs):
+        context = self.get_context_data(**kwargs)
+        if request.htmx:
+            return render(
+                request,
+                "ai_gateway/partials/model-availability-results.html",
+                context,
+            )
+        return self.render_to_response(context)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        search = self.request.GET.get("search", "")
+        provider = self.request.GET.get("provider", "")
+        region = self.request.GET.get("region", "")
+
+        try:
+            with KeyService.from_settings() as service:
+                all_models = service.list_all_models()
+        except AIGatewayError as error:
+            sentry_sdk.capture_exception(error)
+            all_models = []
+            context["model_catalogue_error"] = (
+                "Model availability is temporarily unavailable. Please try again later."
+            )
+
+        context.update(
+            {
+                "models": filter_models(
+                    all_models,
+                    search=search,
+                    provider=provider,
+                    region=region,
+                ),
+                "model_providers": sorted(
+                    {model["provider"] for model in all_models if model.get("provider")}
+                ),
+                "model_regions": sorted({model["region"] for model in all_models}),
+                "filter_search": search,
+                "filter_provider": provider,
+                "filter_region": region,
+            }
+        )
+        return context
+
+
 class AICostUsageCalculatorView(TemplateView):
     """Estimate AI Gateway usage costs across providers and models."""
 

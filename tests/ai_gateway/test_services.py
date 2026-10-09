@@ -89,12 +89,17 @@ class TestKeyServiceListModels:
                     "ai_model_name": "GPT-4",
                     "ai_model_family": "GPT",
                     "ai_model_provider": "OpenAI",
+                    "ai_model_region": "eu-west-2",
+                    "ai_model_generally_available": True,
                 },
                 "model_info": {},
             },
             {
                 "model_name": "bare-model",
-                "litellm_params": {},
+                "litellm_params": {
+                    "ai_model_location": "europe-west1",
+                    "ai_model_generally_available": False,
+                },
                 "model_info": {},
             },
         ]
@@ -102,10 +107,16 @@ class TestKeyServiceListModels:
         with KeyService(gateway_client) as service:
             models = service.list_available_models(project)
 
-        assert models[0]["display_name"] == "GPT-4"
-        assert models[0]["family"] == "GPT"
-        assert models[0]["provider"] == "OpenAI"
-        assert models[1]["display_name"] == "bare-model"
+        assert [model["display_name"] for model in models] == ["bare-model", "GPT-4"]
+        gpt_model = next(model for model in models if model["model_name"] == "gpt-4")
+        bare_model = next(model for model in models if model["model_name"] == "bare-model")
+
+        assert gpt_model["family"] == "GPT"
+        assert gpt_model["provider"] == "OpenAI"
+        assert gpt_model["generally_available"] is True
+        assert gpt_model["region"] == "United Kingdom"
+        assert bare_model["generally_available"] is False
+        assert bare_model["region"] == "European Union"
 
     def test_costs_are_none_when_pricing_is_missing(self, project, gateway_client):
         gateway_client.list_models_for_access_group.return_value = ["gpt-4"]
@@ -122,6 +133,8 @@ class TestKeyServiceListModels:
 
         assert models[0]["input_cost_per_million"] is None
         assert models[0]["output_cost_per_million"] is None
+        assert models[0]["generally_available"] is False
+        assert models[0]["region"] == "Not specified"
 
     def test_includes_access_group_models_for_a_team(self, project, gateway_client):
         Team.objects.create(project=project, litellm_team_id="team-xyz")

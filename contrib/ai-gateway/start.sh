@@ -48,6 +48,7 @@ curl \
       "ai_model_provider": "Amazon Bedrock",
       "ai_model_family": "Anthropic Claude",
       "ai_model_name": "Anthropic Claude Sonnet 5 (EU)",
+      "ai_model_region": "eu-west-2",
       "ai_model_generally_available": true
     },
     "model_info": {}
@@ -68,6 +69,7 @@ curl \
       "ai_model_provider": "Google Gemini Enterprise Agent Platform",
       "ai_model_family": "Google Gemini",
       "ai_model_name": "Google Gemini 2.5 Pro",
+      "ai_model_location": "europe-west1",
       "ai_model_generally_available": true
     },
     "model_info": {}
@@ -111,6 +113,7 @@ curl \
       "ai_model_provider": "Amazon Bedrock",
       "ai_model_family": "Anthropic Claude",
       "ai_model_name": "Anthropic Claude Opus 5 (EU)",
+      "ai_model_region": "eu-west-2",
       "ai_model_generally_available": false
     },
     "model_info": {}

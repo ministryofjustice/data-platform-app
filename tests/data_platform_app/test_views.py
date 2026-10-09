@@ -1,8 +1,11 @@
 import re
+from unittest.mock import patch
 
 import pytest
 from django.urls import reverse
-from pytest_django.asserts import assertContains, assertNotContains
+from pytest_django.asserts import assertContains, assertNotContains, assertTemplateUsed
+
+from ai_gateway.exceptions import AIGatewayAPIError
 
 
 def _assert_header_logo_links_to(response, expected_href):
@@ -162,6 +165,15 @@ class TestLandingView:
 
         assertContains(response, f'href="{reverse("ai_cost_usage_calculator")}"')
 
+    def test_links_to_ai_model_availability(self, client, user):
+        client.force_login(user)
+
+        response = client.get(reverse("landing"))
+
+        assertContains(response, "Justice AI Gateway tools")
+        assertContains(response, "Browse models available on the Justice AI Gateway")
+        assertContains(response, f'href="{reverse("ai_model_availability")}"')
+
     def test_links_to_find_moj_data(self, client, user):
         client.force_login(user)
 
@@ -186,6 +198,112 @@ class TestAICostUsageCalculatorView:
 
         assert response.status_code == 200
         assert "ai_gateway/ai_cost_usage_calculator.html" in [t.name for t in response.templates]
+
+
+class TestAIModelAvailabilityView:
+    def test_redirects_anonymous_user_to_login(self, client):
+        response = client.get(reverse("ai_model_availability"))
+
+        assert response.status_code == 302
+        assert response.url.startswith(reverse("login"))
+
+    def test_renders_model_catalogue(self, client, user, key_service):
+        key_service.list_all_models.return_value = [
+            {
+                "model_name": "gpt-4",
+                "display_name": "GPT-4",
+                "provider": "OpenAI",
+                "generally_available": True,
+                "region": "United Kingdom",
+            },
+            {
+                "model_name": "claude-3",
+                "display_name": "Claude 3",
+                "provider": "Anthropic",
+                "generally_available": False,
+                "region": "European Union",
+            },
+        ]
+        client.force_login(user)
+
+        response = client.get(reverse("ai_model_availability"))
+
+        assert response.status_code == 200
+        assertContains(response, "AI model availability")
+        assertContains(response, "2 models</strong>")
+        assertContains(response, "GPT-4")
+        assertContains(response, "OpenAI")
+        assertContains(response, "Available")
+        assertContains(response, "By request")
+        assertContains(response, "European Union")
+        assertContains(response, 'name="search"')
+        assertContains(response, 'name="provider"')
+        assertContains(response, 'name="region"')
+        assertContains(response, 'data-module="moj-sortable-table"')
+
+    def test_filters_models_by_search_provider_and_region(self, client, user, key_service):
+        key_service.list_all_models.return_value = [
+            {
+                "model_name": "gpt-4",
+                "display_name": "GPT-4",
+                "provider": "OpenAI",
+                "generally_available": True,
+                "region": "United Kingdom",
+            },
+            {
+                "model_name": "claude-3",
+                "display_name": "Claude 3",
+                "provider": "Anthropic",
+                "generally_available": False,
+                "region": "European Union",
+            },
+        ]
+        client.force_login(user)
+
+        response = client.get(
+            reverse("ai_model_availability"),
+            {"search": "claude", "provider": "Anthropic", "region": "European Union"},
+        )
+
+        assert response.status_code == 200
+        assertContains(response, "Claude 3")
+        assertContains(response, "1 model</strong>")
+        assertNotContains(response, "GPT-4")
+
+    def test_htmx_request_returns_results_fragment(self, client, user, key_service):
+        key_service.list_all_models.return_value = [
+            {
+                "model_name": "gpt-4",
+                "display_name": "GPT-4",
+                "provider": "OpenAI",
+                "generally_available": True,
+                "region": "United Kingdom",
+            },
+        ]
+        client.force_login(user)
+
+        response = client.get(
+            reverse("ai_model_availability"),
+            {"region": "United Kingdom"},
+            HTTP_HX_REQUEST="true",
+        )
+
+        assert response.status_code == 200
+        assertTemplateUsed(response, "ai_gateway/partials/model-availability-results.html")
+        assertContains(response, "GPT-4")
+        assertNotContains(response, "AI model availability")
+
+    def test_displays_error_when_gateway_is_unavailable(self, client, user, key_service):
+        key_service.list_all_models.side_effect = AIGatewayAPIError(503, "unavailable")
+        client.force_login(user)
+
+        with patch("ai_gateway.views.sentry_sdk.capture_exception") as capture_exception:
+            response = client.get(reverse("ai_model_availability"))
+
+        assert response.status_code == 200
+        assertContains(response, "Model availability is temporarily unavailable")
+        assertContains(response, "0 models</strong>")
+        capture_exception.assert_called_once()
 
 
 class TestHealthcheckView:
