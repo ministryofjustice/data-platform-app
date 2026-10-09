@@ -46,6 +46,16 @@ class TestFilterModels:
 
         assert [model["model_name"] for model in result] == ["gpt-4", "gpt-4o-mini"]
 
+    def test_filters_by_region(self):
+        models = [
+            {**MODELS[0], "region": "United Kingdom"},
+            {**MODELS[1], "region": "European Union"},
+        ]
+
+        result = filter_models(models, region="European Union")
+
+        assert [model["model_name"] for model in result] == ["gpt-4o-mini"]
+
     def test_combines_all_filters(self):
         result = filter_models(MODELS, search="mini", provider="OpenAI", family="GPT")
 

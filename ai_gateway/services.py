@@ -25,6 +25,13 @@ from users.models import User
 
 DAILY_SPEND_PREVIEW_COUNT = 10
 LINE_CHART_MIN_POINTS = 2
+MODEL_REGION_LABELS = {
+    "eu-west-2": "United Kingdom",
+    "europe-west1": "European Union",
+    "europe-west2": "United Kingdom",
+    "eu": "European Union",
+    "global": "Global",
+}
 
 logger = structlog.get_logger(__name__)
 
@@ -381,11 +388,13 @@ class KeyService:
         group's models are shown.
         """
         allowed = self._allowed_model_names(project)
-        return [
+        models = [
             self._enrich_model(model)
             for model in self._client.list_models_v1_info()
             if model.get("model_name") in allowed
         ]
+        models.sort(key=lambda model: model["display_name"].lower())
+        return models
 
     def list_all_models(self) -> list[dict[str, Any]]:
         """Return every model on the gateway, regardless of project access.
@@ -413,10 +422,17 @@ class KeyService:
         return set(data.get("team_info", {}).get("access_group_models") or [])
 
     def _enrich_model(self, model: dict[str, Any]) -> dict[str, Any]:
-        """Return a copy of ``model`` with display and pricing fields added."""
+        """Return a copy of ``model`` with display, pricing, and catalogue fields added."""
         model = model.copy()
         litellm_params = model.get("litellm_params", {})
         model_info = model.get("model_info", {})
+
+        def api_metadata(*names: str) -> Any:
+            for source in (litellm_params, model_info, model):
+                for name in names:
+                    if source.get(name) is not None:
+                        return source[name]
+            return None
 
         input_cost = model_info.get("input_cost_per_token")
         output_cost = model_info.get("output_cost_per_token")
@@ -430,6 +446,11 @@ class KeyService:
         model["display_name"] = litellm_params.get("ai_model_name") or model.get("model_name")
         model["provider"] = litellm_params.get("ai_model_provider")
         model["family"] = litellm_params.get("ai_model_family")
+        model["generally_available"] = (
+            api_metadata("ai_model_generally_available", "generally_available") is True
+        )
+        region = api_metadata("ai_model_region", "region", "ai_model_location", "location")
+        model["region"] = MODEL_REGION_LABELS.get(str(region).lower(), "Not specified")
 
         return model
 

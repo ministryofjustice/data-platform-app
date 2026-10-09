@@ -45,18 +45,6 @@ $masthead-background-color: #381a62;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-
-  .govuk-link:last-child {
-    margin-top: 1rem;
-  }
-
-  @include govuk-media-query($from: tablet) {
-    height: 100%;
-
-    .govuk-link:last-child {
-      margin-top: auto;
-    }
-  }
 }
 
 .app-link-icon {
@@ -68,6 +56,15 @@ $masthead-background-color: #381a62;
 .app-equal-height-panels {
   display: flex;
   flex-wrap: wrap;
+  align-items: stretch;
+
+  > .govuk-grid-column-one-half {
+    display: flex;
+  }
+
+  .info-panel {
+    flex: 1;
+  }
 }
 
 .app-model-usage-rows {
