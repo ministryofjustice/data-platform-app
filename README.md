@@ -70,6 +70,33 @@ This runs the full test suite with coverage analysis. Tests must maintain **≥9
 - `make test` generates a `coverage.xml` report and prints a summary.
 - Aim for meaningful coverage of business logic, edge cases, and error handling. Avoid low-value tests that only bump numbers.
 
+### End-to-end browser tests
+
+The Playwright tests live in `tests_e2e/` and run against an already-running app; they do not start Django or use `live_server`. Run them separately from the normal test suite with `make test-e2e`. This target does not load `.env` or `.env.e2e`.
+
+For a local run, configure the app server with E2E authentication enabled. The configured user must already exist in the local database and have permission to manage API keys for the project identified by `E2E_PROJECT_UUID`.
+
+Start the local app with these E2E settings (keep the token in your ignored `.env` or shell environment; do not commit it):
+
+```bash
+APP_ENV=local \
+E2E_AUTH_ENABLED=true \
+E2E_AUTH_TOKEN='<random local E2E token>' \
+E2E_USER_EMAIL='<existing local user email>' \
+make run
+```
+
+When `E2E_AUTH_ENABLED=true`, local settings disable Django Debug Toolbar so it cannot intercept browser clicks. The app still needs its usual database and AI Gateway configuration. If using the local AI Gateway, start it with `make start-ai-gateway`.
+
+In a second terminal, pass the local URL, the same token, and the accessible project's UUID to the test runner:
+
+```bash
+E2E_BASE_URL=http://127.0.0.1:8000 \
+E2E_AUTH_TOKEN='<same local E2E token>' \
+E2E_PROJECT_UUID='<accessible project UUID>' \
+make test-e2e
+```
+
 ## Database note
 
 For initial development, we are using SQLite locally.

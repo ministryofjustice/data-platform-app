@@ -120,6 +120,16 @@ app:
       value: "1"
     - name: FEATURE_AI_GATEWAY_COSTS
       value: "False"
+    - name: E2E_AUTH_ENABLED
+      value: "false"
+    - name: E2E_AUTH_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: app-secrets
+          key: e2e-auth-token
+          optional: true
+    - name: E2E_USER_EMAIL
+      value: ""
   port: 8000
   # Probes hit the app's /healthcheck/ endpoint
   livenessProbe:
