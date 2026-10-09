@@ -2,6 +2,7 @@ import pytest
 from django.conf import settings
 from playwright.sync_api import expect
 
+# TODO: Decide whether to remove this legacy model-list check; the key journey is in tests_e2e.
 pytestmark = pytest.mark.e2e
 
 
