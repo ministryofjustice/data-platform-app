@@ -59,8 +59,10 @@ urlpatterns = [
 ]
 
 if settings.E2E_AUTH_ENABLED:
-    if settings.APP_ENV != "test":
-        raise ImproperlyConfigured("E2E authentication can only be enabled in APP_ENV=test.")
+    if settings.APP_ENV not in {"local", "test"}:
+        raise ImproperlyConfigured(
+            "E2E authentication can only be enabled in APP_ENV=local or APP_ENV=test."
+        )
     if not settings.E2E_AUTH_TOKEN or not settings.E2E_USER_EMAIL:
         raise ImproperlyConfigured("E2E_AUTH_TOKEN and E2E_USER_EMAIL are required.")
 
