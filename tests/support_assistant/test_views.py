@@ -8,6 +8,10 @@ from support_assistant.models import Feedback, Interaction
 
 ASK_URL = reverse("support_assistant:ask")
 HTMX = {"HTTP_HX_REQUEST": "true"}
+FALLBACK_MESSAGE = (
+    "I couldn't find an answer to that in the user guide. "
+    "Please ask your question in the #ask-data-platform Slack channel."
+)
 
 
 @pytest.fixture(autouse=True)
@@ -90,8 +94,7 @@ class TestAskView:
         assertContains(response, "Choose create key [1].")
         assertContains(response, "Sources")
         assertContains(response, f'href="{matching_guide[0].url}"')
-        assertNotContains(response, "Read the AI Gateway user guide")
-        assertNotContains(response, "slack")
+        assertNotContains(response, "ask-data-platform")
         interaction = Interaction.objects.get()
         assertContains(response, f'hx-post="{feedback_url(interaction)}"')
 
@@ -114,24 +117,17 @@ class TestAskView:
     def test_shows_fallback_when_no_guide_content_matches(self, logged_in_client, gateway):
         response = logged_in_client.post(ASK_URL, {"question": "Weather in Leeds?"}, **HTMX)
 
-        assertContains(response, "could not find an answer to that in the user guide")
-        assertContains(
-            response,
-            '<a class="govuk-link" href="https://user-guide.test">'
-            "Read the AI Gateway user guide</a>",
-            html=True,
-        )
+        assertContains(response, FALLBACK_MESSAGE)
+        assertNotContains(response, "<a ")
         assertNotContains(response, "Was this answer helpful?")
 
-    def test_fallback_omits_guide_link_when_not_configured(
-        self, logged_in_client, gateway, settings
-    ):
-        settings.SUPPORT_ASSISTANT_GUIDE_BASE_URL = ""
+    def test_shows_fallback_when_model_declines(self, logged_in_client, matching_guide, gateway):
+        gateway.answer = "NO_ANSWER"
 
-        response = logged_in_client.post(ASK_URL, {"question": "Weather in Leeds?"}, **HTMX)
+        response = logged_in_client.post(ASK_URL, {"question": "create key"}, **HTMX)
 
-        assertContains(response, "could not find an answer to that in the user guide")
-        assertNotContains(response, "Read the AI Gateway user guide")
+        assertContains(response, FALLBACK_MESSAGE)
+        assertNotContains(response, "Was this answer helpful?")
 
     def test_shows_unavailable_message_on_gateway_error(
         self, logged_in_client, matching_guide, gateway

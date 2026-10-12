@@ -18,11 +18,8 @@
 {% elif interaction.outcome == "error" %}
   <p class="govuk-body">Sorry, the support assistant is not available right now.</p>
 {% else %}
-  <p class="govuk-body">Sorry, I could not find an answer to that in the user guide.</p>
-{% endif %}
-{% if interaction and not interaction.is_answered and user_guide_url %}
   <p class="govuk-body">
-    <a class="govuk-link" href="{{ user_guide_url }}">Read the AI Gateway user guide</a>
+    I couldn't find an answer to that in the user guide. Please ask your question in the #ask-data-platform Slack channel.
   </p>
 {% endif %}
 {% if interaction.is_answered %}

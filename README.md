@@ -151,8 +151,9 @@ How it works:
    full-text search index. Changed sections are updated and removed sections are deleted. If no
    markdown files are found, the command fails without changing the index.
 2. A question is matched against the index with Postgres full-text search. If no section reaches
-   `SUPPORT_ASSISTANT_MIN_RANK`, the user is told no answer was found in the user guide, with a
-   link to the guide, without calling a model.
+   `SUPPORT_ASSISTANT_MIN_RANK`, the user is told no answer was found in the user guide and asked
+   to post their question in the #ask-data-platform Slack channel, without calling a model. The
+   same message is shown if the model declines to answer.
 3. Otherwise the top sections are sent to the gateway's `/v1/chat/completions` endpoint with a
    prompt that only allows answers from those extracts. Answers show their source links and
    yes/no feedback buttons.
@@ -170,7 +171,7 @@ admin under Support assistant.
 | `SUPPORT_ASSISTANT_GUIDE_REPO`          | GitHub repository holding the guide, as `owner/name`.                                              |
 | `SUPPORT_ASSISTANT_GUIDE_REF`           | Branch, tag or commit to sync. Defaults to `main`.                                                 |
 | `SUPPORT_ASSISTANT_GUIDE_PATH`          | Folder in the repository containing the markdown, for example `source`. Defaults to the repo root. |
-| `SUPPORT_ASSISTANT_GUIDE_BASE_URL`      | Published URL of the guide, used to build source links and linked when no answer is found.         |
+| `SUPPORT_ASSISTANT_GUIDE_BASE_URL`      | Published URL of the guide, used to build source links and the intro link to the guide.            |
 | `SUPPORT_ASSISTANT_GUIDE_URL_SUFFIX`    | Suffix for page URLs, for example `.html` or `/`. Defaults to `.html`.                             |
 | `SUPPORT_ASSISTANT_GITHUB_TOKEN`        | Optional token for private repositories.                                                           |
 | `SUPPORT_ASSISTANT_TOP_K`               | Number of guide sections sent to the model. Defaults to `5`.                                       |
