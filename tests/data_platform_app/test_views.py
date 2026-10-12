@@ -201,6 +201,48 @@ class TestAICostUsageCalculatorView:
 
 
 class TestAIModelAvailabilityView:
+    def test_supports_configured_region_exclusions(self, client, user, key_service, settings):
+        settings.AI_GATEWAY_CATALOGUE_EXCLUSIONS = [{"field": "region", "pattern": "Global"}]
+        key_service.list_all_models.return_value = [
+            {"model_name": "global", "display_name": "Global model", "region": "Global"},
+            {"model_name": "uk", "display_name": "UK model", "region": "United Kingdom"},
+        ]
+        client.force_login(user)
+
+        response = client.get(reverse("ai_model_availability"))
+
+        assertContains(response, "UK model")
+        assertNotContains(response, "Global model")
+
+    @pytest.mark.parametrize("htmx", [False, True])
+    def test_exclusions_apply_before_filters_counts_and_options(
+        self, client, user, key_service, htmx
+    ):
+        key_service.list_all_models.return_value = [
+            {
+                "model_name": "restricted",
+                "display_name": "Restricted model",
+                "provider": "Restricted provider",
+                "region": "Global",
+                "litellm_params": {"aws_account_name": "digital-prison-reporting-production"},
+            },
+            {
+                "model_name": "shared",
+                "display_name": "Shared model",
+                "provider": "Shared provider",
+                "region": "United Kingdom",
+            },
+        ]
+        client.force_login(user)
+
+        response = client.get(reverse("ai_model_availability"), HTTP_HX_REQUEST=str(htmx).lower())
+
+        assert [model["model_name"] for model in response.context["models"]] == ["shared"]
+        assert response.context["model_providers"] == ["Shared provider"]
+        assert response.context["model_regions"] == ["United Kingdom"]
+        assertNotContains(response, "Restricted model")
+        assertContains(response, "1 model</strong>")
+
     def test_redirects_anonymous_user_to_login(self, client):
         response = client.get(reverse("ai_model_availability"))
 

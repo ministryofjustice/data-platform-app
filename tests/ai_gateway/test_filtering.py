@@ -1,4 +1,4 @@
-from ai_gateway.filtering import filter_models
+from ai_gateway.filtering import exclude_catalogue_models, filter_models
 
 MODELS = [
     {
@@ -20,6 +20,44 @@ MODELS = [
         "provider": "Anthropic",
     },
 ]
+
+
+class TestExcludeCatalogueModels:
+    def test_excludes_nested_account_glob_and_preserves_remaining_order(self):
+        models = [
+            {"model_name": "first", "litellm_params": {"aws_account_name": "shared"}},
+            {
+                "model_name": "restricted",
+                "litellm_params": {"aws_account_name": "digital-prison-reporting-production"},
+            },
+            {"model_name": "last"},
+        ]
+        rules = [
+            {"field": "litellm_params.aws_account_name", "pattern": "digital-prison-reporting-*"},
+        ]
+
+        assert exclude_catalogue_models(models, rules) == [models[0], models[2]]
+
+    def test_any_matching_rule_excludes_a_model(self):
+        models = [
+            {"region": "Global"},
+            {"model_info": {"region": "us-east-1"}},
+            {"region": "United Kingdom"},
+        ]
+        rules = [
+            {"field": "region", "pattern": "Global"},
+            {"field": "model_info.region", "pattern": "us-*"},
+        ]
+
+        assert exclude_catalogue_models(models, rules) == [models[2]]
+
+    def test_no_rules_keeps_all_models(self):
+        assert exclude_catalogue_models(MODELS, []) == MODELS
+
+    def test_missing_and_non_string_fields_do_not_match_wildcards(self):
+        models = [{}, {"region": None}, {"region": False}, {"model_info": None}]
+
+        assert exclude_catalogue_models(models, [{"field": "region", "pattern": "*"}]) == models
 
 
 class TestFilterModels:

@@ -27,9 +27,11 @@ DAILY_SPEND_PREVIEW_COUNT = 10
 LINE_CHART_MIN_POINTS = 2
 MODEL_REGION_LABELS = {
     "eu-west-2": "United Kingdom",
-    "europe-west1": "European Union",
+    "europe-west1": "Belgium",
     "europe-west2": "United Kingdom",
     "eu": "European Union",
+    "uksouth": "United Kingdom",
+    "ukwest": "United Kingdom",
     "global": "Global",
 }
 

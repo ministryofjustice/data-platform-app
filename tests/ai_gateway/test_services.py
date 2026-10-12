@@ -116,7 +116,7 @@ class TestKeyServiceListModels:
         assert gpt_model["generally_available"] is True
         assert gpt_model["region"] == "United Kingdom"
         assert bare_model["generally_available"] is False
-        assert bare_model["region"] == "European Union"
+        assert bare_model["region"] == "Belgium"
 
     def test_costs_are_none_when_pricing_is_missing(self, project, gateway_client):
         gateway_client.list_models_for_access_group.return_value = ["gpt-4"]

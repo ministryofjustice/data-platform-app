@@ -1,8 +1,29 @@
 from __future__ import annotations
 
+from fnmatch import fnmatchcase
 from typing import Any
 
 VISIBLE_LIMIT = 10
+
+
+def exclude_catalogue_models(
+    models: list[dict[str, Any]], rules: list[dict[str, str]]
+) -> list[dict[str, Any]]:
+    """Exclude models matching any rule's dotted field path and case-sensitive glob.
+
+    Missing fields and non-string values do not match. Input ordering is preserved.
+    """
+    included = []
+    for model in models:
+        for rule in rules:
+            value: Any = model
+            for field in rule["field"].split("."):
+                value = value.get(field) if isinstance(value, dict) else None
+            if isinstance(value, str) and fnmatchcase(value, rule["pattern"]):
+                break
+        else:
+            included.append(model)
+    return included
 
 
 def filter_models(

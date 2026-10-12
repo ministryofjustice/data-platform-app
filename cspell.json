@@ -101,6 +101,8 @@
     "toolkits",
     "tfstate",
     "trunc",
+    "uksouth",
+    "ukwest",
     "urllib",
     "urlopen",
     "userdel",
