@@ -45,9 +45,11 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.postgres",
     "users",
     "projects",
     "ai_gateway",
+    "support_assistant",
     "simple_history",
     "django_extensions",
     "django_htmx",
@@ -194,6 +196,32 @@ DEFAULT_ACCESS_GROUP_NAME = os.environ.get(
     "DEFAULT_ACCESS_GROUP_NAME", "generally-available-models"
 )
 
+# Support assistant (answers questions from the AI Gateway user guide)
+SUPPORT_ASSISTANT_GATEWAY_URL = os.environ.get("SUPPORT_ASSISTANT_GATEWAY_URL", AI_GATEWAY_URL)
+# A dedicated, budget-limited gateway virtual key. Never the master key.
+SUPPORT_ASSISTANT_API_KEY = os.environ.get("SUPPORT_ASSISTANT_API_KEY")
+SUPPORT_ASSISTANT_MODEL = os.environ.get("SUPPORT_ASSISTANT_MODEL")
+SUPPORT_ASSISTANT_TIMEOUT = float(os.environ.get("SUPPORT_ASSISTANT_TIMEOUT", "30"))
+SUPPORT_ASSISTANT_SLACK_CHANNEL_URL = os.environ.get("SUPPORT_ASSISTANT_SLACK_CHANNEL_URL", "")
+SUPPORT_ASSISTANT_TOP_K = int(os.environ.get("SUPPORT_ASSISTANT_TOP_K", "5"))
+SUPPORT_ASSISTANT_MIN_RANK = float(os.environ.get("SUPPORT_ASSISTANT_MIN_RANK", "0.05"))
+SUPPORT_ASSISTANT_MAX_QUESTION_LENGTH = int(
+    os.environ.get("SUPPORT_ASSISTANT_MAX_QUESTION_LENGTH", "500")
+)
+SUPPORT_ASSISTANT_RATE_LIMIT = int(os.environ.get("SUPPORT_ASSISTANT_RATE_LIMIT", "10"))
+SUPPORT_ASSISTANT_RATE_LIMIT_WINDOW = int(
+    os.environ.get("SUPPORT_ASSISTANT_RATE_LIMIT_WINDOW", "300")
+)
+# GitHub repository ("owner/name") and folder holding the markdown user guide
+SUPPORT_ASSISTANT_GUIDE_REPO = os.environ.get("SUPPORT_ASSISTANT_GUIDE_REPO", "")
+SUPPORT_ASSISTANT_GUIDE_REF = os.environ.get("SUPPORT_ASSISTANT_GUIDE_REF", "main")
+SUPPORT_ASSISTANT_GUIDE_PATH = os.environ.get("SUPPORT_ASSISTANT_GUIDE_PATH", "")
+# Published URL of the guide; page URLs are built from file paths relative to GUIDE_PATH
+SUPPORT_ASSISTANT_GUIDE_BASE_URL = os.environ.get("SUPPORT_ASSISTANT_GUIDE_BASE_URL", "")
+SUPPORT_ASSISTANT_GUIDE_URL_SUFFIX = os.environ.get("SUPPORT_ASSISTANT_GUIDE_URL_SUFFIX", ".html")
+# Optional; only needed for private repositories or to avoid anonymous rate limits
+SUPPORT_ASSISTANT_GITHUB_TOKEN = os.environ.get("SUPPORT_ASSISTANT_GITHUB_TOKEN")
+
 # GOV.UK Notify
 NOTIFY_API_KEY = os.environ.get("NOTIFY_API_KEY")
 NOTIFY_PROJECT_MEMBER_ADDED_TEMPLATE_ID = os.environ.get(
@@ -210,6 +238,8 @@ FIELD_ENCRYPTION_KEYS = [
 
 FEATURE_FLAGS = {
     "AI_GATEWAY_COSTS": os.environ.get("FEATURE_AI_GATEWAY_COSTS", "False").strip().lower()
+    == "true",
+    "SUPPORT_ASSISTANT": os.environ.get("FEATURE_SUPPORT_ASSISTANT", "False").strip().lower()
     == "true",
 }
 
@@ -250,6 +280,11 @@ LOGGING = {
             "propagate": False,
         },
         "ai_gateway": {
+            "handlers": ["console"],
+            "level": LOG_LEVEL,
+            "propagate": False,
+        },
+        "support_assistant": {
             "handlers": ["console"],
             "level": LOG_LEVEL,
             "propagate": False,

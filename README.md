@@ -121,9 +121,10 @@ environment without code changes.
 
 Feature flags are read from your `.env` file when Django starts:
 
-| Variable                   | Feature enabled when `true`            |
-| -------------------------- | -------------------------------------- |
-| `FEATURE_AI_GATEWAY_COSTS` | AI Gateway costs views and related UI. |
+| Variable                    | Feature enabled when `true`                                               |
+| --------------------------- | ------------------------------------------------------------------------- |
+| `FEATURE_AI_GATEWAY_COSTS`  | AI Gateway costs views and related UI.                                    |
+| `FEATURE_SUPPORT_ASSISTANT` | AI Gateway support assistant on the landing page (see Support assistant). |
 
 Default behaviour:
 
@@ -137,6 +138,66 @@ FEATURE_AI_GATEWAY_COSTS=true
 ```
 
 After updating your `.env`, restart the app (`make run`) so the new flag values are loaded.
+
+## Support assistant
+
+The support assistant answers AI Gateway questions on the landing page (`/app/`) using only the
+AI Gateway user guide. It is behind the `FEATURE_SUPPORT_ASSISTANT` flag, which is off by default.
+
+How it works:
+
+1. `python manage.py sync_user_guide` downloads the guide's markdown from GitHub, splits each page
+   into sections at level 1 to 3 headings and stores them as `GuideChunk` rows with a Postgres
+   full-text search index. Changed sections are updated and removed sections are deleted. If no
+   markdown files are found, the command fails without changing the index.
+2. A question is matched against the index with Postgres full-text search. If no section reaches
+   `SUPPORT_ASSISTANT_MIN_RANK`, the user is pointed to the Slack support channel without calling
+   a model.
+3. Otherwise the top sections are sent to the gateway's `/v1/chat/completions` endpoint with a
+   prompt that only allows answers from those extracts. Answers show their source links, a link to
+   Slack and yes/no feedback buttons.
+
+Every question, answer, outcome and piece of feedback is stored and can be reviewed in Django
+admin under Support assistant.
+
+### Settings
+
+| Variable                                | Description                                                                                        |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `SUPPORT_ASSISTANT_API_KEY`             | A dedicated, budget-limited gateway virtual key. Do not use the master key.                        |
+| `SUPPORT_ASSISTANT_MODEL`               | Model name to call on the gateway.                                                                 |
+| `SUPPORT_ASSISTANT_GATEWAY_URL`         | Gateway base URL. Defaults to `AI_GATEWAY_URL`.                                                    |
+| `SUPPORT_ASSISTANT_SLACK_CHANNEL_URL`   | Link to the AI Gateway Slack support channel.                                                      |
+| `SUPPORT_ASSISTANT_GUIDE_REPO`          | GitHub repository holding the guide, as `owner/name`.                                              |
+| `SUPPORT_ASSISTANT_GUIDE_REF`           | Branch, tag or commit to sync. Defaults to `main`.                                                 |
+| `SUPPORT_ASSISTANT_GUIDE_PATH`          | Folder in the repository containing the markdown, for example `source`. Defaults to the repo root. |
+| `SUPPORT_ASSISTANT_GUIDE_BASE_URL`      | Published URL of the guide, used to build source links.                                            |
+| `SUPPORT_ASSISTANT_GUIDE_URL_SUFFIX`    | Suffix for page URLs, for example `.html` or `/`. Defaults to `.html`.                             |
+| `SUPPORT_ASSISTANT_GITHUB_TOKEN`        | Optional token for private repositories.                                                           |
+| `SUPPORT_ASSISTANT_TOP_K`               | Number of guide sections sent to the model. Defaults to `5`.                                       |
+| `SUPPORT_ASSISTANT_MIN_RANK`            | Minimum full-text search rank for a section to be used. Defaults to `0.05`.                        |
+| `SUPPORT_ASSISTANT_MAX_QUESTION_LENGTH` | Maximum question length in characters. Defaults to `500`.                                          |
+| `SUPPORT_ASSISTANT_RATE_LIMIT`          | Questions allowed per user per window. Defaults to `10`.                                           |
+| `SUPPORT_ASSISTANT_RATE_LIMIT_WINDOW`   | Rate limit window in seconds. Defaults to `300`.                                                   |
+| `SUPPORT_ASSISTANT_TIMEOUT`             | Gateway request timeout in seconds. Defaults to `30`.                                              |
+
+Rate limiting uses Django's default cache. Without a shared cache backend, each server process
+keeps its own count.
+
+### Run locally
+
+1. Start the local gateway (`make start-ai-gateway`) and create a virtual key for the assistant.
+2. Add the settings above to your `.env`, with `FEATURE_SUPPORT_ASSISTANT=true`.
+3. Index the guide with `uv run python manage.py sync_user_guide`.
+4. Restart the app (`make run`) and open `/app/`.
+
+### Deploy
+
+The Helm chart sets the variables in `app.environment` (the API key and GitHub token come from
+the optional `support-assistant-api-key` and `support-assistant-github-token` keys in
+`app-secrets`). To keep the index up to date, set `supportAssistantSync.enabled: true`; this adds a
+CronJob that runs `sync_user_guide` on `supportAssistantSync.schedule`. Run the command once
+before turning on the feature flag.
 
 ## GOV.UK Notify integration
 

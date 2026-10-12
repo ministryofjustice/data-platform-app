@@ -120,6 +120,35 @@ app:
       value: "1"
     - name: FEATURE_AI_GATEWAY_COSTS
       value: "False"
+    # Support assistant on the landing page; see README "Support assistant"
+    - name: FEATURE_SUPPORT_ASSISTANT
+      value: "False"
+    - name: SUPPORT_ASSISTANT_GATEWAY_URL
+      value: http://litellm-admin.ai-gateway.svc.cluster.local:4000
+    - name: SUPPORT_ASSISTANT_MODEL
+      value: ""
+    - name: SUPPORT_ASSISTANT_API_KEY
+      valueFrom:
+        secretKeyRef:
+          name: app-secrets
+          key: support-assistant-api-key
+          optional: true
+    - name: SUPPORT_ASSISTANT_SLACK_CHANNEL_URL
+      value: ""
+    - name: SUPPORT_ASSISTANT_GUIDE_REPO
+      value: ""
+    - name: SUPPORT_ASSISTANT_GUIDE_REF
+      value: main
+    - name: SUPPORT_ASSISTANT_GUIDE_PATH
+      value: ""
+    - name: SUPPORT_ASSISTANT_GUIDE_BASE_URL
+      value: ""
+    - name: SUPPORT_ASSISTANT_GITHUB_TOKEN
+      valueFrom:
+        secretKeyRef:
+          name: app-secrets
+          key: support-assistant-github-token
+          optional: true
   port: 8000
   # Probes hit the app's /healthcheck/ endpoint
   livenessProbe:
@@ -154,3 +183,20 @@ app:
   volumes:
     - name: tmp
       emptyDir: {}
+
+# Periodically re-index the user guide for the support assistant.
+# Uses the app image, environment, security context and volumes above.
+supportAssistantSync:
+  enabled: false
+  schedule: "0 6 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  backoffLimit: 2
+  resources:
+    limits:
+      cpu: 250m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
