@@ -20,11 +20,9 @@
 {% else %}
   <p class="govuk-body">Sorry, I could not find an answer to that in the user guide.</p>
 {% endif %}
-{% if slack_channel_url %}
+{% if interaction and not interaction.is_answered and user_guide_url %}
   <p class="govuk-body">
-    {% if interaction.is_answered %}Didn't help?{% endif %}
-    <a class="govuk-link"
-       href="{{ slack_channel_url }}">Ask in the AI Gateway Slack support channel</a>
+    <a class="govuk-link" href="{{ user_guide_url }}">Read the AI Gateway user guide</a>
   </p>
 {% endif %}
 {% if interaction.is_answered %}

@@ -133,8 +133,6 @@ app:
           name: app-secrets
           key: support-assistant-api-key
           optional: true
-    - name: SUPPORT_ASSISTANT_SLACK_CHANNEL_URL
-      value: ""
     - name: SUPPORT_ASSISTANT_GUIDE_REPO
       value: ""
     - name: SUPPORT_ASSISTANT_GUIDE_REF

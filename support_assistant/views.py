@@ -30,7 +30,6 @@ def is_rate_limited(user) -> bool:
 
 def assistant_context(**extra):
     return {
-        "slack_channel_url": settings.SUPPORT_ASSISTANT_SLACK_CHANNEL_URL,
         "user_guide_url": settings.SUPPORT_ASSISTANT_GUIDE_BASE_URL,
         **extra,
     }

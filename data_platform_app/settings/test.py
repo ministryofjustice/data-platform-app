@@ -55,7 +55,6 @@ FEATURE_FLAGS = {
 SUPPORT_ASSISTANT_GATEWAY_URL = AI_GATEWAY_URL
 SUPPORT_ASSISTANT_API_KEY = "sk-test-support-assistant-key"  # gitleaks:allow
 SUPPORT_ASSISTANT_MODEL = "test-model"
-SUPPORT_ASSISTANT_SLACK_CHANNEL_URL = "https://slack.test/channels/ai-gateway-support"
 SUPPORT_ASSISTANT_GUIDE_REPO = "ministryofjustice/test-user-guide"
 SUPPORT_ASSISTANT_GUIDE_REF = "main"
 SUPPORT_ASSISTANT_GUIDE_PATH = "source"

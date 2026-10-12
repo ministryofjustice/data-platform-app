@@ -90,8 +90,8 @@ class TestAskView:
         assertContains(response, "Choose create key [1].")
         assertContains(response, "Sources")
         assertContains(response, f'href="{matching_guide[0].url}"')
-        assertContains(response, "Didn't help?")
-        assertContains(response, "https://slack.test/channels/ai-gateway-support")
+        assertNotContains(response, "Read the AI Gateway user guide")
+        assertNotContains(response, "slack")
         interaction = Interaction.objects.get()
         assertContains(response, f'hx-post="{feedback_url(interaction)}"')
 
@@ -115,8 +115,23 @@ class TestAskView:
         response = logged_in_client.post(ASK_URL, {"question": "Weather in Leeds?"}, **HTMX)
 
         assertContains(response, "could not find an answer to that in the user guide")
-        assertContains(response, "Ask in the AI Gateway Slack support channel")
+        assertContains(
+            response,
+            '<a class="govuk-link" href="https://user-guide.test">'
+            "Read the AI Gateway user guide</a>",
+            html=True,
+        )
         assertNotContains(response, "Was this answer helpful?")
+
+    def test_fallback_omits_guide_link_when_not_configured(
+        self, logged_in_client, gateway, settings
+    ):
+        settings.SUPPORT_ASSISTANT_GUIDE_BASE_URL = ""
+
+        response = logged_in_client.post(ASK_URL, {"question": "Weather in Leeds?"}, **HTMX)
+
+        assertContains(response, "could not find an answer to that in the user guide")
+        assertNotContains(response, "Read the AI Gateway user guide")
 
     def test_shows_unavailable_message_on_gateway_error(
         self, logged_in_client, matching_guide, gateway

@@ -151,11 +151,11 @@ How it works:
    full-text search index. Changed sections are updated and removed sections are deleted. If no
    markdown files are found, the command fails without changing the index.
 2. A question is matched against the index with Postgres full-text search. If no section reaches
-   `SUPPORT_ASSISTANT_MIN_RANK`, the user is pointed to the Slack support channel without calling
-   a model.
+   `SUPPORT_ASSISTANT_MIN_RANK`, the user is told no answer was found in the user guide, with a
+   link to the guide, without calling a model.
 3. Otherwise the top sections are sent to the gateway's `/v1/chat/completions` endpoint with a
-   prompt that only allows answers from those extracts. Answers show their source links, a link to
-   Slack and yes/no feedback buttons.
+   prompt that only allows answers from those extracts. Answers show their source links and
+   yes/no feedback buttons.
 
 Every question, answer, outcome and piece of feedback is stored and can be reviewed in Django
 admin under Support assistant.
@@ -167,11 +167,10 @@ admin under Support assistant.
 | `SUPPORT_ASSISTANT_API_KEY`             | A dedicated, budget-limited gateway virtual key. Do not use the master key.                        |
 | `SUPPORT_ASSISTANT_MODEL`               | Model name to call on the gateway.                                                                 |
 | `SUPPORT_ASSISTANT_GATEWAY_URL`         | Gateway base URL. Defaults to `AI_GATEWAY_URL`.                                                    |
-| `SUPPORT_ASSISTANT_SLACK_CHANNEL_URL`   | Link to the AI Gateway Slack support channel.                                                      |
 | `SUPPORT_ASSISTANT_GUIDE_REPO`          | GitHub repository holding the guide, as `owner/name`.                                              |
 | `SUPPORT_ASSISTANT_GUIDE_REF`           | Branch, tag or commit to sync. Defaults to `main`.                                                 |
 | `SUPPORT_ASSISTANT_GUIDE_PATH`          | Folder in the repository containing the markdown, for example `source`. Defaults to the repo root. |
-| `SUPPORT_ASSISTANT_GUIDE_BASE_URL`      | Published URL of the guide, used to build source links.                                            |
+| `SUPPORT_ASSISTANT_GUIDE_BASE_URL`      | Published URL of the guide, used to build source links and linked when no answer is found.         |
 | `SUPPORT_ASSISTANT_GUIDE_URL_SUFFIX`    | Suffix for page URLs, for example `.html` or `/`. Defaults to `.html`.                             |
 | `SUPPORT_ASSISTANT_GITHUB_TOKEN`        | Optional token for private repositories.                                                           |
 | `SUPPORT_ASSISTANT_TOP_K`               | Number of guide sections sent to the model. Defaults to `5`.                                       |
