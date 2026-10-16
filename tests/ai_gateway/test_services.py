@@ -55,6 +55,48 @@ class TestBuildAlias:
 
 
 class TestKeyServiceListModels:
+    @pytest.mark.parametrize("multiplier", [None, 1, 1.1])
+    @pytest.mark.parametrize("project_scoped", [False, True])
+    def test_regional_uplift_applies_to_prices_and_estimates(
+        self, project, gateway_client, multiplier, project_scoped
+    ):
+        gateway_client.list_models_for_access_group.return_value = ["gpt-4"]
+        gateway_client.list_models_v1_info.return_value = [
+            {
+                "model_name": "gpt-4",
+                "litellm_params": {},
+                "model_info": {
+                    "input_cost_per_token": 0.00003,
+                    "output_cost_per_token": 0.00006,
+                    "regional_endpoint_uplift_multiplier": multiplier,
+                },
+            },
+        ]
+
+        with KeyService(gateway_client) as service:
+            models = (
+                service.list_available_models(project)
+                if project_scoped
+                else service.list_all_models()
+            )
+
+        expected_multiplier = 1 if multiplier is None else multiplier
+        assert models[0]["input_cost_per_million"] == pytest.approx(30 * expected_multiplier)
+        assert models[0]["output_cost_per_million"] == pytest.approx(60 * expected_multiplier)
+        result = estimate_costs(
+            usage_period="monthly",
+            model_rows=[
+                {
+                    "model": "gpt-4",
+                    "input_tokens": 1_000,
+                    "output_tokens": 500,
+                    "requests_per_period": 100,
+                }
+            ],
+            available_models=models,
+        )
+        assert result["total_cost"] == pytest.approx(6 * expected_multiplier)
+
     def test_returns_default_group_models_with_costs(self, project, gateway_client):
         gateway_client.list_models_for_access_group.return_value = ["gpt-4"]
         gateway_client.list_models_v1_info.return_value = [
@@ -118,13 +160,14 @@ class TestKeyServiceListModels:
         assert bare_model["generally_available"] is False
         assert bare_model["region"] == "Belgium"
 
-    def test_costs_are_none_when_pricing_is_missing(self, project, gateway_client):
+    @pytest.mark.parametrize("model_info", [{}, {"regional_endpoint_uplift_multiplier": 1.1}])
+    def test_costs_are_none_when_pricing_is_missing(self, project, gateway_client, model_info):
         gateway_client.list_models_for_access_group.return_value = ["gpt-4"]
         gateway_client.list_models_v1_info.return_value = [
             {
                 "model_name": "gpt-4",
                 "litellm_params": {},
-                "model_info": {},
+                "model_info": model_info,
             },
         ]
 

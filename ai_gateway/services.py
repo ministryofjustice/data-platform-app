@@ -438,12 +438,15 @@ class KeyService:
 
         input_cost = model_info.get("input_cost_per_token")
         output_cost = model_info.get("output_cost_per_token")
+        uplift_multiplier = model_info.get("regional_endpoint_uplift_multiplier")
+        if uplift_multiplier is None:
+            uplift_multiplier = 1
 
         model["input_cost_per_million"] = (
-            input_cost * 1_000_000 if input_cost is not None else None
+            input_cost * uplift_multiplier * 1_000_000 if input_cost is not None else None
         )
         model["output_cost_per_million"] = (
-            output_cost * 1_000_000 if output_cost is not None else None
+            output_cost * uplift_multiplier * 1_000_000 if output_cost is not None else None
         )
         model["display_name"] = litellm_params.get("ai_model_name") or model.get("model_name")
         model["provider"] = litellm_params.get("ai_model_provider")
