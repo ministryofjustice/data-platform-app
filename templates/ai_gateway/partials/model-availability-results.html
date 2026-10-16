@@ -1,0 +1,43 @@
+{% if model_catalogue_error %}
+  <div class="govuk-error-summary" role="alert">
+    <h2 class="govuk-error-summary__title">{{ model_catalogue_error }}</h2>
+  </div>
+{% endif %}
+<p class="govuk-body govuk-!-margin-top-4"
+   role="status"
+   aria-live="polite"
+   aria-atomic="true">
+  <strong>{{ models|length }} model{{ models|length|pluralize }}</strong>
+</p>
+{% if models %}
+  <table class="govuk-table" data-module="moj-sortable-table">
+    <caption class="govuk-visually-hidden">AI models available on the Justice AI Gateway</caption>
+    <thead class="govuk-table__head">
+      <tr class="govuk-table__row">
+        <th scope="col" class="govuk-table__header" aria-sort="none">Name</th>
+        <th scope="col" class="govuk-table__header" aria-sort="none">Provider</th>
+        <th scope="col" class="govuk-table__header" aria-sort="none">Availability</th>
+        <th scope="col" class="govuk-table__header" aria-sort="none">Region</th>
+      </tr>
+    </thead>
+    <tbody class="govuk-table__body">
+      {% for model in models %}
+        <tr class="govuk-table__row">
+          <td class="govuk-table__cell">{{ model.display_name }}</td>
+          <td class="govuk-table__cell">{{ model.provider|default:"Not specified" }}</td>
+          <td class="govuk-table__cell">
+            {% if model.generally_available %}
+              <strong class="govuk-tag govuk-tag--green">Available</strong>
+            {% else %}
+              <strong class="govuk-tag govuk-tag--orange">By request</strong>
+            {% endif %}
+          </td>
+          <td class="govuk-table__cell">{{ model.region|default:"Not specified" }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% elif not model_catalogue_error %}
+  <p class="govuk-body govuk-!-margin-bottom-0">No results found.</p>
+  <p class="govuk-body">Try another search or different filters to search again.</p>
+{% endif %}

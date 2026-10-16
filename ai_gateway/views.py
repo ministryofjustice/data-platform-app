@@ -6,6 +6,7 @@ from urllib.parse import urlencode
 
 import sentry_sdk
 import structlog
+from django.conf import settings
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -14,7 +15,7 @@ from django.views.generic import DeleteView, DetailView, FormView, ListView, Tem
 from django.views.generic.detail import SingleObjectMixin
 
 from ai_gateway.exceptions import AIGatewayError
-from ai_gateway.filtering import VISIBLE_LIMIT, filter_models
+from ai_gateway.filtering import VISIBLE_LIMIT, exclude_catalogue_models, filter_models
 from ai_gateway.forms import (
     KeyCreateForm,
     KeyModelChangeForm,
@@ -33,6 +34,59 @@ from projects.mixins import (
 from projects.models import Project, ProjectPermission
 
 logger = structlog.get_logger(__name__)
+
+
+class AIModelAvailabilityView(TemplateView):
+    """Show the live AI Gateway model catalogue and its configured availability."""
+
+    template_name = "ai_gateway/model-availability.html"
+
+    def get(self, request, *args, **kwargs):
+        context = self.get_context_data(**kwargs)
+        if request.htmx:
+            return render(
+                request,
+                "ai_gateway/partials/model-availability-results.html",
+                context,
+            )
+        return self.render_to_response(context)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        search = self.request.GET.get("search", "")
+        provider = self.request.GET.get("provider", "")
+        region = self.request.GET.get("region", "")
+
+        try:
+            with KeyService.from_settings() as service:
+                all_models = exclude_catalogue_models(
+                    service.list_all_models(), settings.AI_GATEWAY_CATALOGUE_EXCLUSIONS
+                )
+        except AIGatewayError as error:
+            sentry_sdk.capture_exception(error)
+            all_models = []
+            context["model_catalogue_error"] = (
+                "Model availability is temporarily unavailable. Please try again later."
+            )
+
+        context.update(
+            {
+                "models": filter_models(
+                    all_models,
+                    search=search,
+                    provider=provider,
+                    region=region,
+                ),
+                "model_providers": sorted(
+                    {model["provider"] for model in all_models if model.get("provider")}
+                ),
+                "model_regions": sorted({model["region"] for model in all_models}),
+                "filter_search": search,
+                "filter_provider": provider,
+                "filter_region": region,
+            }
+        )
+        return context
 
 
 class AICostUsageCalculatorView(TemplateView):
