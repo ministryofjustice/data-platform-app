@@ -413,19 +413,22 @@ class KeyService:
         return set(data.get("team_info", {}).get("access_group_models") or [])
 
     def _enrich_model(self, model: dict[str, Any]) -> dict[str, Any]:
-        """Return a copy of ``model`` with display and pricing fields added."""
+        """Return display fields and per-million prices including regional endpoint uplift."""
         model = model.copy()
         litellm_params = model.get("litellm_params", {})
         model_info = model.get("model_info", {})
 
         input_cost = model_info.get("input_cost_per_token")
         output_cost = model_info.get("output_cost_per_token")
+        uplift_multiplier = model_info.get("regional_endpoint_uplift_multiplier")
+        if uplift_multiplier is None:
+            uplift_multiplier = 1
 
         model["input_cost_per_million"] = (
-            input_cost * 1_000_000 if input_cost is not None else None
+            input_cost * uplift_multiplier * 1_000_000 if input_cost is not None else None
         )
         model["output_cost_per_million"] = (
-            output_cost * 1_000_000 if output_cost is not None else None
+            output_cost * uplift_multiplier * 1_000_000 if output_cost is not None else None
         )
         model["display_name"] = litellm_params.get("ai_model_name") or model.get("model_name")
         model["provider"] = litellm_params.get("ai_model_provider")
