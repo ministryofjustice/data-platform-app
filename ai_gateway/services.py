@@ -454,7 +454,7 @@ class KeyService:
         model["generally_available"] = (
             api_metadata("ai_model_generally_available", "generally_available") is True
         )
-        region = api_metadata("ai_model_region", "region", "ai_model_location", "location")
+        region = api_metadata("aws_region_name", "vertex_location")
         model["region"] = MODEL_REGION_LABELS.get(str(region).lower(), "Not specified")
 
         return model

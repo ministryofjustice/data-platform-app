@@ -131,7 +131,7 @@ class TestKeyServiceListModels:
                     "ai_model_name": "GPT-4",
                     "ai_model_family": "GPT",
                     "ai_model_provider": "OpenAI",
-                    "ai_model_region": "eu-west-2",
+                    "aws_region_name": "eu-west-2",
                     "ai_model_generally_available": True,
                 },
                 "model_info": {},
@@ -139,7 +139,7 @@ class TestKeyServiceListModels:
             {
                 "model_name": "bare-model",
                 "litellm_params": {
-                    "ai_model_location": "europe-west1",
+                    "vertex_location": "europe-west1",
                     "ai_model_generally_available": False,
                 },
                 "model_info": {},
