@@ -1,0 +1,61 @@
+<div id="support-assistant-feedback-{{ interaction.pk }}">
+  {% if error_message %}
+    <p class="govuk-error-message">
+      <span class="govuk-visually-hidden">Error:</span> {{ error_message }}
+    </p>
+  {% endif %}
+  {% if not feedback %}
+    <form method="post"
+          action="{% url 'support_assistant:feedback' interaction.pk %}"
+          hx-post="{% url 'support_assistant:feedback' interaction.pk %}"
+          hx-target="#support-assistant-feedback-{{ interaction.pk }}"
+          hx-swap="outerHTML">
+      <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+      <fieldset class="govuk-fieldset">
+        <legend class="govuk-fieldset__legend govuk-fieldset__legend--s">Was this answer helpful?</legend>
+        <div class="govuk-button-group">
+          <button type="submit"
+                  name="helpful"
+                  value="yes"
+                  class="govuk-button govuk-button--secondary"
+                  data-module="govuk-button">
+            <span aria-hidden="true">👍</span> Yes
+          </button>
+          <button type="submit"
+                  name="helpful"
+                  value="no"
+                  class="govuk-button govuk-button--secondary"
+                  data-module="govuk-button">
+            <span aria-hidden="true">👎</span> No
+          </button>
+        </div>
+      </fieldset>
+    </form>
+  {% else %}
+    <p class="govuk-body">Thank you for your feedback.</p>
+    {% if not feedback.helpful and not feedback.comment %}
+      <form method="post"
+            action="{% url 'support_assistant:feedback' interaction.pk %}"
+            hx-post="{% url 'support_assistant:feedback' interaction.pk %}"
+            hx-target="#support-assistant-feedback-{{ interaction.pk }}"
+            hx-swap="outerHTML">
+        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+        <input type="hidden" name="helpful" value="no">
+        <div class="govuk-form-group">
+          <label class="govuk-label"
+                 for="support-assistant-comment-{{ interaction.pk }}">
+            What were you looking for? (optional)
+          </label>
+          <textarea class="govuk-textarea"
+                    id="support-assistant-comment-{{ interaction.pk }}"
+                    name="comment"
+                    rows="2"
+                    maxlength="1000"></textarea>
+        </div>
+        <button type="submit"
+                class="govuk-button govuk-button--secondary"
+                data-module="govuk-button">Send</button>
+      </form>
+    {% endif %}
+  {% endif %}
+</div>

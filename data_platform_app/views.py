@@ -3,6 +3,10 @@ from django.http import HttpResponse
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
 
+from data_platform_app.feature_flags import feature_enabled
+from support_assistant.forms import QuestionForm
+from support_assistant.views import assistant_context
+
 
 class ProductPageMixin:
     show_masthead = True
@@ -40,6 +44,12 @@ class AccessibilityStatementView(ProductPageMixin, TemplateView):
 
 class LandingView(TemplateView):
     template_name = "landing.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if feature_enabled("SUPPORT_ASSISTANT"):
+            context["support_assistant"] = assistant_context(form=QuestionForm())
+        return context
 
 
 @login_not_required

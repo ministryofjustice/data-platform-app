@@ -1,0 +1,27 @@
+{% if error_message %}
+  <p class="govuk-error-message">
+    <span class="govuk-visually-hidden">Error:</span> {{ error_message }}
+  </p>
+{% elif interaction.is_answered %}
+  <h3 class="govuk-heading-s">Answer</h3>
+  <div class="govuk-inset-text">{{ interaction.answer|linebreaksbr }}</div>
+  {% if interaction.sources %}
+    <h3 class="govuk-heading-s">Sources</h3>
+    <ul class="govuk-list govuk-list--bullet">
+      {% for source in interaction.sources %}
+        <li>
+          <a class="govuk-link" href="{{ source.url }}">{{ source.title }}</a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% elif interaction.outcome == "error" %}
+  <p class="govuk-body">Sorry, the support assistant is not available right now.</p>
+{% else %}
+  <p class="govuk-body">
+    I couldn't find an answer to that in the user guide. Please ask your question in the #ask-data-platform Slack channel.
+  </p>
+{% endif %}
+{% if interaction.is_answered %}
+  {% include "includes/support_assistant/_feedback.html" %}
+{% endif %}

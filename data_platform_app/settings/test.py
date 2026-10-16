@@ -49,4 +49,14 @@ APP_ENV = "test"
 
 FEATURE_FLAGS = {
     "AI_GATEWAY_COSTS": True,  # Enable this feature flag in tests
+    "SUPPORT_ASSISTANT": True,
 }
+
+SUPPORT_ASSISTANT_GATEWAY_URL = AI_GATEWAY_URL
+SUPPORT_ASSISTANT_API_KEY = "sk-test-support-assistant-key"  # gitleaks:allow
+SUPPORT_ASSISTANT_MODEL = "test-model"
+SUPPORT_ASSISTANT_GUIDE_REPO = "ministryofjustice/test-user-guide"
+SUPPORT_ASSISTANT_GUIDE_REF = "main"
+SUPPORT_ASSISTANT_GUIDE_PATH = "source"
+SUPPORT_ASSISTANT_GUIDE_BASE_URL = "https://user-guide.test"
+SUPPORT_ASSISTANT_GITHUB_TOKEN = None

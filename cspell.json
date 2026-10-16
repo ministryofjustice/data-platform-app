@@ -10,6 +10,10 @@
     ".grype.yml"
   ],
   "words": [
+    "capsys",
+    "guidechunk",
+    "tsquery",
+    "whats",
     "autospecced",
     "autouse",
     "addopts",

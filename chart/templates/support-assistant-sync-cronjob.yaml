@@ -1,0 +1,63 @@
+{{- if .Values.supportAssistantSync.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "data-platform-app.fullname" . }}-sync-user-guide
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "data-platform-app.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.supportAssistantSync.schedule | quote }}
+  concurrencyPolicy: {{ .Values.supportAssistantSync.concurrencyPolicy }}
+  successfulJobsHistoryLimit: {{ .Values.supportAssistantSync.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.supportAssistantSync.failedJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      backoffLimit: {{ .Values.supportAssistantSync.backoffLimit }}
+      template:
+        metadata:
+          labels:
+            {{- include "data-platform-app.labels" . | nindent 12 }}
+        spec:
+          restartPolicy: Never
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          serviceAccountName: {{ include "data-platform-app.serviceAccountName" . }}
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
+          containers:
+            - name: sync-user-guide
+              securityContext:
+                {{- toYaml .Values.app.securityContext | nindent 16 }}
+              image: "{{ .Values.app.image.repository }}:{{ .Values.app.image.tag | default .Chart.AppVersion }}"
+              imagePullPolicy: {{ .Values.app.image.pullPolicy }}
+              command: ["python", "manage.py", "sync_user_guide"]
+              {{- with .Values.app.environment }}
+              env:
+                {{- toYaml . | nindent 16 }}
+              {{- end }}
+              resources:
+                {{- toYaml .Values.supportAssistantSync.resources | nindent 16 }}
+              {{- with .Values.app.volumeMounts }}
+              volumeMounts:
+                {{- toYaml . | nindent 16 }}
+              {{- end }}
+          {{- with .Values.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.affinity }}
+          affinity:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.app.volumes }}
+          volumes:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+{{- end }}

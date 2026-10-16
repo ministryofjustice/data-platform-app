@@ -1,0 +1,14 @@
+{% extends "base/base.html" %}
+{% block title %}
+  Ask about the AI Gateway - Justice Data Platform | Ministry of Justice
+{% endblock title %}
+{% block back_link %}
+  <a href="{% url 'landing' %}" class="govuk-back-link">Back</a>
+{% endblock back_link %}
+{% block content %}
+  <div class="govuk-grid-row">
+    <div class="govuk-grid-column-two-thirds">
+      {% include "includes/support_assistant/_chat.html" %}
+    </div>
+  </div>
+{% endblock content %}
