@@ -45,6 +45,9 @@ $masthead-background-color: #381a62;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+}
+
+.info-panel-no-overflow {
   overflow-wrap: anywhere;
 }
 
