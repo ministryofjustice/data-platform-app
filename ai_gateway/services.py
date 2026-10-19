@@ -420,13 +420,6 @@ class KeyService:
         litellm_params = model.get("litellm_params", {})
         model_info = model.get("model_info", {})
 
-        def api_metadata(*names: str) -> Any:
-            for source in (litellm_params, model_info, model):
-                for name in names:
-                    if source.get(name) is not None:
-                        return source[name]
-            return None
-
         input_cost = model_info.get("input_cost_per_token")
         output_cost = model_info.get("output_cost_per_token")
         uplift_multiplier = model_info.get("regional_endpoint_uplift_multiplier")
