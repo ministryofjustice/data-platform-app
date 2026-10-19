@@ -47,7 +47,8 @@ curl \
       "model": "bedrock/eu.anthropic.claude-sonnet-5",
       "ai_model_provider": "Amazon Bedrock",
       "ai_model_family": "Anthropic Claude",
-      "ai_model_name": "Anthropic Claude Sonnet 5 (EU)",
+      "ai_model_name": "Anthropic Claude Sonnet 5",
+      "ai_model_location": "United Kingdom",
       "ai_model_region": "eu-west-2",
       "ai_model_generally_available": true
     },
@@ -69,6 +70,7 @@ curl \
       "ai_model_provider": "Google Gemini Enterprise Agent Platform",
       "ai_model_family": "Google Gemini",
       "ai_model_name": "Google Gemini 2.5 Pro",
+      "ai_model_location": "United Kingdom",
       "ai_model_location": "europe-west1",
       "ai_model_generally_available": true
     },
@@ -89,6 +91,7 @@ curl \
       "model": "azure/gpt-5.2",
       "ai_model_provider": "Microsoft Foundry",
       "ai_model_family": "OpenAI GPT",
+      "ai_model_location": "European Union",
       "ai_model_name": "OpenAI GPT 5.2",
       "ai_model_generally_available": true
     },
@@ -112,7 +115,8 @@ curl \
       "model": "bedrock/eu.anthropic.claude-opus-5",
       "ai_model_provider": "Amazon Bedrock",
       "ai_model_family": "Anthropic Claude",
-      "ai_model_name": "Anthropic Claude Opus 5 (EU)",
+      "ai_model_name": "Anthropic Claude Opus 5",
+      "ai_model_location": "United Kingdom",
       "ai_model_region": "eu-west-2",
       "ai_model_generally_available": false
     },
@@ -134,6 +138,7 @@ curl \
       "ai_model_provider": "Microsoft Foundry",
       "ai_model_family": "OpenAI GPT",
       "ai_model_name": "OpenAI GPT 5.2 Preview",
+      "ai_model_location": "European Union",
       "ai_model_generally_available": false
     },
     "model_info": {}
