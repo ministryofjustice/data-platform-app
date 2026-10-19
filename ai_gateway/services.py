@@ -436,7 +436,7 @@ class KeyService:
         model["provider"] = litellm_params.get("ai_model_provider")
         model["family"] = litellm_params.get("ai_model_family")
         model["generally_available"] = litellm_params.get("ai_model_generally_available")
-        model["region"] = litellm_params.get("ai_model_location", "Not specified")
+        model["region"] = litellm_params.get("ai_model_location") or "Not specified"
 
         return model
 
