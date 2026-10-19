@@ -131,7 +131,7 @@ class TestKeyServiceListModels:
                     "ai_model_name": "GPT-4",
                     "ai_model_family": "GPT",
                     "ai_model_provider": "OpenAI",
-                    "aws_region_name": "eu-west-2",
+                    "ai_model_location": "United Kingdom",
                     "ai_model_generally_available": True,
                 },
                 "model_info": {},
@@ -139,7 +139,7 @@ class TestKeyServiceListModels:
             {
                 "model_name": "bare-model",
                 "litellm_params": {
-                    "vertex_location": "europe-west1",
+                    "ai_model_location": "Belgium",
                     "ai_model_generally_available": False,
                 },
                 "model_info": {},
@@ -176,7 +176,7 @@ class TestKeyServiceListModels:
 
         assert models[0]["input_cost_per_million"] is None
         assert models[0]["output_cost_per_million"] is None
-        assert models[0]["generally_available"] is False
+        assert models[0]["generally_available"] is None
         assert models[0]["region"] == "Not specified"
 
     def test_includes_access_group_models_for_a_team(self, project, gateway_client):

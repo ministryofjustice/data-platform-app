@@ -25,15 +25,6 @@ from users.models import User
 
 DAILY_SPEND_PREVIEW_COUNT = 10
 LINE_CHART_MIN_POINTS = 2
-MODEL_REGION_LABELS = {
-    "eu-west-2": "United Kingdom",
-    "europe-west1": "Belgium",
-    "europe-west2": "United Kingdom",
-    "eu": "European Union",
-    "uksouth": "United Kingdom",
-    "ukwest": "United Kingdom",
-    "global": "Global",
-}
 
 logger = structlog.get_logger(__name__)
 
@@ -451,11 +442,8 @@ class KeyService:
         model["display_name"] = litellm_params.get("ai_model_name") or model.get("model_name")
         model["provider"] = litellm_params.get("ai_model_provider")
         model["family"] = litellm_params.get("ai_model_family")
-        model["generally_available"] = (
-            api_metadata("ai_model_generally_available", "generally_available") is True
-        )
-        region = api_metadata("aws_region_name", "vertex_location")
-        model["region"] = MODEL_REGION_LABELS.get(str(region).lower(), "Not specified")
+        model["generally_available"] = litellm_params.get("ai_model_generally_available")
+        model["region"] = litellm_params.get("ai_model_location", "Not specified")
 
         return model
 
