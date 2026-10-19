@@ -70,8 +70,8 @@ curl \
       "ai_model_provider": "Google Gemini Enterprise Agent Platform",
       "ai_model_family": "Google Gemini",
       "ai_model_name": "Google Gemini 2.5 Pro",
-      "ai_model_location": "United Kingdom",
-      "vector_location": "europe-west1",
+      "ai_model_location": "Belgium",
+      "vertex_location": "europe-west1",
       "ai_model_generally_available": true
     },
     "model_info": {}
