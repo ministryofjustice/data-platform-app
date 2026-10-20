@@ -194,6 +194,10 @@ DEFAULT_ACCESS_GROUP_NAME = os.environ.get(
     "DEFAULT_ACCESS_GROUP_NAME", "generally-available-models"
 )
 
+AI_GATEWAY_CATALOGUE_EXCLUSIONS = [
+    {"field": "litellm_params.aws_account_name", "pattern": "digital-prison-reporting-*"},
+]
+
 # GOV.UK Notify
 NOTIFY_API_KEY = os.environ.get("NOTIFY_API_KEY")
 NOTIFY_PROJECT_MEMBER_ADDED_TEMPLATE_ID = os.environ.get(

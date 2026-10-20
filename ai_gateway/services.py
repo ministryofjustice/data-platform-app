@@ -381,11 +381,13 @@ class KeyService:
         group's models are shown.
         """
         allowed = self._allowed_model_names(project)
-        return [
+        models = [
             self._enrich_model(model)
             for model in self._client.list_models_v1_info()
             if model.get("model_name") in allowed
         ]
+        models.sort(key=lambda model: model["display_name"].lower())
+        return models
 
     def list_all_models(self) -> list[dict[str, Any]]:
         """Return every model on the gateway, regardless of project access.
@@ -413,7 +415,7 @@ class KeyService:
         return set(data.get("team_info", {}).get("access_group_models") or [])
 
     def _enrich_model(self, model: dict[str, Any]) -> dict[str, Any]:
-        """Return display fields and per-million prices including regional endpoint uplift."""
+        """Return a copy of ``model`` with display, pricing, and catalogue fields added."""
         model = model.copy()
         litellm_params = model.get("litellm_params", {})
         model_info = model.get("model_info", {})
@@ -433,6 +435,8 @@ class KeyService:
         model["display_name"] = litellm_params.get("ai_model_name") or model.get("model_name")
         model["provider"] = litellm_params.get("ai_model_provider")
         model["family"] = litellm_params.get("ai_model_family")
+        model["generally_available"] = litellm_params.get("ai_model_generally_available")
+        model["region"] = litellm_params.get("ai_model_location") or "Not specified"
 
         return model
 

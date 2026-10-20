@@ -22,7 +22,7 @@ from django.contrib.auth.decorators import login_not_required
 from django.urls import path
 from django.urls.conf import include
 
-from ai_gateway.views import AICostUsageCalculatorView
+from ai_gateway.views import AICostUsageCalculatorView, AIModelAvailabilityView
 from data_platform_app.views import (
     AccessibilityStatementView,
     DataFactoriesView,
@@ -48,6 +48,11 @@ urlpatterns = [
         "app/ai-cost-usage-calculator/",
         AICostUsageCalculatorView.as_view(),
         name="ai_cost_usage_calculator",
+    ),
+    path(
+        "app/ai-model-availability/",
+        AIModelAvailabilityView.as_view(),
+        name="ai_model_availability",
     ),
     path("admin/", admin.site.urls),
     path("healthcheck/", healthcheck, name="healthcheck"),
