@@ -155,7 +155,7 @@ curl \
   --data '{
     "model_name": "dpr-test-claude-sonnet-5",
     "litellm_params": {
-      "model": "eu.anthropic.claude-sonnet-5",
+      "model": "bedrock/eu.anthropic.claude-sonnet-5",
       "ai_model_provider": "Amazon Bedrock (Digital Prison Reporting Test)",
       "ai_model_family": "Anthropic Claude",
       "ai_model_name": "Anthropic Claude Sonnet 5",
