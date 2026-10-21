@@ -144,6 +144,29 @@ curl \
     "model_info": {}
   }'
 
+curl \
+  --silent \
+  --fail-with-body \
+  --show-error \
+  --request POST \
+  --url "http://localhost:4000/model/new" \
+  --header "Content-Type: application/json" \
+  --header "Authorization: Bearer sk-123456789" \
+  --data '{
+    "model_name": "dpr-test-claude-sonnet-5",
+    "litellm_params": {
+      "model": "bedrock/eu.anthropic.claude-sonnet-5",
+      "ai_model_provider": "Amazon Bedrock (Digital Prison Reporting Test)",
+      "ai_model_family": "Anthropic Claude",
+      "ai_model_name": "Anthropic Claude Sonnet 5",
+      "ai_model_location": "United Kingdom",
+      "ai_aws_account_name": "digital-prison-reporting-test",
+      "aws_region_name": "eu-west-2",
+      "ai_model_generally_available": false
+    },
+    "model_info": {}
+  }'
+
 echo "Seeding AI Gateway Unified Access Group"
 curl \
   --silent \

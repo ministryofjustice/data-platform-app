@@ -142,7 +142,7 @@ After updating your `.env`, restart the app (`make run`) so the new flag values 
 
 `AI_GATEWAY_CATALOGUE_EXCLUSIONS` in Django settings hides models from the catalogue only.
 It does not change project access, API-key model selection, or the cost calculator.
-Models whose `litellm_params.aws_account_name` matches `digital-prison-reporting-*` are
+Models whose `litellm_params.ai_aws_account_name` matches `digital-prison-reporting-*` are
 excluded by default.
 
 Each rule specifies a dotted field path in the enriched LiteLLM model response and a
@@ -154,7 +154,7 @@ For example, an environment-specific settings module can override the list:
 
 ```python
 AI_GATEWAY_CATALOGUE_EXCLUSIONS = [
-    {"field": "litellm_params.aws_account_name", "pattern": "digital-prison-reporting-*"},
+    {"field": "litellm_params.ai_aws_account_name", "pattern": "digital-prison-reporting-*"},
     {"field": "litellm_params.ai_model_region", "pattern": "us-*"},
     {"field": "region", "pattern": "Global"},
 ]

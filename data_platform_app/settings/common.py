@@ -195,7 +195,7 @@ DEFAULT_ACCESS_GROUP_NAME = os.environ.get(
 )
 
 AI_GATEWAY_CATALOGUE_EXCLUSIONS = [
-    {"field": "litellm_params.aws_account_name", "pattern": "digital-prison-reporting-*"},
+    {"field": "litellm_params.ai_aws_account_name", "pattern": "digital-prison-reporting-*"},
 ]
 
 # GOV.UK Notify

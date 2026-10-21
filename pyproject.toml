@@ -39,6 +39,9 @@ line-length = 99
 [tool.uv]
 exclude-newer = "7d"
 
+[tool.uv.exclude-newer-package]
+certifi = "P0D"
+
 [tool.ruff.lint]
 select = [
     # pycodestyle
