@@ -61,9 +61,3 @@ ignore:
       type: deb
       name: libattr1
     expires: 2026-09-28
-
-  - vulnerability: GHSA-6q48-6c7w-9gw2
-    package:
-      type: python
-      name: certifi
-    expires: 2026-10-28
