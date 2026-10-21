@@ -224,7 +224,7 @@ class TestAIModelAvailabilityView:
                 "display_name": "Restricted model",
                 "provider": "Restricted provider",
                 "region": "Global",
-                "litellm_params": {"aws_account_name": "digital-prison-reporting-production"},
+                "litellm_params": {"ai_aws_account_name": "digital-prison-reporting-production"},
             },
             {
                 "model_name": "shared",
