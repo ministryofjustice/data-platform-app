@@ -58,7 +58,7 @@ class ProjectMembershipAdmin(SimpleHistoryAdmin):
 class ProjectAdmin(SimpleHistoryAdmin):
     list_display = ("name", "business_unit", "owner", "created_by", "created")
     list_filter = ("business_unit",)
-    search_fields = ("name",)
+    search_fields = ("name", "uuid")
     readonly_fields = ("uuid", "created_by", "created", "modified")
     inlines = (ProjectMembershipInline, AIGatewayTeamInline)
     list_select_related = ("business_unit", "created_by", "owner")
