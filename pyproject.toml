@@ -19,18 +19,18 @@ dependencies = [
     "pytest-cov==7.1.0",
     "whitenoise==6.12.0",
     "cryptography==50.0.2",
-    "sentry-sdk==2.71.0",
+    "sentry-sdk==2.72.0",
     "django-htmx==1.29.0",
     "notifications-python-client==12.2.0",
 ]
 
 [dependency-groups]
 dev = [
-    "djlint==1.46.4",
+    "djlint==1.46.6",
     "django-debug-toolbar==8.0.0",
-    "pre-commit==4.6.2",
+    "pre-commit==4.7.0",
     "pytest==9.1.1",
-    "ruff==0.16.10",
+    "ruff==0.17.1",
 ]
 
 [tool.ruff]
