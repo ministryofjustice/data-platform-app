@@ -37,6 +37,37 @@ def key_service():
         yield service
 
 
+class TestAIGatewayTeamAdminChangelist:
+    @pytest.mark.parametrize("search_field", ["project_uuid", "project_name", "team_id"])
+    def test_search_finds_matching_team(self, client, superuser, team, search_field):
+        baker.make("ai_gateway.Team", project__name="Unrelated project")
+        search_terms = {
+            "project_uuid": str(team.project.uuid),
+            "project_name": team.project.name,
+            "team_id": team.litellm_team_id,
+        }
+        client.force_login(superuser)
+
+        response = client.get(
+            reverse("admin:ai_gateway_team_changelist"), {"q": search_terms[search_field]}
+        )
+
+        assert response.status_code == 200
+        assert list(response.context["cl"].result_list) == [team]
+
+    @pytest.mark.parametrize("ordering", ["0", "-0"])
+    def test_project_column_sorts_by_project_name(self, client, superuser, ordering):
+        zebra = baker.make("ai_gateway.Team", project__name="Zebra project")
+        alpha = baker.make("ai_gateway.Team", project__name="Alpha project")
+        client.force_login(superuser)
+
+        response = client.get(reverse("admin:ai_gateway_team_changelist"), {"o": ordering})
+
+        assert response.status_code == 200
+        expected = [alpha, zebra] if ordering == "0" else [zebra, alpha]
+        assert list(response.context["cl"].result_list) == expected
+
+
 class TestAIGatewayTeamAdminChangeView:
     def test_renders_access_groups_with_current_selection(
         self, client, superuser, team, key_service
