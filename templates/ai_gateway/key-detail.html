@@ -47,34 +47,36 @@
     <div class="govuk-grid-column-one-half">
       <div class="ai-gateway-key-detail govuk-!-margin-top-4">
         <h2 class="govuk-heading-m">AI models on this key</h2>
-        <p class="govuk-body">Copy a model ID to use it in your application.</p>
-        <span id="copy-alert" class="govuk-visually-hidden" aria-live="polite"></span>
-        <table class="govuk-table">
-          <thead class="govuk-table__head">
-            <tr class="govuk-table__row">
-              <th class="govuk-table__header">Model ID</th>
-              <th class="govuk-table__header">
-                <span class="govuk-visually-hidden">Action</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody class="govuk-table__body">
-            {% for model in models %}
+        {% if not models %}
+          <p class="govuk-body">Error retrieving models from the AI Gateway. Please contact support if the issue persists.</p>
+        {% else %}
+          <p class="govuk-body">Copy a model ID to use it in your application.</p>
+          <span id="copy-alert" class="govuk-visually-hidden" aria-live="polite"></span>
+          <table class="govuk-table">
+            <thead class="govuk-table__head">
               <tr class="govuk-table__row">
-                <td id="model-{{ forloop.counter }}" class="govuk-table__cell">{{ model }}</td>
-                <td class="govuk-table__cell govuk-!-text-align-right">
-                  <button class="govuk-button copy-button govuk-!-margin-bottom-0"
-                          type="button"
-                          data-module="copy-button"
-                          data-text-selector="#model-{{ forloop.counter }}"
-                          data-success-message="Model ID copied">Copy</button>
-                </td>
+                <th class="govuk-table__header">Model ID</th>
+                <th class="govuk-table__header">
+                  <span class="govuk-visually-hidden">Action</span>
+                </th>
               </tr>
-            {% empty %}
-              Error retrieving models from the AI Gateway. Please contact support if the issue persists.
-            {% endfor %}
-          </tbody>
-        </table>
+            </thead>
+            <tbody class="govuk-table__body">
+              {% for model in models %}
+                <tr class="govuk-table__row">
+                  <td id="model-{{ forloop.counter }}" class="govuk-table__cell">{{ model }}</td>
+                  <td class="govuk-table__cell govuk-!-text-align-right">
+                    <button class="govuk-button copy-button govuk-!-margin-bottom-0"
+                            type="button"
+                            data-module="copy-button"
+                            data-text-selector="#model-{{ forloop.counter }}"
+                            data-success-message="Model ID copied">Copy</button>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% endif %}
         {% if can_manage_api_keys %}
           <a class="govuk-body govuk-link"
              href="{% url 'ai_gateway:key_model_change' project.uuid key.pk %}">Change models</a>
