@@ -1,13 +1,10 @@
-@use "node_modules/govuk-frontend/dist/govuk" as * with (
-  $govuk-assets-path: "/static/assets/",
-  $govuk-page-width: 1280px
-);
-
-// Share config with MOJ Frontend
+// MOJ Frontend configures GOV.UK Frontend (via $moj-* settings), so it must be
+// loaded first and GOV.UK Frontend must not be configured again with `with`
 @forward "node_modules/@ministryofjustice/frontend/moj/all" with (
-  $moj-assets-path: $govuk-assets-path,
-  $moj-page-width: $govuk-page-width
+  $moj-assets-path: "/static/assets/",
+  $moj-page-width: 1280px
 );
+@use "node_modules/govuk-frontend/dist/govuk" as *;
 @use "node_modules/@x-govuk/govuk-prototype-components/src/x-govuk";
 @use "components/copy-button/copy-button";
 @use "components/usage/usage";
