@@ -56,12 +56,18 @@ class AIGatewayTeamInline(admin.StackedInline):
 
 class AIGatewayTeamAdmin(SimpleHistoryAdmin):
     form = AIGatewayTeamAdminForm
-    list_display = ("project", "litellm_team_id", "created")
+    list_display = ("project_name", "litellm_team_id", "created")
+    search_fields = ("project__uuid", "project__name", "litellm_team_id")
+    list_select_related = ("project",)
     readonly_fields = ("project", "litellm_team_id", "created", "modified")
     fieldsets = (
         (None, {"fields": ("project", "litellm_team_id", "created", "modified")}),
         ("Access groups", {"fields": ("access_groups",)}),
     )
+
+    @admin.display(description="Project", ordering="project__name")
+    def project_name(self, obj: Team) -> str:
+        return obj.project.name
 
     def has_add_permission(self, request):
         return False

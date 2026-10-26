@@ -45,7 +45,10 @@ RUN --mount=type=cache,target=/root/.cache \
 
 ##### BUILD NODE
 
-FROM docker.io/library/node:26.10.0-alpine@sha256:0b36e8c136b94cd4fcf02188228e76c31ad5872eef3fec8cbd2eee500cfd9e80 AS build-node
+FROM docker.io/library/node:26.12.0-alpine@sha256:6f08a523443ddedf52941874c203475b0ad503e859ad70cb26ab8be9a517dbd5 AS build-node
+
+# Alpine has no bash; fail on any error in multi-line RUN blocks
+SHELL ["/bin/sh", "-e", "-u", "-c"]
 
 WORKDIR /build
 
