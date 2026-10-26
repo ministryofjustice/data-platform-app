@@ -20,52 +20,67 @@
         {% include "includes/error_message.html" with heading=error_message.heading message=error_message.message only %}
       </div>
     {% endif %}
-    <div class="govuk-grid-column-one-half">
+    <div class="govuk-grid-column-full">
       <span class="govuk-caption-l">Manage</span>
       <h1 class="govuk-heading-l">{{ key.name }}</h1>
-      <div class="ai-gateway-key-detail">
-        <dl class="govuk-summary-list govuk-summary-list--no-border govuk-!-margin-0">
-          <div class="govuk-summary-list__row">
-            <dt class="govuk-summary-list__key">Key ID</dt>
-            <dd class="govuk-summary-list__value">
-              {{ key.litellm_token }}
-            </dd>
-          </div>
-          <div class="govuk-summary-list__row">
-            <dt class="govuk-summary-list__key">Created on</dt>
-            <dd class="govuk-summary-list__value">
-              {{ key.created|date:"d F Y" }}
-            </dd>
-          </div>
-          <div class="govuk-summary-list__row">
-            <dt class="govuk-summary-list__key">API key</dt>
-            <dd class="govuk-summary-list__value">
-              {{ key.masked_key }}
-            </dd>
-          </div>
-          <div class="govuk-summary-list__row">
-            <dt class="govuk-summary-list__key">AI models</dt>
-            <dd class="govuk-summary-list__value">
-              {% for model in models %}
-                {{ model }}
-                {% if not forloop.last %}<br>{% endif %}
-              {% empty %}
-                Error retrieving models from the AI Gateway. Please contact support if the issue persists.
-              {% endfor %}
-            </dd>
-            <dd class="govuk-summary-list__actions">
-              {% if can_manage_api_keys %}
-                <a class="govuk-link"
-                   href="{% url 'ai_gateway:key_model_change' project.uuid key.pk %}">
-                  Change models
-                </a>
-              {% endif %}
-            </dd>
-          </div>
-        </dl>
+      <dl class="govuk-summary-list govuk-summary-list--no-border govuk-!-margin-0">
+        <div class="govuk-summary-list__row">
+          <dt class="govuk-summary-list__key">Key ID</dt>
+          <dd class="govuk-summary-list__value">
+            {{ key.litellm_token }}
+          </dd>
+        </div>
+        <div class="govuk-summary-list__row">
+          <dt class="govuk-summary-list__key">Created on</dt>
+          <dd class="govuk-summary-list__value">
+            {{ key.created|date:"d F Y" }}
+          </dd>
+        </div>
+        <div class="govuk-summary-list__row">
+          <dt class="govuk-summary-list__key">API key</dt>
+          <dd class="govuk-summary-list__value">
+            {{ key.masked_key }}
+          </dd>
+        </div>
+      </dl>
+    </div>
+    <div class="govuk-grid-column-one-half">
+      <div class="ai-gateway-key-detail govuk-!-margin-top-4">
+        <h2 class="govuk-heading-m">AI models on this key</h2>
+        <p class="govuk-body">Copy a model ID to use it in your application.</p>
+        <span id="copy-alert" class="govuk-visually-hidden" aria-live="polite"></span>
+        <table class="govuk-table">
+          <thead class="govuk-table__head">
+            <tr class="govuk-table__row">
+              <th class="govuk-table__header">Model ID</th>
+              <th class="govuk-table__header">
+                <span class="govuk-visually-hidden">Action</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody class="govuk-table__body">
+            {% for model in models %}
+              <tr class="govuk-table__row">
+                <td id="model-{{ forloop.counter }}" class="govuk-table__cell">{{ model }}</td>
+                <td class="govuk-table__cell govuk-!-text-align-right">
+                  <button class="govuk-button copy-button govuk-!-margin-bottom-0"
+                          type="button"
+                          data-module="copy-button"
+                          data-text-selector="#model-{{ forloop.counter }}"
+                          data-success-message="Model ID copied">Copy</button>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% if can_manage_api_keys %}
+          <a class="govuk-body govuk-link"
+             href="{% url 'ai_gateway:key_model_change' project.uuid key.pk %}">Change models</a>
+        {% endif %}
       </div>
     </div>
   </div>
+  <hr class="govuk-section-break govuk-section-break--l govuk-section-break--visible">
   <div class="govuk-grid-row govuk-!-margin-top-6">
     <div class="govuk-grid-column-full">
       <h2 class="govuk-heading-m">History</h2>
