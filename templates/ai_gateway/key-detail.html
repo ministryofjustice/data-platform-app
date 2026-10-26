@@ -70,6 +70,8 @@
                           data-success-message="Model ID copied">Copy</button>
                 </td>
               </tr>
+            {% empty %}
+              Error retrieving models from the AI Gateway. Please contact support if the issue persists.
             {% endfor %}
           </tbody>
         </table>
