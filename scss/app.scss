@@ -5,9 +5,15 @@
   $moj-page-width: 1280px
 );
 @use "node_modules/govuk-frontend/dist/govuk" as *;
+@use "node_modules/govuk-frontend/dist/govuk/helpers/font-faces--internal" as
+  govuk-font-faces;
 @use "node_modules/@x-govuk/govuk-prototype-components/src/x-govuk";
 @use "components/copy-button/copy-button";
 @use "components/usage/usage";
+
+// MOJ Frontend hard-codes $govuk-include-default-font-face to false, so the
+// GDS Transport @font-face rules must be output explicitly.
+@include govuk-font-faces.gds-transport;
 
 $masthead-background-color: #381a62;
 
