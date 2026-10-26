@@ -8,7 +8,7 @@
     "@x-govuk/govuk-prototype-components": "6.0.0",
     "accessible-autocomplete": "3.0.2",
     "echarts": "6.1.0",
-    "govuk-frontend": "6.1.0",
+    "govuk-frontend": "6.6.0",
     "htmx.org": "2.0.11"
   },
   "devDependencies": {
