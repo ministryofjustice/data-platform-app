@@ -382,5 +382,7 @@ $masthead-background-color: #381a62;
 }
 
 .govuk-summary-list__key-width {
-  width: 10%;
+  @include govuk-media-query($from: tablet) {
+    width: 10%;
+  }
 }
