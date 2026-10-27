@@ -440,7 +440,9 @@ class KeyService:
 
         return model
 
-    def create_key(self, project: Project, name: str, models: list[str], created_by: User) -> str:
+    def create_key(
+        self, project: Project, name: str, models: list[str], created_by: User
+    ) -> tuple[str, int]:
         """Generate a gateway key for ``project`` and persist its metadata.
 
         Lazily creates the project's gateway team, calls the gateway to generate
