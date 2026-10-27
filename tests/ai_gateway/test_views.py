@@ -705,7 +705,10 @@ class TestKeyCreateConfirmView:
         assert response.status_code == 200
         assertTemplateUsed(response, "ai_gateway/key-created.html")
         assertContains(response, PLAINTEXT_KEY)
-        assertContains(response, "1")
+        assertContains(
+            response,
+            f'href="{reverse("ai_gateway:key_detail", args=[project.uuid, 1])}"',
+        )
         assert "no-store" in response["Cache-Control"]
         key_service.create_key.assert_called_once_with(
             project=project,
