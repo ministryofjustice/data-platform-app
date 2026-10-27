@@ -440,7 +440,9 @@ class KeyService:
 
         return model
 
-    def create_key(self, project: Project, name: str, models: list[str], created_by: User) -> str:
+    def create_key(
+        self, project: Project, name: str, models: list[str], created_by: User
+    ) -> tuple[str, int]:
         """Generate a gateway key for ``project`` and persist its metadata.
 
         Lazily creates the project's gateway team, calls the gateway to generate
@@ -464,7 +466,7 @@ class KeyService:
         )
 
         plaintext_key = data["key"]
-        Key.objects.create(
+        key = Key.objects.create(
             project=project,
             name=name,
             litellm_alias=litellm_alias,
@@ -474,7 +476,7 @@ class KeyService:
             models=models,
             created_by=created_by,
         )
-        return plaintext_key
+        return plaintext_key, key.pk
 
     def regenerate_key(self, key: Key) -> str:
         """Regenerate a gateway key for ``key`` and persist its metadata."""

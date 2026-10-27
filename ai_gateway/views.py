@@ -498,7 +498,7 @@ class KeyCreateConfirmView(
             )
 
         with KeyService.from_settings() as service:
-            plaintext_key = service.create_key(
+            plaintext_key, key_pk = service.create_key(
                 project=self.project,
                 name=form.cleaned_data["name"],
                 models=form.cleaned_data["models"],
@@ -508,7 +508,7 @@ class KeyCreateConfirmView(
         response = render(
             request,
             "ai_gateway/key-created.html",
-            {"project": self.project, "plaintext_key": plaintext_key},
+            {"project": self.project, "plaintext_key": plaintext_key, "key_pk": key_pk},
         )
         add_never_cache_headers(response)
         return response
@@ -770,7 +770,12 @@ class KeyRegenerateView(
         response = render(
             request,
             "ai_gateway/key-created.html",
-            {"project": self.project, "plaintext_key": plaintext_key, "regenerated": True},
+            {
+                "project": self.project,
+                "plaintext_key": plaintext_key,
+                "regenerated": True,
+                "key_pk": self.object.pk,
+            },
         )
         add_never_cache_headers(response)
         return response

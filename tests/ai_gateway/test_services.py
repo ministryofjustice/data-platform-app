@@ -218,7 +218,7 @@ class TestKeyServiceCreateKey:
         gateway_client.get_access_group_id.return_value = "ag-default"
 
         with KeyService(gateway_client) as service:
-            plaintext = service.create_key(project, "primary-key", ["gpt-4"], user)
+            plaintext, key_pk = service.create_key(project, "primary-key", ["gpt-4"], user)
 
         assert plaintext == PLAINTEXT_KEY
         gateway_client.get_access_group_id.assert_called_once_with("generally-available-models")
@@ -235,6 +235,7 @@ class TestKeyServiceCreateKey:
 
         key = Key.objects.get(project=project)
         assert key.name == "primary-key"
+        assert key.pk == key_pk
         assert key.litellm_alias == alias_sent
         assert key.litellm_secret == PLAINTEXT_KEY
         assert key.litellm_token == "tok-1"
