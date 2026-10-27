@@ -25,19 +25,19 @@
       <h1 class="govuk-heading-l">{{ key.name }}</h1>
       <dl class="govuk-summary-list govuk-summary-list--no-border govuk-!-margin-0">
         <div class="govuk-summary-list__row">
-          <dt class="govuk-summary-list__key">Key ID</dt>
-          <dd class="govuk-summary-list__value">
+          <dt class="govuk-summary-list__key govuk-summary-list__key-width govuk-!-padding-bottom-0">Key ID</dt>
+          <dd class="govuk-summary-list__value govuk-!-padding-bottom-0">
             {{ key.litellm_token }}
           </dd>
         </div>
         <div class="govuk-summary-list__row">
-          <dt class="govuk-summary-list__key">Created on</dt>
-          <dd class="govuk-summary-list__value">
+          <dt class="govuk-summary-list__key govuk-summary-list__key-width govuk-!-padding-bottom-0">Created on</dt>
+          <dd class="govuk-summary-list__value govuk-!-padding-bottom-0">
             {{ key.created|date:"d F Y" }}
           </dd>
         </div>
         <div class="govuk-summary-list__row">
-          <dt class="govuk-summary-list__key">API key</dt>
+          <dt class="govuk-summary-list__key govuk-summary-list__key-width">API key</dt>
           <dd class="govuk-summary-list__value">
             {{ key.masked_key }}
           </dd>
