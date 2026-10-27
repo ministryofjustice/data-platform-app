@@ -6,7 +6,7 @@ from django.conf import settings
 from django.contrib import admin, messages
 from simple_history.admin import SimpleHistoryAdmin
 
-from ai_gateway.models import Key, Team
+from ai_gateway.models import BudgetAlert, BudgetAlertNotification, Key, Team
 from ai_gateway.services import KeyService
 
 logger = logging.getLogger(__name__)
@@ -207,6 +207,52 @@ class KeyAuditAdmin(admin.ModelAdmin):
         return False
 
     def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(BudgetAlert)
+class BudgetAlertAdmin(admin.ModelAdmin):
+    list_display = ("project", "period_start", "threshold_percent", "created")
+    list_filter = ("period_start", "threshold_percent")
+    search_fields = ("project__name", "project__uuid")
+    list_select_related = ("project",)
+    readonly_fields = (
+        "project",
+        "period_start",
+        "threshold_percent",
+        "spend",
+        "budget",
+        "created",
+        "modified",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(BudgetAlertNotification)
+class BudgetAlertNotificationAdmin(admin.ModelAdmin):
+    list_display = ("alert", "email_address", "sent_at", "notify_notification_id")
+    list_filter = ("sent_at",)
+    search_fields = ("alert__project__name", "email_address")
+    list_select_related = ("alert__project",)
+    readonly_fields = (
+        "alert",
+        "recipient",
+        "email_address",
+        "sent_at",
+        "notify_notification_id",
+        "created",
+        "modified",
+    )
+
+    def has_add_permission(self, request):
         return False
 
     def has_delete_permission(self, request, obj=None):

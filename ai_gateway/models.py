@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 from django.utils.functional import cached_property
 from django_extensions.db.models import TimeStampedModel
@@ -20,6 +21,72 @@ class Team(TimeStampedModel):
 
     def __str__(self) -> str:
         return f"AI Gateway team for {self.project.name}"
+
+
+class BudgetAlert(TimeStampedModel):
+    project = models.ForeignKey(
+        "projects.Project",
+        on_delete=models.CASCADE,
+        related_name="budget_alerts",
+    )
+    period_start = models.DateField()
+    threshold_percent = models.PositiveSmallIntegerField()
+    spend = models.DecimalField(max_digits=18, decimal_places=6)
+    budget = models.DecimalField(max_digits=18, decimal_places=6)
+
+    class Meta:
+        db_table = "ai_gateway_budget_alert"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["project", "period_start", "threshold_percent"],
+                name="budget_alert_project_month_threshold_uniq",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(threshold_percent__gte=1, threshold_percent__lte=100),
+                name="budget_alert_threshold_range",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(period_start__day=1),
+                name="budget_alert_month_start",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.project.name}: {self.threshold_percent}% ({self.period_start:%Y-%m})"
+
+
+class BudgetAlertNotification(TimeStampedModel):
+    alert = models.ForeignKey(
+        BudgetAlert,
+        on_delete=models.CASCADE,
+        related_name="notifications",
+    )
+    recipient = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="budget_alert_notifications",
+    )
+    email_address = models.EmailField()
+    sent_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When GOV.UK Notify accepted the email, not when it was delivered.",
+    )
+    notify_notification_id = models.UUIDField(null=True, blank=True)
+
+    class Meta:
+        db_table = "ai_gateway_budget_alert_notification"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["alert", "email_address"],
+                name="budget_alert_notification_email_uniq",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"Budget alert {self.alert_id}: {self.email_address}"
 
 
 class KeyHistoricalModel(models.Model):
