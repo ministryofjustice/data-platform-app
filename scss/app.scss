@@ -383,6 +383,6 @@ $masthead-background-color: #381a62;
 
 .govuk-summary-list__key-width {
   @include govuk-media-query($from: tablet) {
-    width: 10%;
+    width: 15%;
   }
 }
