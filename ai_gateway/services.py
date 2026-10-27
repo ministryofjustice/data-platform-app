@@ -464,7 +464,7 @@ class KeyService:
         )
 
         plaintext_key = data["key"]
-        Key.objects.create(
+        key = Key.objects.create(
             project=project,
             name=name,
             litellm_alias=litellm_alias,
@@ -474,7 +474,7 @@ class KeyService:
             models=models,
             created_by=created_by,
         )
-        return plaintext_key
+        return plaintext_key, key.pk
 
     def regenerate_key(self, key: Key) -> str:
         """Regenerate a gateway key for ``key`` and persist its metadata."""

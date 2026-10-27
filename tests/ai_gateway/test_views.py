@@ -694,7 +694,7 @@ class TestKeyCreateConfirmView:
         assert response.url.startswith(reverse("ai_gateway:key_create", args=[project.uuid]))
 
     def test_post_creates_key_and_renders_created_page(self, client, user, project, key_service):
-        key_service.create_key.return_value = PLAINTEXT_KEY
+        key_service.create_key.return_value = (PLAINTEXT_KEY, 1)
         client.force_login(user)
 
         response = client.post(
@@ -705,6 +705,7 @@ class TestKeyCreateConfirmView:
         assert response.status_code == 200
         assertTemplateUsed(response, "ai_gateway/key-created.html")
         assertContains(response, PLAINTEXT_KEY)
+        assertContains(response, "1")
         assert "no-store" in response["Cache-Control"]
         key_service.create_key.assert_called_once_with(
             project=project,
