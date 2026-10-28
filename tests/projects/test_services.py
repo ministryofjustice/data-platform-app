@@ -1,4 +1,5 @@
 from unittest.mock import Mock, patch
+from uuid import UUID
 
 import pytest
 from django.core.exceptions import ImproperlyConfigured
@@ -36,13 +37,16 @@ class TestGovUKNotificationsService:
 
     def test_send_email_calls_notify(self):
         client = Mock()
+        notification_id = UUID("11111111-1111-1111-1111-111111111111")
+        client.send_email_notification.return_value = {"id": str(notification_id)}
         service = GovUKNotificationsService(client=client)
 
-        service.send_email(
+        result = service.send_email(
             email_address="person@example.com",
             template_id="template-id",
             personalisation={"project_name": "My Project"},
         )
+        assert result == notification_id
 
         client.send_email_notification.assert_called_once_with(
             email_address="person@example.com",

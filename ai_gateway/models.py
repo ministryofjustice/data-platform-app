@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 from django.utils.functional import cached_property
 from django_extensions.db.models import TimeStampedModel
 from simple_history.models import HistoricalRecords
@@ -55,7 +56,18 @@ class BudgetAlert(TimeStampedModel):
         return f"{self.project.name}: {self.threshold_percent}% ({self.period_start:%Y-%m})"
 
 
+class BudgetAlertNotificationQuerySet(models.QuerySet):
+    def pending(self) -> BudgetAlertNotificationQuerySet:
+        """Return current-month unsent warnings."""
+        return self.filter(
+            sent_at__isnull=True,
+            alert__period_start=timezone.localdate().replace(day=1),
+        )
+
+
 class BudgetAlertNotification(TimeStampedModel):
+    objects = BudgetAlertNotificationQuerySet.as_manager()
+
     alert = models.ForeignKey(
         BudgetAlert,
         on_delete=models.CASCADE,

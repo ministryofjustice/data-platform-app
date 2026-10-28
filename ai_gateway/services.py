@@ -21,7 +21,9 @@ from django.utils.text import slugify
 
 from ai_gateway.client import AIGatewayClient
 from ai_gateway.exceptions import AIGatewayError
-from ai_gateway.models import BudgetAlert, Key, Team
+from ai_gateway.models import BudgetAlert, BudgetAlertNotification, Key, Team
+from data_platform_app.services import GovUKNotificationsService
+from data_platform_app.utils import build_base_url
 from projects.models import Project
 from users.models import User
 
@@ -74,6 +76,34 @@ def record_budget_alert(
         )
 
     return alert
+
+
+@transaction.atomic
+def send_budget_alert_notification(notification: BudgetAlertNotification) -> None:
+    """Submit a selected warning; failures propagate and remain retryable."""
+    notification = BudgetAlertNotification.objects.select_for_update().get(pk=notification.pk)
+    alert = notification.alert
+    if notification.sent_at:
+        return
+
+    template_id = settings.NOTIFY_BUDGET_ALERT_TEMPLATE_ID
+    if not template_id:
+        raise ImproperlyConfigured("Missing Notify settings: NOTIFY_BUDGET_ALERT_TEMPLATE_ID")
+
+    notification.notify_notification_id = GovUKNotificationsService.from_settings().send_email(
+        email_address=notification.email_address,
+        template_id=template_id,
+        personalisation={
+            "project_name": alert.project.name,
+            "project_url": (
+                f"{build_base_url(settings.APP_ENV)}"
+                f"{reverse('ai_gateway:usage', kwargs={'uuid': alert.project.uuid})}"
+            ),
+            "threshold_percent": str(alert.threshold_percent),
+        },
+    )
+    notification.sent_at = timezone.now()
+    notification.save(update_fields=["sent_at", "notify_notification_id", "modified"])
 
 
 def previous_month(value: date) -> date:
