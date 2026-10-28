@@ -22,9 +22,11 @@ class Command(BaseCommand):
             BudgetAlertNotification.objects.pending().filter(alert__in=alerts).order_by("pk")
         )
         failed = 0
+        sent = 0
         for notification in notifications:
             try:
                 send_budget_alert_notification(notification=notification)
+                sent += 1
             except GovUKNotificationError as error:
                 failed += 1
                 self.stderr.write(
@@ -32,7 +34,11 @@ class Command(BaseCommand):
                 )
 
         self.stdout.write(
-            f"Finished sending budget notifications; failed {failed} notification(s)."
+            f"""
+            Finished sending budget notifications.
+            Sent {sent} notification(s).
+            Failed {failed} notification(s).
+            """
         )
         if failed:
             raise CommandError(f"Failed to send {failed} budget notification(s).")
