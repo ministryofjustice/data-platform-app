@@ -64,9 +64,16 @@ class TestCheckTeamSpend:
                 (Decimal("260"), Decimal("500")),
             ]
 
-            with pytest.raises(CommandError, match="Failed 1"):
+            with (
+                patch(
+                    "ai_gateway.management.commands.check_team_spend.sentry_sdk.capture_exception"
+                ) as capture_exception,
+                pytest.raises(CommandError, match="Failed 1"),
+            ):
                 call_command("check_team_spend", stderr=errors)
 
+        capture_exception.assert_called_once()
+        assert "Gateway unavailable" in str(capture_exception.call_args.args[0])
         assert "Gateway unavailable" in errors.getvalue()
         assert project.budget_alerts.get().notifications.get().sent_at is None
 
@@ -142,9 +149,16 @@ class TestSendBudgetAlerts:
         ]
         errors = StringIO()
 
-        with pytest.raises(CommandError, match="Failed to send 1"):
+        with (
+            patch(
+                "ai_gateway.management.commands.send_budget_alerts.sentry_sdk.capture_exception"
+            ) as capture_exception,
+            pytest.raises(CommandError, match="Failed to send 1"),
+        ):
             call_command("send_budget_alerts", stderr=errors)
 
+        capture_exception.assert_called_once()
+        assert "Notify unavailable" in str(capture_exception.call_args.args[0])
         assert alert.notifications.filter(sent_at__isnull=True).count() == 1
         assert alert.notifications.filter(sent_at__isnull=False).count() == 1
         assert "Notify unavailable" in errors.getvalue()

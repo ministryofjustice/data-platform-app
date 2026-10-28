@@ -1,5 +1,6 @@
 """Check monthly project spend and record newly reached budget warnings."""
 
+import sentry_sdk
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
@@ -24,6 +25,7 @@ class Command(BaseCommand):
                 with UsageService.from_settings(team=team) as service:
                     spend, budget = service.get_budget_usage(month=month)
             except AIGatewayError as error:
+                sentry_sdk.capture_exception(error)
                 failed += 1
                 self.stderr.write(self.style.ERROR(f"Failed to check team {team.pk}: {error}"))
                 continue

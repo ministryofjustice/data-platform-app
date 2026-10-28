@@ -1,5 +1,6 @@
 """Send outstanding notifications for the highest monthly budget alerts."""
 
+import sentry_sdk
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
@@ -28,6 +29,7 @@ class Command(BaseCommand):
                 send_budget_alert_notification(notification=notification)
                 sent += 1
             except GovUKNotificationError as error:
+                sentry_sdk.capture_exception(error)
                 failed += 1
                 self.stderr.write(
                     self.style.ERROR(f"Failed to send notification {notification.pk}: {error}")
