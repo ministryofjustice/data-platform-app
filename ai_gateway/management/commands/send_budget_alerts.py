@@ -25,6 +25,13 @@ class Command(BaseCommand):
         failed = 0
         sent = 0
         for notification in notifications:
+            if (
+                not notification.alert.project.memberships.can_manage_api_keys()
+                .filter(user_id=notification.recipient_id)
+                .exists()
+            ):
+                continue
+
             try:
                 send_budget_alert_notification(notification=notification)
                 sent += 1

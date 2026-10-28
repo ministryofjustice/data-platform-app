@@ -103,6 +103,52 @@ class TestCheckTeamSpend:
 
 @freeze_time("2026-10-28 05:00:00")
 class TestSendBudgetAlerts:
+    def test_skips_removed_member(self, budget_alert_notification, project, notify_client):
+        project.memberships.filter(user=budget_alert_notification.recipient).delete()
+
+        call_command("send_budget_alerts")
+
+        notify_client.send_email_notification.assert_not_called()
+        budget_alert_notification.refresh_from_db()
+        assert budget_alert_notification.sent_at is None
+
+    def test_skips_inactive_member(self, budget_alert_notification, notify_client):
+        recipient = budget_alert_notification.recipient
+        recipient.is_active = False
+        recipient.save()
+
+        call_command("send_budget_alerts")
+
+        notify_client.send_email_notification.assert_not_called()
+        budget_alert_notification.refresh_from_db()
+        assert budget_alert_notification.sent_at is None
+
+    def test_skips_deleted_recipient(self, budget_alert_notification, notify_client):
+        budget_alert_notification.recipient.delete()
+
+        call_command("send_budget_alerts")
+
+        notify_client.send_email_notification.assert_not_called()
+        budget_alert_notification.refresh_from_db()
+        assert budget_alert_notification.recipient_id is None
+        assert budget_alert_notification.sent_at is None
+
+    def test_rechecks_permission_on_retry(self, budget_alert_notification, project, notify_client):
+        notify_client.send_email_notification.side_effect = HTTPError(message="Notify unavailable")
+        with pytest.raises(CommandError, match="Failed to send 1"):
+            call_command("send_budget_alerts")
+
+        project.memberships.get(
+            user=budget_alert_notification.recipient
+        ).permissions.all().delete()
+        notify_client.send_email_notification.reset_mock(side_effect=True)
+
+        call_command("send_budget_alerts")
+
+        notify_client.send_email_notification.assert_not_called()
+        budget_alert_notification.refresh_from_db()
+        assert budget_alert_notification.sent_at is None
+
     def test_selects_highest_alert_before_filtering_unsent_notifications(
         self, project, project_owner, notify_client
     ):
