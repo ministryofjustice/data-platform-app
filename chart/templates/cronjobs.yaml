@@ -1,0 +1,43 @@
+{{- range .Values.cronJobs }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "data-platform-app.fullname" $ }}-{{ .name }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "data-platform-app.labels" $ | nindent 4 }}
+spec:
+  schedule: {{ .schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        metadata:
+          labels:
+            {{- include "data-platform-app.labels" $ | nindent 12 }}
+        spec:
+          restartPolicy: Never
+          serviceAccountName: {{ include "data-platform-app.serviceAccountName" $ }}
+          securityContext:
+            {{- toYaml $.Values.podSecurityContext | nindent 12 }}
+          containers:
+            - name: {{ .name }}
+              securityContext:
+                {{- toYaml $.Values.app.securityContext | nindent 16 }}
+              image: "{{ $.Values.app.image.repository }}:{{ $.Values.app.image.tag | default $.Chart.AppVersion }}"
+              imagePullPolicy: {{ $.Values.app.image.pullPolicy }}
+              command:
+                {{- toYaml .command | nindent 16 }}
+              env:
+                {{- toYaml $.Values.app.environment | nindent 16 }}
+              resources:
+                {{- toYaml $.Values.app.resources | nindent 16 }}
+              volumeMounts:
+                {{- toYaml $.Values.app.volumeMounts | nindent 16 }}
+          volumes:
+            {{- toYaml $.Values.app.volumes | nindent 12 }}
+{{- end }}
