@@ -38,8 +38,8 @@ class BudgetAlert(TimeStampedModel):
         db_table = "ai_gateway_budget_alert"
         constraints = [
             models.UniqueConstraint(
-                fields=["project", "period_start", "threshold_percent"],
-                name="budget_alert_project_month_threshold_uniq",
+                fields=["project", "period_start", "budget", "threshold_percent"],
+                name="budget_alert_project_month_budget_threshold_uniq",
             ),
             models.CheckConstraint(
                 condition=models.Q(threshold_percent__gte=1, threshold_percent__lte=100),

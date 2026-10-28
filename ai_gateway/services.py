@@ -5,6 +5,7 @@ from __future__ import annotations
 import calendar
 import secrets
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Any
 
 import sentry_sdk
@@ -14,19 +15,65 @@ from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.functional import cached_property
 from django.utils.text import slugify
 
 from ai_gateway.client import AIGatewayClient
 from ai_gateway.exceptions import AIGatewayError
-from ai_gateway.models import Key, Team
+from ai_gateway.models import BudgetAlert, Key, Team
 from projects.models import Project
 from users.models import User
 
 DAILY_SPEND_PREVIEW_COUNT = 10
 LINE_CHART_MIN_POINTS = 2
+BUDGET_ALERT_THRESHOLDS = [90, 50]
 
 logger = structlog.get_logger(__name__)
+
+
+def budget_alert_threshold(spend: Decimal, budget: Decimal | None) -> int | None:
+    """Return the highest reached threshold without rounding the spend."""
+    if not budget:
+        return None
+
+    percent_used = (spend / budget) * 100
+    for threshold in BUDGET_ALERT_THRESHOLDS:
+        if percent_used >= threshold:
+            return threshold
+
+    return None
+
+
+@transaction.atomic
+def record_budget_alert(
+    project: Project, threshold: int, spend: Decimal, budget: Decimal
+) -> BudgetAlert | None:
+    """Record a new threshold for this month's budget and snapshot its eligible recipients."""
+    month = timezone.localdate().replace(day=1)
+    if project.budget_alerts.filter(
+        period_start=month, budget=budget, threshold_percent__gte=threshold
+    ).exists():
+        return None
+
+    alert, created = BudgetAlert.objects.get_or_create(
+        project=project,
+        period_start=month,
+        budget=budget,
+        threshold_percent=threshold,
+        defaults={"spend": spend},
+    )
+    if not created:
+        return None
+
+    memberships = project.memberships.can_manage_api_keys().select_related("user")
+    for membership in memberships:
+        alert.notifications.get_or_create(
+            email_address=membership.user.email,
+            defaults={"recipient": membership.user},
+        )
+
+    return alert
 
 
 def previous_month(value: date) -> date:
@@ -144,6 +191,15 @@ class UsageService:
             "key_data": self._build_key_usage(month_spend),
             "model_data": self._build_model_usage(month_spend),
         }
+
+    def get_budget_usage(self, month: date) -> tuple[Decimal, Decimal | None]:
+        """Return monthly spend and budget without building the usage report."""
+        month_start = month.replace(day=1)
+        month_end = month_start.replace(day=calendar.monthrange(month.year, month.month)[1])
+        daily_rows = self._daily_rows(self._team_daily_activity(month_start, month_end))
+        spend = sum((Decimal(str(row["spend"])) for row in daily_rows), Decimal("0"))
+        budget = self.team_info["max_budget"]
+        return spend, None if budget is None else Decimal(str(budget))
 
     def _build_overview(
         self,
