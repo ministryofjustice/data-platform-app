@@ -35,13 +35,13 @@ logger = structlog.get_logger(__name__)
 
 
 def budget_alert_threshold(spend: Decimal, budget: Decimal | None) -> int | None:
-    """Return the highest reached threshold without rounding the spend."""
+    """Return the highest threshold exceeded, without rounding the spend."""
     if not budget:
         return None
 
     percent_used = (spend / budget) * 100
     for threshold in BUDGET_ALERT_THRESHOLDS:
-        if percent_used >= threshold:
+        if percent_used > threshold:
             return threshold
 
     return None
@@ -248,6 +248,12 @@ class UsageService:
         max_budget = self.team_info.get("max_budget")
         budget_remaining = None if max_budget is None else round(max_budget - total_spend, 2)
         percent_used = None if not max_budget else round((total_spend / max_budget) * 100, 1)
+        alert_threshold = None
+        if month_start == timezone.localdate().replace(day=1):
+            alert_threshold = budget_alert_threshold(
+                spend=sum((Decimal(str(day["spend"])) for day in daily_rows), Decimal("0")),
+                budget=None if max_budget is None else Decimal(str(max_budget)),
+            )
 
         daily_show_all = None
         if len(daily_rows) > DAILY_SPEND_PREVIEW_COUNT:
@@ -283,6 +289,7 @@ class UsageService:
             "max_budget": max_budget,
             "budget_remaining": budget_remaining,
             "percent_used": percent_used,
+            "budget_alert_threshold": alert_threshold,
             "daily_spend": daily_rows,
             "daily_spend_preview": daily_rows[:DAILY_SPEND_PREVIEW_COUNT],
             "daily_show_all": daily_show_all,

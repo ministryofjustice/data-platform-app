@@ -11,7 +11,7 @@ from projects.models import ProjectPermission
 class TestBudgetAlertThreshold:
     @pytest.mark.parametrize(
         ("spend", "expected"),
-        [("49.999", None), ("50", 50), ("89.999", 50), ("90", 90), ("110", 90)],
+        [("50", None), ("50.001", 50), ("90", 50), ("90.001", 90), ("110", 90)],
     )
     def test_uses_unrounded_spend(self, spend, expected):
         assert budget_alert_threshold(spend=Decimal(spend), budget=Decimal("100")) == expected

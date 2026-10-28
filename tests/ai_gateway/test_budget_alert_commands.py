@@ -61,7 +61,7 @@ class TestCheckTeamSpend:
         ) as factory:
             factory.return_value.__enter__.return_value.get_budget_usage.side_effect = [
                 AIGatewayAPIError(500, "Gateway unavailable"),
-                (Decimal("250"), Decimal("500")),
+                (Decimal("260"), Decimal("500")),
             ]
 
             with pytest.raises(CommandError, match="Failed 1"):
@@ -78,7 +78,7 @@ class TestCheckTeamSpend:
             "ai_gateway.management.commands.check_team_spend.UsageService.from_settings"
         ) as factory:
             factory.return_value.__enter__.return_value.get_budget_usage.return_value = (
-                Decimal("250"),
+                Decimal("260"),
                 Decimal("500"),
             )
 

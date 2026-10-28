@@ -3,6 +3,7 @@ from unittest.mock import create_autospec, patch
 
 import pytest
 from django.urls import reverse
+from freezegun import freeze_time
 from model_bakery import baker
 from pytest_django.asserts import (
     assertContains,
@@ -1126,6 +1127,60 @@ class TestKeyRevokeView:
 
 
 class TestUsageView:
+    @freeze_time("2026-10-28 05:00:00")
+    @pytest.mark.parametrize(
+        ("spend", "threshold"),
+        [(50.5, 50), (90.5, 90)],
+    )
+    def test_shows_budget_banner(self, client, user, team, spend, threshold):
+        with patch("ai_gateway.services.AIGatewayClient.from_settings") as factory:
+            gateway = factory.return_value
+            gateway.team_info.return_value = {
+                "team_info": {"created_at": "2026-09-01T00:00:00Z", "max_budget": 100}
+            }
+            gateway.team_daily_activity.return_value = {
+                "results": [{"date": "2026-10-01", "metrics": {"spend": spend}}]
+            }
+            client.force_login(user)
+
+            response = client.get(
+                reverse("ai_gateway:usage", kwargs={"uuid": team.project.uuid}),
+                {"month": "2026-10"},
+            )
+
+        assert response.context["overview_data"]["budget_alert_threshold"] == threshold
+        assertContains(response, 'class="moj-ticket-panel app-usage-budget-banner"', count=1)
+        assertContains(response, f"You've spent more than {threshold}% of your monthly budget")
+        assertContains(
+            response,
+            "https://user-guide.data-platform.service.justice.gov.uk/support/"
+            "index.html#request-an-increase-to-your-ai-usage-limits",
+        )
+
+    @freeze_time("2026-10-28 05:00:00")
+    @pytest.mark.parametrize(
+        ("spend", "budget", "month"),
+        [(50, 100, "2026-10"), (90.5, None, "2026-10"), (90.5, 100, "2026-09")],
+    )
+    def test_hides_budget_banner(self, client, user, team, spend, budget, month):
+        with patch("ai_gateway.services.AIGatewayClient.from_settings") as factory:
+            gateway = factory.return_value
+            gateway.team_info.return_value = {
+                "team_info": {"created_at": "2026-09-01T00:00:00Z", "max_budget": budget}
+            }
+            gateway.team_daily_activity.return_value = {
+                "results": [{"date": f"{month}-01", "metrics": {"spend": spend}}]
+            }
+            client.force_login(user)
+
+            response = client.get(
+                reverse("ai_gateway:usage", kwargs={"uuid": team.project.uuid}),
+                {"month": month},
+            )
+
+        assert response.context["overview_data"]["budget_alert_threshold"] is None
+        assertNotContains(response, 'class="moj-ticket-panel app-usage-budget-banner"')
+
     @pytest.mark.parametrize("month", ["2026-01", "not-a-month", "2025-12", None])
     def test_selects_valid_month_or_defaults_to_current_available_month(
         self, client, user, team, month
