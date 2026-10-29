@@ -1,3 +1,5 @@
+from typing import Self
+
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
@@ -57,7 +59,7 @@ class BudgetAlert(TimeStampedModel):
 
 
 class BudgetAlertNotificationQuerySet(models.QuerySet):
-    def pending(self) -> BudgetAlertNotificationQuerySet:
+    def pending(self) -> Self:
         """Return current-month unsent warnings."""
         return self.filter(
             sent_at__isnull=True,

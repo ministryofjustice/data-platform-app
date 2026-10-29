@@ -1,4 +1,5 @@
 import uuid
+from typing import Self
 
 from django.contrib.auth.models import Permission
 from django.db import models
@@ -51,7 +52,7 @@ class ProjectMembershipPermission(TimeStampedModel):
 
 
 class ProjectMembershipQuerySet(models.QuerySet):
-    def can_manage_api_keys(self) -> ProjectMembershipQuerySet:
+    def can_manage_api_keys(self) -> Self:
         """Return active members with permission to manage API keys."""
         return self.filter(
             user__is_active=True,
