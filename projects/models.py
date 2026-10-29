@@ -1,4 +1,5 @@
 import uuid
+from typing import Self
 
 from django.contrib.auth.models import Permission
 from django.db import models
@@ -50,12 +51,24 @@ class ProjectMembershipPermission(TimeStampedModel):
         ]
 
 
+class ProjectMembershipQuerySet(models.QuerySet):
+    def can_manage_api_keys(self) -> Self:
+        """Return active members with permission to manage API keys."""
+        return self.filter(
+            user__is_active=True,
+            permissions__permission__content_type__app_label="projects",
+            permissions__permission__content_type__model="project",
+            permissions__permission__codename=ProjectPermission.MANAGE_API_KEYS,
+        )
+
+
 class ProjectMembership(TimeStampedModel):
     project = models.ForeignKey("Project", on_delete=models.CASCADE, related_name="memberships")
     user = models.ForeignKey(
         "users.User", on_delete=models.CASCADE, related_name="project_memberships"
     )
     history = HistoricalRecords(table_name="project_membership_history")
+    objects = ProjectMembershipQuerySet.as_manager()
 
     class Meta:
         db_table = "project_membership"
