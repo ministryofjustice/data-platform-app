@@ -25,6 +25,15 @@ affinity: {}
 nodeSelector: {}
 tolerations: []
 
+# Scheduled jobs; each runs the app image with the given command (UTC)
+cronJobs:
+  - name: check-team-spend
+    schedule: "0 5 * * *"
+    command: ["python", "manage.py", "check_team_spend"]
+  - name: send-budget-alerts
+    schedule: "*/15 * * * *"
+    command: ["python", "manage.py", "send_budget_alerts"]
+
 app:
   image:
     repository: ghcr.io/ministryofjustice/data-platform-app
@@ -112,6 +121,11 @@ app:
         secretKeyRef:
           name: app-secrets
           key: notify-project-member-removed-template-id
+    - name: NOTIFY_BUDGET_ALERT_TEMPLATE_ID
+      valueFrom:
+        secretKeyRef:
+          name: app-secrets
+          key: notify-budget-alert-template-id
     # override per environment in modernisation-platform-environments
     - name: GOOGLE_ANALYTICS_ID
       value: ""

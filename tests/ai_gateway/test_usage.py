@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 from unittest.mock import create_autospec, patch
 
 import pytest
@@ -83,6 +84,24 @@ class TestUsageServiceMonthChoices:
 
 
 class TestUsageServiceGetUsage:
+    def test_budget_usage_fetches_only_selected_month_without_rounding(self, team, gateway_client):
+        gateway_client.team_info.return_value = {"team_info": {"max_budget": 100}}
+        gateway_client.team_daily_activity.return_value = {
+            "results": [
+                {"date": "2026-10-01", "metrics": {"spend": 24.999}},
+                {"date": "2026-10-02", "metrics": {"spend": 25}},
+            ]
+        }
+
+        with UsageService(gateway_client, team) as service:
+            spend, budget = service.get_budget_usage(date(2026, 10, 1))
+
+        assert spend == Decimal("49.999")
+        assert budget == Decimal("100")
+        gateway_client.team_daily_activity.assert_called_once_with(
+            "team-xyz", "2026-10-01", "2026-10-31"
+        )
+
     def test_reuses_selected_activity_for_overview_key_and_model_data(
         self, team, gateway_client, key
     ):

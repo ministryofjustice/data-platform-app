@@ -5,6 +5,7 @@ from __future__ import annotations
 import calendar
 import secrets
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Any
 
 import sentry_sdk
@@ -14,19 +15,95 @@ from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.functional import cached_property
 from django.utils.text import slugify
 
 from ai_gateway.client import AIGatewayClient
 from ai_gateway.exceptions import AIGatewayError
-from ai_gateway.models import Key, Team
+from ai_gateway.models import BudgetAlert, BudgetAlertNotification, Key, Team
+from data_platform_app.services import GovUKNotificationsService
+from data_platform_app.utils import build_base_url
 from projects.models import Project
 from users.models import User
 
 DAILY_SPEND_PREVIEW_COUNT = 10
 LINE_CHART_MIN_POINTS = 2
+BUDGET_ALERT_THRESHOLDS = [90, 50]
 
 logger = structlog.get_logger(__name__)
+
+
+def budget_alert_threshold(spend: Decimal, budget: Decimal | None) -> int | None:
+    """Return the highest threshold exceeded, without rounding the spend."""
+    if not budget:
+        return None
+
+    percent_used = (spend / budget) * 100
+    for threshold in BUDGET_ALERT_THRESHOLDS:
+        if percent_used > threshold:
+            return threshold
+
+    return None
+
+
+@transaction.atomic
+def record_budget_alert(
+    project: Project, threshold: int, spend: Decimal, budget: Decimal
+) -> BudgetAlert | None:
+    """Record a new threshold for this month's budget and snapshot its eligible recipients."""
+    month = timezone.localdate().replace(day=1)
+    if project.budget_alerts.filter(
+        period_start=month, budget=budget, threshold_percent__gte=threshold
+    ).exists():
+        return None
+
+    alert, created = BudgetAlert.objects.get_or_create(
+        project=project,
+        period_start=month,
+        budget=budget,
+        threshold_percent=threshold,
+        defaults={"spend": spend},
+    )
+    if not created:
+        return None
+
+    memberships = project.memberships.can_manage_api_keys().select_related("user")
+    for membership in memberships:
+        alert.notifications.get_or_create(
+            email_address=membership.user.email,
+            defaults={"recipient": membership.user},
+        )
+
+    return alert
+
+
+@transaction.atomic
+def send_budget_alert_notification(notification: BudgetAlertNotification) -> None:
+    """Submit a selected warning; failures propagate and remain retryable."""
+    notification = BudgetAlertNotification.objects.select_for_update().get(pk=notification.pk)
+    alert = notification.alert
+    if notification.sent_at:
+        return
+
+    template_id = settings.NOTIFY_BUDGET_ALERT_TEMPLATE_ID
+    if not template_id:
+        raise ImproperlyConfigured("Missing Notify settings: NOTIFY_BUDGET_ALERT_TEMPLATE_ID")
+
+    notification.notify_notification_id = GovUKNotificationsService.from_settings().send_email(
+        email_address=notification.email_address,
+        template_id=template_id,
+        personalisation={
+            "project_name": alert.project.name,
+            "project_url": (
+                f"{build_base_url(settings.APP_ENV)}"
+                f"{reverse('ai_gateway:usage', kwargs={'uuid': alert.project.uuid})}"
+            ),
+            "threshold_percent": str(alert.threshold_percent),
+        },
+    )
+    notification.sent_at = timezone.now()
+    notification.save(update_fields=["sent_at", "notify_notification_id", "modified"])
 
 
 def previous_month(value: date) -> date:
@@ -145,6 +222,15 @@ class UsageService:
             "model_data": self._build_model_usage(month_spend),
         }
 
+    def get_budget_usage(self, month: date) -> tuple[Decimal, Decimal | None]:
+        """Return monthly spend and budget without building the usage report."""
+        month_start = month.replace(day=1)
+        month_end = month_start.replace(day=calendar.monthrange(month.year, month.month)[1])
+        daily_rows = self._daily_rows(self._team_daily_activity(month_start, month_end))
+        spend = sum((Decimal(str(row["spend"])) for row in daily_rows), Decimal("0"))
+        budget = self.team_info["max_budget"]
+        return spend, None if budget is None else Decimal(str(budget))
+
     def _build_overview(
         self,
         month_start: date,
@@ -162,6 +248,12 @@ class UsageService:
         max_budget = self.team_info.get("max_budget")
         budget_remaining = None if max_budget is None else round(max_budget - total_spend, 2)
         percent_used = None if not max_budget else round((total_spend / max_budget) * 100, 1)
+        alert_threshold = None
+        if month_start == timezone.localdate().replace(day=1):
+            alert_threshold = budget_alert_threshold(
+                spend=sum((Decimal(str(day["spend"])) for day in daily_rows), Decimal("0")),
+                budget=None if max_budget is None else Decimal(str(max_budget)),
+            )
 
         daily_show_all = None
         if len(daily_rows) > DAILY_SPEND_PREVIEW_COUNT:
@@ -197,6 +289,7 @@ class UsageService:
             "max_budget": max_budget,
             "budget_remaining": budget_remaining,
             "percent_used": percent_used,
+            "budget_alert_threshold": alert_threshold,
             "daily_spend": daily_rows,
             "daily_spend_preview": daily_rows[:DAILY_SPEND_PREVIEW_COUNT],
             "daily_show_all": daily_show_all,
