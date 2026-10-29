@@ -18,7 +18,8 @@ spec:
       template:
         metadata:
           labels:
-            {{- include "data-platform-app.labels" $ | nindent 12 }}
+            app.kubernetes.io/instance: {{ $.Release.Name }}
+            app.kubernetes.io/component: {{ .name }}
         spec:
           restartPolicy: Never
           serviceAccountName: {{ include "data-platform-app.serviceAccountName" $ }}
