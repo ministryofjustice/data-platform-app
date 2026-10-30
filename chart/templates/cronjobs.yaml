@@ -18,6 +18,9 @@ spec:
       template:
         metadata:
           labels:
+            {{- with omit ($.Values.podLabels | default dict) "app.kubernetes.io/name" "app.kubernetes.io/instance" "app.kubernetes.io/component" }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
             app.kubernetes.io/instance: {{ $.Release.Name }}
             app.kubernetes.io/component: {{ .name }}
         spec:
@@ -41,4 +44,16 @@ spec:
                 {{- toYaml $.Values.app.volumeMounts | nindent 16 }}
           volumes:
             {{- toYaml $.Values.app.volumes | nindent 12 }}
+          {{- with $.Values.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $.Values.affinity }}
+          affinity:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $.Values.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
 {{- end }}
