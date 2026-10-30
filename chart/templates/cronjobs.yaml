@@ -18,7 +18,7 @@ spec:
       template:
         metadata:
           labels:
-            {{- with omit $.Values.podLabels "app.kubernetes.io/name" "app.kubernetes.io/instance" "app.kubernetes.io/component" }}
+            {{- with omit ($.Values.podLabels | default dict) "app.kubernetes.io/name" "app.kubernetes.io/instance" "app.kubernetes.io/component" }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
             app.kubernetes.io/instance: {{ $.Release.Name }}
