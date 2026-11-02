@@ -763,9 +763,10 @@ class KeyDetailView(KeyScopedMixin, DetailView):
         with KeyService.from_settings() as service:
             try:
                 models = service.get_models_for_key(self.object)
-                context["models"] = [
+                models = [
                     "None" if model == KeyService.NO_DEFAULT_MODELS else model for model in models
                 ]
+                context["models"] = sorted(models, key=str.casefold)
             except AIGatewayError as error:
                 sentry_sdk.capture_exception(error)
                 context["models"] = []
