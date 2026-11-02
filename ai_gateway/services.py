@@ -5,7 +5,7 @@ from __future__ import annotations
 import calendar
 import secrets
 from datetime import date, datetime
-from typing import Any
+from typing import Any, NotRequired, TypedDict
 
 import sentry_sdk
 import structlog
@@ -27,6 +27,13 @@ DAILY_SPEND_PREVIEW_COUNT = 10
 LINE_CHART_MIN_POINTS = 2
 
 logger = structlog.get_logger(__name__)
+
+
+class _UsageTotals(TypedDict):
+    spend: float
+    requests: int | None
+    input_tokens: NotRequired[int | None]
+    output_tokens: NotRequired[int | None]
 
 
 def previous_month(value: date) -> date:
@@ -125,8 +132,10 @@ class UsageService:
             month = previous_month(month)
         return choices
 
-    def get_usage(self, month: date) -> dict[str, Any]:
-        """Return overview, API-key, and model usage data for ``month``."""
+    def get_usage(
+        self, month: date, *, key_alias: str = "", model_name: str = ""
+    ) -> dict[str, Any]:
+        """Return monthly usage and daily drill-downs for eligible key/model selections."""
         month_start = month.replace(day=1)
         month_end = month.replace(day=calendar.monthrange(month.year, month.month)[1])
         month_spend = self._team_daily_activity(month_start, month_end)
@@ -135,14 +144,23 @@ class UsageService:
         if self.usage_start < month_start:
             full_spend_history = self._team_daily_activity(self.usage_start, month_end)
 
+        key_data = self._build_key_usage(month_spend)
+        model_data = self._build_model_usage(month_spend)
+        key_data["daily"] = self._build_daily_usage(
+            month_spend, "api_keys", key_data["rows"], key_alias, month_start
+        )
+        model_data["daily"] = self._build_daily_usage(
+            month_spend, "model_groups", model_data["rows"], model_name, month_start
+        )
+
         return {
             "overview_data": self._build_overview(
                 month_start,
                 month_spend,
                 full_spend_history,
             ),
-            "key_data": self._build_key_usage(month_spend),
-            "model_data": self._build_model_usage(month_spend),
+            "key_data": key_data,
+            "model_data": model_data,
         }
 
     def _build_overview(
@@ -153,6 +171,7 @@ class UsageService:
     ) -> dict[str, Any]:
         daily_rows = self._daily_rows(daily_results)
         total_spend = round(sum(day["spend"] for day in daily_rows), 2)
+        total_requests = sum(day["requests"] for day in daily_rows)
 
         if not total_spend:
             return {"has_usage": False}
@@ -171,9 +190,7 @@ class UsageService:
                 "url": f"?month={month_start.strftime('%Y-%m')}&daily=all",
             }
 
-        daily_chart_rows = [
-            {"label": row["date"].strftime("%-d"), "spend": row["spend"]} for row in daily_rows
-        ]
+        daily_chart_rows = [{**row, "label": row["date"].strftime("%-d")} for row in daily_rows]
         daily_chart_data = self._create_chart_data(
             daily_chart_rows,
             "label",
@@ -182,18 +199,27 @@ class UsageService:
             "Spend ($)",
             reverse=True,
         )
+        daily_requests_chart_data = self._create_requests_chart_data(
+            daily_chart_rows, f"Day ({month_start.strftime('%B %Y')})"
+        )
         if len(daily_rows) > LINE_CHART_MIN_POINTS:
             daily_chart_data["chart_type"] = "line"
+            if daily_requests_chart_data:
+                daily_requests_chart_data["chart_type"] = "line"
 
         monthly_chart_data = self._create_chart_data(
             monthly_rows, "label", "spend", "Month", "Spend ($)", reverse=True
         )
+        monthly_requests_chart_data = self._create_requests_chart_data(monthly_rows, "Month")
         if len(monthly_rows) > LINE_CHART_MIN_POINTS:
             monthly_chart_data["chart_type"] = "line"
+            if monthly_requests_chart_data:
+                monthly_requests_chart_data["chart_type"] = "line"
 
         return {
             "has_usage": True,
             "total_spend": total_spend,
+            "total_requests": total_requests,
             "max_budget": max_budget,
             "budget_remaining": budget_remaining,
             "percent_used": percent_used,
@@ -203,9 +229,15 @@ class UsageService:
             "daily_chart_data": daily_chart_data,
             "daily_chart_name": "daily-spend",
             "daily_chart_label": f"Daily spend for {month_start.strftime('%B %Y')}",
+            "daily_requests_chart_data": daily_requests_chart_data,
+            "daily_requests_chart_name": "daily-requests",
+            "daily_requests_chart_label": f"Daily requests for {month_start.strftime('%B %Y')}",
             "monthly_spend_rows": monthly_rows,
             "monthly_chart_name": "monthly-spend",
             "monthly_chart_data": monthly_chart_data,
+            "monthly_requests_chart_data": monthly_requests_chart_data,
+            "monthly_requests_chart_name": "monthly-requests",
+            "monthly_requests_chart_label": "Monthly requests",
         }
 
     @staticmethod
@@ -217,7 +249,7 @@ class UsageService:
         value_axis_label: str = "",
         reverse: bool = False,
     ) -> dict[str, Any]:
-        """Return chart data for a list of rows with a label and spend."""
+        """Return chart data for labelled metric values."""
         if reverse:
             rows = list(reversed(rows))
 
@@ -228,13 +260,30 @@ class UsageService:
             "value_axis_label": value_axis_label,
         }
 
+    def _create_requests_chart_data(
+        self,
+        rows: list[dict[str, Any]],
+        category_axis_label: str,
+        *,
+        horizontal: bool = False,
+    ) -> dict[str, Any] | None:
+        if not rows or any(row["requests"] is None for row in rows):
+            return None
+        data = self._create_chart_data(
+            rows, "label", "requests", category_axis_label, "Requests", reverse=True
+        )
+        data["value_format"] = "count"
+        if horizontal:
+            data["horizontal"] = True
+        return data
+
     def _build_key_usage(self, daily_results: list[dict[str, Any]]) -> dict[str, Any]:
         totals = self._breakdown_totals(daily_results, "api_keys")
         keys_by_alias = {
             key.litellm_alias: key for key in self._team.project.ai_gateway_keys.all()
         }
         rows = []
-        for alias, spend in totals.items():
+        for alias, metrics in totals.items():
             key = keys_by_alias.get(alias)
             url = (
                 reverse(
@@ -244,7 +293,13 @@ class UsageService:
                 else None
             )
             rows.append(
-                {"label": key.name if key else alias, "url": url, "spend": round(spend, 2)}
+                {
+                    "id": alias,
+                    "label": key.name if key else alias,
+                    "url": url,
+                    "spend": round(metrics["spend"], 2),
+                    "requests": metrics["requests"],
+                }
             )
         rows.sort(key=lambda row: row["spend"], reverse=True)
         chart_data = self._create_chart_data(
@@ -256,16 +311,23 @@ class UsageService:
             "chart_data": chart_data,
             "chart_name": "key-spend",
             "chart_label": "Spend per API key",
+            "requests_chart_data": self._create_requests_chart_data(rows, "API Key"),
+            "requests_chart_name": "key-requests",
+            "requests_chart_label": "Requests per API key",
         }
 
     def _build_model_usage(self, daily_results: list[dict[str, Any]]) -> dict[str, Any]:
         totals = self._breakdown_totals(daily_results, "model_groups")
         rows = [
             {
+                "id": model_name,
                 "label": model_name,
-                "spend": round(spend, 2),
+                "spend": round(metrics["spend"], 2),
+                "requests": metrics["requests"],
+                "input_tokens": metrics.get("input_tokens"),
+                "output_tokens": metrics.get("output_tokens"),
             }
-            for model_name, spend in totals.items()
+            for model_name, metrics in totals.items()
         ]
         rows.sort(key=lambda row: row["spend"], reverse=True)
         chart_data = self._create_chart_data(
@@ -278,7 +340,142 @@ class UsageService:
             "chart_data": chart_data,
             "chart_name": "model-spend",
             "chart_label": "Spend per model",
+            "requests_chart_data": self._create_requests_chart_data(
+                rows, "Model", horizontal=True
+            ),
+            "requests_chart_name": "model-requests",
+            "requests_chart_label": "Requests per model",
+            "tokens_chart_data": self._create_tokens_chart_data(rows, "Model", horizontal=True),
+            "tokens_chart_name": "model-tokens",
+            "tokens_chart_label": "Input and output tokens per model",
         }
+
+    @staticmethod
+    def _accumulate_model_tokens(total: _UsageTotals, metrics: dict[str, Any]) -> None:
+        input_tokens = metrics.get("prompt_tokens")
+        output_tokens = metrics.get("completion_tokens")
+        current_input = total.get("input_tokens", 0)
+        current_output = total.get("output_tokens", 0)
+        total["input_tokens"] = (
+            None if input_tokens is None or current_input is None else current_input + input_tokens
+        )
+        total["output_tokens"] = (
+            None
+            if output_tokens is None or current_output is None
+            else current_output + output_tokens
+        )
+
+    @staticmethod
+    def _create_tokens_chart_data(
+        rows: list[dict[str, Any]], category_axis_label: str, *, horizontal: bool = False
+    ) -> dict[str, Any] | None:
+        if not rows or any(
+            row.get("input_tokens") is None or row.get("output_tokens") is None for row in rows
+        ):
+            return None
+        ordered_rows = list(reversed(rows))
+        return {
+            "labels": [row["label"] for row in ordered_rows],
+            "series": [
+                {"name": "Input tokens", "values": [row["input_tokens"] for row in ordered_rows]},
+                {
+                    "name": "Output tokens",
+                    "values": [row["output_tokens"] for row in ordered_rows],
+                },
+            ],
+            "category_axis_label": category_axis_label,
+            "value_axis_label": "Tokens",
+            "value_format": "count",
+            "horizontal": horizontal,
+        }
+
+    def _build_daily_usage(
+        self,
+        daily_results: list[dict[str, Any]],
+        dimension: str,
+        monthly_rows: list[dict[str, Any]],
+        selected: str,
+        month: date,
+    ) -> dict[str, Any]:
+        choices = [
+            (row["id"], row["label"])
+            for row in sorted(monthly_rows, key=lambda row: row["label"].casefold())
+        ]
+        labels = dict(choices)
+        selected = selected if selected in labels else ""
+        data: dict[str, Any] = {
+            "choices": choices,
+            "selected": selected,
+            "label": labels.get(selected, ""),
+            "rows": [],
+        }
+        if not selected:
+            return data
+
+        totals: dict[date, _UsageTotals] = {}
+        for entry in daily_results:
+            if not entry.get("date"):
+                continue
+            day = datetime.strptime(entry["date"], "%Y-%m-%d").date()
+            if day.replace(day=1) != month:
+                continue
+            for item_id, item_data in entry.get("breakdown", {}).get(dimension, {}).items():
+                identity = (
+                    item_data.get("metadata", {}).get("key_alias")
+                    if dimension == "api_keys"
+                    else item_id
+                )
+                if identity != selected:
+                    continue
+                spend, requests = self._get_totals(item_data)
+                total = totals.setdefault(day, {"spend": 0, "requests": 0})
+                total["spend"] += spend
+                if item_data.get("metrics", {}).get("api_requests") is None:
+                    total["requests"] = None
+                elif total["requests"] is not None:
+                    total["requests"] += requests
+                if dimension == "model_groups":
+                    self._accumulate_model_tokens(total, item_data.get("metrics", {}))
+
+        rows = [
+            {"date": day, "label": day.strftime("%-d %B %Y"), **metrics}
+            for day, metrics in sorted(totals.items(), reverse=True)
+        ]
+        chart_rows = [{**row, "label": row["date"].strftime("%-d")} for row in rows]
+        axis_label = f"Day ({month.strftime('%B %Y')})"
+        chart_data = self._create_chart_data(
+            chart_rows, "label", "spend", axis_label, "Spend ($)", reverse=True
+        )
+        requests_chart_data = self._create_requests_chart_data(chart_rows, axis_label)
+        if len(rows) > LINE_CHART_MIN_POINTS:
+            chart_data["chart_type"] = "line"
+            if requests_chart_data:
+                requests_chart_data["chart_type"] = "line"
+        prefix = "key" if dimension == "api_keys" else "model"
+        description = f"{data['label']} in {month.strftime('%B %Y')}"
+        data.update(
+            {
+                "rows": rows,
+                "chart_data": chart_data,
+                "chart_name": f"{prefix}-daily-spend",
+                "chart_label": f"Daily spend for {description}",
+                "requests_chart_data": requests_chart_data,
+                "requests_chart_name": f"{prefix}-daily-requests",
+                "requests_chart_label": f"Daily requests for {description}",
+            }
+        )
+        if dimension == "model_groups":
+            tokens_chart_data = self._create_tokens_chart_data(chart_rows, axis_label)
+            if tokens_chart_data:
+                tokens_chart_data["chart_type"] = chart_data.get("chart_type", "bar")
+            data.update(
+                {
+                    "tokens_chart_data": tokens_chart_data,
+                    "tokens_chart_name": "model-daily-tokens",
+                    "tokens_chart_label": f"Daily input and output tokens for {description}",
+                }
+            )
+        return data
 
     def _team_daily_activity(self, start: date, end: date) -> list[dict[str, Any]]:
         data = self._client.team_daily_activity(
@@ -286,18 +483,25 @@ class UsageService:
         )
         return data.get("results", [])
 
+    def _get_totals(self, entry: dict[str, Any]) -> tuple[float, int]:
+        metrics = entry.get("metrics", {})
+        spend = metrics.get("spend", 0) or 0
+        daily_requests = metrics.get("api_requests", 0) or 0
+        return spend, daily_requests
+
     def _daily_rows(self, daily_results: list[dict[str, Any]]) -> list[dict[str, Any]]:
         totals = []
         for entry in daily_results:
             entry_date = entry.get("date")
             if not entry_date:
                 continue
-            spend = entry.get("metrics", {}).get("spend", 0) or 0
+            spend, daily_requests = self._get_totals(entry)
             day = datetime.strptime(entry_date, "%Y-%m-%d").date()
             totals.append(
                 {
                     "date": day,
                     "spend": spend,
+                    "requests": daily_requests,
                     "label": day.strftime("%-d %B %Y"),
                 }
             )
@@ -308,39 +512,49 @@ class UsageService:
         """
         Totals up a range of daily spends into totals for each month
         """
-        totals: dict[date, float] = {}
+        spend_totals: dict[date, float] = {}
+        request_totals: dict[date, int] = {}
         for entry in daily_results:
             entry_date = entry.get("date")
             if not entry_date:
                 continue
             month = datetime.strptime(entry_date, "%Y-%m-%d").date().replace(day=1)
-            spend = entry.get("metrics", {}).get("spend", 0) or 0
-            totals[month] = totals.get(month, 0) + spend
+            spend, daily_requests = self._get_totals(entry)
+            spend_totals[month] = spend_totals.get(month, 0) + spend
+            request_totals[month] = request_totals.get(month, 0) + daily_requests
 
         return [
             {
                 "label": month.strftime("%B %Y"),
-                "spend": round(spend, 2),
+                "spend": round(spend_totals[month], 2),
+                "requests": request_totals[month],
             }
-            for month, spend in sorted(
-                totals.items(),
-                reverse=True,
-            )
+            for month in sorted(spend_totals, reverse=True)
         ]
 
     def _breakdown_totals(
         self, daily_results: list[dict[str, Any]], dimension: str
-    ) -> dict[str, float]:
-        totals: dict[str, float] = {}
+    ) -> dict[str, _UsageTotals]:
+        totals: dict[str, _UsageTotals] = {}
         for entry in daily_results:
             for item_id, item_data in entry.get("breakdown", {}).get(dimension, {}).items():
-                spend = item_data.get("metrics", {}).get("spend", 0) or 0
+                spend, daily_requests = self._get_totals(item_data)
                 _id = item_id
                 # API key ID/token changes when regenerated so use the alias to group spend by key
                 if dimension == "api_keys":
                     _id = item_data["metadata"]["key_alias"]
-                totals[_id] = totals.get(_id, 0) + spend
-        return {_id: spend for _id, spend in totals.items() if round(spend, 2) != 0}
+                total = totals.setdefault(_id, {"spend": 0, "requests": 0})
+                total["spend"] += spend
+                if item_data.get("metrics", {}).get("api_requests") is None:
+                    total["requests"] = None
+                elif total["requests"] is not None:
+                    total["requests"] += daily_requests
+                if dimension == "model_groups":
+                    self._accumulate_model_tokens(total, item_data.get("metrics", {}))
+
+        return {
+            item_id: total for item_id, total in totals.items() if round(total["spend"], 2) != 0
+        }
 
 
 class KeyService:

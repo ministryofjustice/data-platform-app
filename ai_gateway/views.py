@@ -19,6 +19,7 @@ from ai_gateway.filtering import VISIBLE_LIMIT, exclude_catalogue_models, filter
 from ai_gateway.forms import (
     KeyCreateForm,
     KeyModelChangeForm,
+    UsageDailyFilterForm,
     UsageMonthForm,
     UsagePeriodForm,
     build_model_usage_rate_formset,
@@ -244,10 +245,41 @@ class UsageView(
             if month_form.is_valid() and month_form.cleaned_data["month"]:
                 selected_month = month_form.cleaned_data["month"]
 
+            selections = {
+                "key_alias": self.request.GET.get("key", ""),
+                "model_name": self.request.GET.get("model", ""),
+            }
+            usage = (
+                service.get_usage(selected_month, **selections)
+                if any(selections.values())
+                else service.get_usage(selected_month)
+            )
+            key_daily = usage["key_data"].get("daily", {})
+            model_daily = usage["model_data"].get("daily", {})
+            filters = {
+                "key": key_daily.get("selected", ""),
+                "model": model_daily.get("selected", ""),
+                "daily": "all" if self.request.GET.get("daily") == "all" else "",
+            }
+            daily_filter_form = UsageDailyFilterForm(
+                key_choices=key_daily.get("choices", []),
+                model_choices=model_daily.get("choices", []),
+                initial={"key": filters["key"], "model": filters["model"]},
+                auto_id="id_usage_%s",
+            )
+            show_all = usage["overview_data"].get("daily_show_all")
+            if show_all:
+                query = {name: value for name, value in filters.items() if value}
+                query.update({"month": selected_month.strftime("%Y-%m"), "daily": "all"})
+                show_all["url"] = f"?{urlencode(query)}"
+
             return {
                 "month_form": month_form,
                 "selected_month": selected_month,
-                **service.get_usage(selected_month),
+                "daily_filter_form": daily_filter_form,
+                "usage_filters": filters,
+                "usage_url": reverse("ai_gateway:usage", args=[self.project.uuid]),
+                **usage,
             }
 
 

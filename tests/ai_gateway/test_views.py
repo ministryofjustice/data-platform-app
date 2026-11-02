@@ -1128,6 +1128,253 @@ class TestKeyRevokeView:
 
 
 class TestUsageView:
+    def _mock_service_with_daily_filters(self, *, selected=False):
+        service = self._mock_service_with_daily_spend()
+        for dimension, identity, label in (
+            ("key", "key-alias", "Example key"),
+            ("model", "model-name", "Example model"),
+        ):
+            chart = {"labels": ["1"], "values": [2]}
+            daily = {
+                "choices": [(identity, label)],
+                "selected": identity if selected else "",
+                "label": label if selected else "",
+                "rows": (
+                    [
+                        {
+                            "date": date(2026, 1, 1),
+                            "label": "1 January 2026",
+                            "spend": 2,
+                            "requests": 5,
+                        }
+                    ]
+                    if selected
+                    else []
+                ),
+                "chart_name": f"{dimension}-daily-spend",
+                "chart_data": chart,
+                "chart_label": f"Daily spend for {label}",
+                "requests_chart_name": f"{dimension}-daily-requests",
+                "requests_chart_data": {**chart, "values": [5], "value_format": "count"},
+                "requests_chart_label": f"Daily requests for {label}",
+            }
+            service.get_usage.return_value[f"{dimension}_data"] = {
+                "has_usage": True,
+                "rows": [{"id": identity, "label": label, "spend": 2, "requests": 5}],
+                "chart_name": f"{dimension}-spend",
+                "chart_data": chart,
+                "daily": daily,
+            }
+            if dimension == "model":
+                model_data = service.get_usage.return_value["model_data"]
+                for row in [*model_data["rows"], *daily["rows"]]:
+                    row.update({"input_tokens": 1234, "output_tokens": 56})
+                tokens = {
+                    "labels": [label],
+                    "series": [
+                        {"name": "Input tokens", "values": [1234]},
+                        {"name": "Output tokens", "values": [56]},
+                    ],
+                    "value_format": "count",
+                }
+                model_data.update(
+                    {
+                        "tokens_chart_data": tokens,
+                        "tokens_chart_name": "model-tokens",
+                        "tokens_chart_label": "Input and output tokens per model",
+                    }
+                )
+                daily.update(
+                    {
+                        "tokens_chart_data": {**tokens, "labels": ["1"]},
+                        "tokens_chart_name": "model-daily-tokens",
+                        "tokens_chart_label": "Daily input and output tokens for Example model",
+                    }
+                )
+        return service
+
+    @pytest.mark.parametrize("selected", [False, True])
+    @pytest.mark.parametrize("available", [False, True])
+    def test_tokens_are_only_shown_in_model_monthly_and_selected_daily_sections(
+        self, client, user, team, selected, available
+    ):
+        service = self._mock_service_with_daily_filters(selected=selected)
+        model = service.get_usage.return_value["model_data"]
+        if not available:
+            model["tokens_chart_data"] = None
+            model["daily"]["tokens_chart_data"] = None
+            for row in [*model["rows"], *model["daily"]["rows"]]:
+                row["input_tokens"] = None
+        query = {"month": "2026-01"}
+        if selected:
+            query.update({"key": "key-alias", "model": "model-name"})
+        with patch("ai_gateway.services.UsageService.from_settings", return_value=service):
+            client.force_login(user)
+            response = client.get(reverse("ai_gateway:usage", args=[team.project.uuid]), query)
+
+        sections = 2 if selected else 1
+        assertContains(response, 'data-chart-metric="tokens"', count=sections)
+        assertContains(response, ">Input tokens</th>", count=sections)
+        assertContains(response, ">Output tokens</th>", count=sections)
+        before_model = response.content.decode().split('id="spend-per-model"')[0]
+        assert 'data-chart-metric="tokens"' not in before_model
+        assert ">Input tokens</th>" not in before_model
+        for prefix in ["model", "model-daily"] if selected else ["model"]:
+            assertContains(response, f'id="{prefix}-spend-tab-tokens"', count=1)
+            assertContains(response, f'id="{prefix}-spend-panel-tokens"', count=1)
+            if available:
+                assertContains(response, f'<script id="{prefix}-tokens-chart-data"', count=1)
+            else:
+                assertNotContains(response, f'id="{prefix}-tokens-chart-data"')
+        if available:
+            assertContains(response, '"name": "Input tokens"', count=sections)
+            assertContains(response, '"name": "Output tokens"', count=sections)
+        else:
+            assertContains(
+                response, "Token data is not available for this period.", count=sections
+            )
+            assertContains(response, "Not available")
+            assertContains(response, ">56</td>", count=sections)
+
+    def test_daily_selectors_initially_show_placeholders_without_results(self, client, user, team):
+        service = self._mock_service_with_daily_filters()
+        with patch("ai_gateway.services.UsageService.from_settings", return_value=service):
+            client.force_login(user)
+            response = client.get(reverse("ai_gateway:usage", args=[team.project.uuid]))
+
+        assertContains(response, ">Daily Usage</h3>", count=2)
+        assertContains(response, "Select an API key to see its daily usage for January 2026.")
+        assertContains(response, "Select a model to see its daily usage for January 2026.")
+        assertContains(response, 'id="id_usage_key"', count=1)
+        assertContains(response, 'id="id_usage_model"', count=1)
+        assertContains(response, 'for="id_usage_key"', count=1)
+        assertContains(response, "Select an API key")
+        assertNotContains(response, 'id="key-daily-spend-chart-data"')
+        assertNotContains(response, 'id="model-daily-spend-chart-data"')
+        service.get_usage.assert_called_once_with(date(2026, 1, 1))
+
+    def test_selected_daily_usage_renders_tables_charts_and_navigation_state(
+        self, client, user, team
+    ):
+        service = self._mock_service_with_daily_filters(selected=True)
+        url = reverse("ai_gateway:usage", args=[team.project.uuid])
+        with patch("ai_gateway.services.UsageService.from_settings", return_value=service):
+            client.force_login(user)
+            response = client.get(
+                url,
+                {"month": "2026-01", "key": "key-alias", "model": "model-name", "daily": "all"},
+            )
+
+        service.get_usage.assert_called_once_with(
+            date(2026, 1, 1), key_alias="key-alias", model_name="model-name"
+        )
+        assert response.context["daily_filter_form"]["key"].value() == "key-alias"
+        assert response.context["daily_filter_form"]["model"].value() == "model-name"
+        assertContains(response, 'data-sort-value="2026-01-01"', count=2)
+        assertContains(response, '<input type="hidden" name="month" value="2026-01">', count=2)
+        assertContains(response, '<input type="hidden" name="daily" value="all">', count=5)
+        for dimension, panel in (("key", "spend-per-key"), ("model", "spend-per-model")):
+            assertContains(response, f'action="{url}#{panel}"', count=2)
+            assertContains(response, f'id="id_month-{panel}"', count=1)
+            for metric in ("spend", "requests"):
+                assertContains(
+                    response, f'<script id="{dimension}-daily-{metric}-chart-data"', count=1
+                )
+            html = response.content.decode()
+            assert html.index(f'id="{dimension}-spend-chart-data"') < html.index(
+                f'id="{panel}-daily-heading"'
+            )
+        assertContains(response, "govuk-section-break--visible", count=2)
+
+    def test_stale_daily_filters_reset_to_placeholders(self, client, user, team):
+        service = self._mock_service_with_daily_filters()
+        with patch("ai_gateway.services.UsageService.from_settings", return_value=service):
+            client.force_login(user)
+            response = client.get(
+                reverse("ai_gateway:usage", args=[team.project.uuid]),
+                {"month": "2026-01", "key": "stale-key", "model": "stale-model"},
+            )
+
+        assert response.context["daily_filter_form"]["key"].value() == ""
+        assert response.context["daily_filter_form"]["model"].value() == ""
+        assert response.context["usage_filters"] == {"key": "", "model": "", "daily": ""}
+        assertNotContains(response, 'value="stale-key"')
+        assertNotContains(response, 'value="stale-model"')
+
+    def test_renders_paired_charts_with_unique_tabs_for_all_sections(self, client, user, team):
+        service = self._mock_service_with_daily_spend()
+        overview = service.get_usage.return_value["overview_data"]
+        chart = {
+            "labels": ["Example"],
+            "values": [2],
+            "category_axis_label": "Category",
+            "value_axis_label": "Spend ($)",
+        }
+        requests_chart = {
+            **chart,
+            "values": [1234],
+            "value_axis_label": "Requests",
+            "value_format": "count",
+        }
+        for prefix in ("daily", "monthly"):
+            overview.update(
+                {
+                    f"{prefix}_chart_name": f"{prefix}-spend",
+                    f"{prefix}_chart_data": chart,
+                    f"{prefix}_requests_chart_name": f"{prefix}-requests",
+                    f"{prefix}_requests_chart_data": requests_chart,
+                    f"{prefix}_requests_chart_label": f"{prefix.title()} requests",
+                }
+            )
+        overview["monthly_spend_rows"] = [{"label": "January 2026", "spend": 2, "requests": 1234}]
+        for dimension in ("key", "model"):
+            service.get_usage.return_value[f"{dimension}_data"] = {
+                "has_usage": True,
+                "rows": [{"label": "Example", "spend": 2, "requests": 1234}],
+                "chart_name": f"{dimension}-spend",
+                "chart_data": chart,
+                "requests_chart_name": f"{dimension}-requests",
+                "requests_chart_data": requests_chart,
+                "requests_chart_label": f"Requests per {dimension}",
+            }
+
+        with patch("ai_gateway.services.UsageService.from_settings", return_value=service):
+            client.force_login(user)
+            response = client.get(reverse("ai_gateway:usage", args=[team.project.uuid]))
+
+        assertContains(response, 'role="tablist"', count=4)
+        assertContains(response, 'data-chart-metric="spend"', count=4)
+        assertContains(response, 'data-chart-metric="requests"', count=4)
+        assertContains(response, 'class="govuk-tabs__tab"', count=3)
+        assertContains(response, '"value_format": "count"', count=4)
+        for section in ("daily", "monthly", "key", "model"):
+            for metric in ("spend", "requests"):
+                assertContains(response, f'<script id="{section}-{metric}-chart-data"', count=1)
+                assertContains(response, f'id="{section}-spend-tab-{metric}"', count=1)
+                assertContains(response, f'id="{section}-spend-panel-{metric}"', count=1)
+                assertContains(
+                    response, f'aria-controls="{section}-spend-panel-{metric}"', count=1
+                )
+
+    def test_missing_request_data_has_a_chart_and_table_fallback(self, client, user, team):
+        service = self._mock_service_with_daily_spend()
+        service.get_usage.return_value["key_data"] = {
+            "has_usage": True,
+            "rows": [{"label": "Example", "spend": 2, "requests": None}],
+            "chart_name": "key-spend",
+            "chart_data": {"labels": ["Example"], "values": [2]},
+            "requests_chart_name": "key-requests",
+            "requests_chart_data": None,
+        }
+        with patch("ai_gateway.services.UsageService.from_settings", return_value=service):
+            client.force_login(user)
+            response = client.get(reverse("ai_gateway:usage", args=[team.project.uuid]))
+
+        assertContains(response, "Request data is not available for this period.")
+        assertContains(response, "Not available")
+        assertContains(response, 'data-chart-metric="requests"')
+        assertNotContains(response, 'id="key-requests-chart-data"')
+
     @pytest.mark.parametrize("month", ["2026-01", "not-a-month", "2025-12", None])
     def test_selects_valid_month_or_defaults_to_current_available_month(
         self, client, user, team, month
@@ -1204,7 +1451,7 @@ class TestUsageView:
         assertContains(response, "This project has no recorded AI Gateway spend")
 
     def _mock_service_with_daily_spend(self):
-        daily = [{"label": str(day), "spend": 1.0} for day in range(1, 14)]
+        daily = [{"label": str(day), "spend": 1.0, "requests": day} for day in range(1, 14)]
         service = create_autospec(UsageService, instance=True)
         service.__enter__.return_value = service
         service.__exit__.return_value = False
@@ -1253,6 +1500,8 @@ class TestUsageView:
         assertTemplateUsed(response, "includes/ai_gateway/_usage_spend_table.html")
         assertTemplateNotUsed(response, "ai_gateway/usage.html")
         assertNotContains(response, "Showing 10 of 13 days")
+        assertContains(response, ">13</td>")
+        assertNotContains(response, "data-chart-metric=")
 
     def test_gateway_error_shows_message_without_500(self, client, user, team):
         service = create_autospec(UsageService, instance=True)

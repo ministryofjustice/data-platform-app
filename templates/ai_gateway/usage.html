@@ -13,7 +13,7 @@
   {% elif not has_keys %}
     {% include "includes/ai_gateway/_usage_empty_state.html" %}
   {% else %}
-    <p class="govuk-body">See the AI spend for this project, including spend per API key and spend per model.</p>
+    <p class="govuk-body">See the Justice AI Gateway usage for this project, including spend, requests and tokens.</p>
     <div class="govuk-tabs app-usage-tabs"
          aria-label="Usage views"
          data-module="govuk-tabs">
@@ -31,15 +31,15 @@
       <div class="govuk-tabs__panel" id="overview">
         <div class="govuk-grid-row govuk-!-margin-bottom-4">
           <div class="govuk-grid-column-two-thirds">
-            <h3 class="govuk-heading-m govuk-!-margin-bottom-1">Project spend overview</h3>
+            <h3 class="govuk-heading-m govuk-!-margin-bottom-1">Project usage overview</h3>
           </div>
         </div>
         <div class="govuk-grid-row govuk-!-margin-bottom-4">
           <div class="govuk-grid-column-one-third govuk-!-padding-top-2">
-            <p class="govuk-body govuk-!-margin-bottom-0">Spend for {{ selected_month|date:"F Y" }}</p>
+            <p class="govuk-hint govuk-!-margin-bottom-0 govuk-!-margin-top-0">{{ selected_month|date:"F Y" }}</p>
           </div>
           <div class="govuk-grid-column-two-thirds govuk-!-text-align-right">
-            {% include "includes/ai_gateway/_usage_month_select.html" %}
+            {% include "includes/ai_gateway/_usage_month_select.html" with month_form=month_form selected_month=selected_month usage_url=usage_url usage_filters=usage_filters tab_id="overview" only %}
           </div>
         </div>
         {% if not overview_data.has_usage %}
@@ -50,15 +50,15 @@
           </div>
         {% else %}
           <div class="govuk-grid-row govuk-!-margin-bottom-4">
-            <div class="govuk-grid-column-one-half">
+            <div class="govuk-grid-column-one-third">
               <div class="info-panel">
-                <p class="govuk-body-s govuk-!-margin-bottom-1">Total spend</p>
+                <p class="govuk-heading-s govuk-!-margin-bottom-1">Total spend</p>
                 <p class="govuk-!-font-size-36 govuk-!-font-weight-bold govuk-!-margin-bottom-0">{{ overview_data.total_spend|usd }}</p>
               </div>
             </div>
-            <div class="govuk-grid-column-one-half">
+            <div class="govuk-grid-column-one-third">
               <div class="info-panel">
-                <p class="govuk-body-s govuk-!-margin-bottom-1">Budget remaining</p>
+                <p class="govuk-heading-s govuk-!-margin-bottom-1">Budget remaining</p>
                 <p class="govuk-!-font-size-36 govuk-!-font-weight-bold govuk-!-margin-bottom-0">
                   {% if overview_data.max_budget %}
                     {{ overview_data.budget_remaining|usd }}
@@ -69,12 +69,18 @@
                 </p>
               </div>
             </div>
+            <div class="govuk-grid-column-one-third">
+              <div class="info-panel">
+                <p class="govuk-heading-s govuk-!-margin-bottom-1">Requests made</p>
+                <p class="govuk-!-font-size-36 govuk-!-font-weight-bold govuk-!-margin-bottom-0">{{ overview_data.total_requests }}</p>
+              </div>
+            </div>
           </div>
           {% if overview_data.percent_used and overview_data.percent_used > 50 %}
             {% include "includes/ai_gateway/_usage_budget_banner.html" with percent_used=overview_data.percent_used only %}
           {% endif %}
-          {% include "includes/ai_gateway/_usage_spend_section.html" with heading="Daily spend" heading_level="h4" column_label="Date" rows=overview_data.daily_spend_preview chart_name=overview_data.daily_chart_name chart_data=overview_data.daily_chart_data chart_label=overview_data.daily_chart_label show_all=overview_data.daily_show_all empty_message="No spend recorded for this month." only %}
-          {% include "includes/ai_gateway/_usage_spend_section.html" with heading="Monthly spend" heading_level="h4" column_label="Month" rows=overview_data.monthly_spend_rows chart_name=overview_data.monthly_chart_name chart_data=overview_data.monthly_chart_data chart_label="Monthly spend" empty_message="No spend recorded yet." only %}
+          {% include "includes/ai_gateway/_usage_spend_section.html" with heading="Daily spend" heading_level="h4" column_label="Date" rows=overview_data.daily_spend_preview chart_name=overview_data.daily_chart_name chart_data=overview_data.daily_chart_data chart_label=overview_data.daily_chart_label requests_chart_name=overview_data.daily_requests_chart_name requests_chart_data=overview_data.daily_requests_chart_data requests_chart_label=overview_data.daily_requests_chart_label show_all=overview_data.daily_show_all empty_message="No spend recorded for this month." only %}
+          {% include "includes/ai_gateway/_usage_spend_section.html" with heading="Monthly spend" heading_level="h4" column_label="Month" rows=overview_data.monthly_spend_rows chart_name=overview_data.monthly_chart_name chart_data=overview_data.monthly_chart_data chart_label="Monthly spend" requests_chart_name=overview_data.monthly_requests_chart_name requests_chart_data=overview_data.monthly_requests_chart_data requests_chart_label=overview_data.monthly_requests_chart_label empty_message="No spend recorded yet." only %}
         {% endif %}
         <div class="govuk-grid-row govuk-!-margin-bottom-2">
           <div class="govuk-grid-column-full">
@@ -102,10 +108,11 @@
               <p class="govuk-body govuk-!-margin-bottom-0">Spend for {{ selected_month|date:"F Y" }}</p>
             </div>
             <div class="govuk-grid-column-two-thirds govuk-!-text-align-right">
-              {% include "includes/ai_gateway/_usage_month_select.html" %}
+              {% include "includes/ai_gateway/_usage_month_select.html" with month_form=month_form selected_month=selected_month usage_url=usage_url usage_filters=usage_filters tab_id="spend-per-key" only %}
             </div>
           </div>
-          {% include "includes/ai_gateway/_usage_spend_section.html" with heading_level="h4" column_label="API key" rows=key_data.rows chart_name=key_data.chart_name chart_data=key_data.chart_data chart_label=key_data.chart_label empty_message="No API key spend recorded for this month." only %}
+          {% include "includes/ai_gateway/_usage_spend_section.html" with heading_level="h4" column_label="API key" rows=key_data.rows chart_name=key_data.chart_name chart_data=key_data.chart_data chart_label=key_data.chart_label requests_chart_name=key_data.requests_chart_name requests_chart_data=key_data.requests_chart_data requests_chart_label=key_data.requests_chart_label empty_message="No API key spend recorded for this month." only %}
+          {% include "includes/ai_gateway/_usage_daily_section.html" with daily=key_data.daily field=daily_filter_form.key selection_prompt="an API key" selected_month=selected_month usage_url=usage_url usage_filters=usage_filters tab_id="spend-per-key" only %}
         {% endif %}
       </div>
       <div class="govuk-tabs__panel govuk-tabs__panel--hidden"
@@ -123,11 +130,22 @@
               <p class="govuk-body govuk-!-margin-bottom-0">Spend for {{ selected_month|date:"F Y" }}</p>
             </div>
             <div class="govuk-grid-column-two-thirds govuk-!-text-align-right">
-              {% include "includes/ai_gateway/_usage_month_select.html" %}
+              {% include "includes/ai_gateway/_usage_month_select.html" with month_form=month_form selected_month=selected_month usage_url=usage_url usage_filters=usage_filters tab_id="spend-per-model" only %}
             </div>
           </div>
-          {% include "includes/ai_gateway/_usage_spend_section.html" with heading_level="h4" column_label="Model" rows=model_data.rows chart_name=model_data.chart_name chart_data=model_data.chart_data chart_label=model_data.chart_label empty_message="No model spend recorded for this month." only %}
+          {% include "includes/ai_gateway/_usage_spend_section.html" with heading_level="h4" column_label="Model" rows=model_data.rows chart_name=model_data.chart_name chart_data=model_data.chart_data chart_label=model_data.chart_label requests_chart_name=model_data.requests_chart_name requests_chart_data=model_data.requests_chart_data requests_chart_label=model_data.requests_chart_label show_tokens=True tokens_chart_name=model_data.tokens_chart_name tokens_chart_data=model_data.tokens_chart_data tokens_chart_label=model_data.tokens_chart_label empty_message="No model spend recorded for this month." only %}
+          {% include "includes/ai_gateway/_usage_daily_section.html" with daily=model_data.daily field=daily_filter_form.model selection_prompt="a model" selected_month=selected_month usage_url=usage_url usage_filters=usage_filters tab_id="spend-per-model" show_tokens=True only %}
         {% endif %}
+        <div class="govuk-grid-row govuk-!-margin-bottom-2">
+          <div class="govuk-grid-column-full">
+            <div class="info-panel">
+              <h2 class="govuk-heading-m">Cost calculator</h2>
+              <p class="govuk-body">
+                Use the <a class="govuk-link" href="{% url 'ai_cost_usage_calculator' %}">AI usage cost calculator</a> to estimate the cost of different models available through the Justice AI Gateway.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   {% endif %}
