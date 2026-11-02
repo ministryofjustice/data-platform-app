@@ -49,11 +49,11 @@ const UsageChart = {
         type: "value",
         name: valueAxisLabel,
         nameLocation: "middle",
-        minInterval: 1,
+        minInterval: isCount ? 1 : undefined,
         axisLabel: {
           show: true,
           formatter: (value) =>
-            isCount ? countFormatter.format(value) : `$${value.toFixed(0)}`,
+            isCount ? countFormatter.format(value) : `$${value}`,
         },
       };
       const multipleSeries = namedSeries?.length > 1;
