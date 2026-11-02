@@ -1,8 +1,6 @@
 import logging
-from collections.abc import Iterable
 
 from django import forms
-from django.conf import settings
 from django.contrib import admin, messages
 from simple_history.admin import SimpleHistoryAdmin
 
@@ -10,20 +8,6 @@ from ai_gateway.models import BudgetAlert, BudgetAlertNotification, Key, Team
 from ai_gateway.services import KeyService
 
 logger = logging.getLogger(__name__)
-
-
-class AccessGroupCheckboxSelectMultiple(forms.CheckboxSelectMultiple):
-    """Checkbox list that renders selected option values as disabled."""
-
-    def __init__(self, *args, disabled_values: Iterable[str] | None = None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.disabled_values = set(disabled_values or ())
-
-    def create_option(self, name, value, *args, **kwargs):
-        option = super().create_option(name, value, *args, **kwargs)
-        if str(value) in self.disabled_values:
-            option["attrs"]["disabled"] = True
-        return option
 
 
 class AIGatewayTeamAdminForm(forms.ModelForm):
@@ -92,11 +76,8 @@ class AIGatewayTeamAdmin(SimpleHistoryAdmin):
             initial = service.get_team_access_group_ids(obj)
 
         choices = []
-        default_access_group_id = None
         for group in groups:
             choices.append((group["access_group_id"], group["access_group_name"]))
-            if group["access_group_name"] == settings.DEFAULT_ACCESS_GROUP_NAME:
-                default_access_group_id = group["access_group_id"]
 
         logger.info(
             "AI Gateway access groups for team %s viewed by %s: %s",
@@ -106,22 +87,10 @@ class AIGatewayTeamAdmin(SimpleHistoryAdmin):
         )
 
         class AIGatewayTeamForm(base_form_class):
-            default_group_id = default_access_group_id
-
             def __init__(self, *args, **form_kwargs):
                 super().__init__(*args, **form_kwargs)
                 self.initial["access_groups"] = initial
-                self.fields["access_groups"].widget = AccessGroupCheckboxSelectMultiple(
-                    disabled_values={default_access_group_id} if default_access_group_id else set()
-                )
                 self.fields["access_groups"].choices = choices
-
-            def clean_access_groups(self):
-                # The default group is disabled in the form, so it is never submitted.
-                selected = self.cleaned_data["access_groups"]
-                if self.default_group_id and self.default_group_id not in selected:
-                    selected.append(self.default_group_id)
-                return selected
 
         return AIGatewayTeamForm
 
