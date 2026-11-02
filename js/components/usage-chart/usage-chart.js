@@ -82,7 +82,7 @@ const UsageChart = {
               legend: { top: 0, type: "scroll" },
             }
           : {}),
-        color: multipleSeries ? ["#1d70b8", "#4b9b7d"] : ["#1d70b8"]
+        color: multipleSeries ? ["#1d70b8", "#4b9b7d"] : ["#1d70b8"],
       };
 
       const chart = echarts.init(container);
