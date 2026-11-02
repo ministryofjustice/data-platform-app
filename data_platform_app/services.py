@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from uuid import UUID
+
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from notifications_python_client.errors import HTTPError
@@ -33,13 +35,14 @@ class GovUKNotificationsService:
         email_address: str,
         template_id: str,
         personalisation: dict[str, str],
-    ) -> None:
-        """Send an email via GOV.UK Notify and normalise transport errors."""
+    ) -> UUID:
+        """Send an email and return its Notify ID, normalising transport errors."""
         try:
-            self._client.send_email_notification(
+            response = self._client.send_email_notification(
                 email_address=email_address,
                 template_id=template_id,
                 personalisation=personalisation,
             )
         except HTTPError as error:
             raise GovUKNotificationError(str(error)) from error
+        return UUID(response["id"])

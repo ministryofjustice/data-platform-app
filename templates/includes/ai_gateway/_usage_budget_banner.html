@@ -1,12 +1,12 @@
 {% comment %}
   Expects:
-    percent_used - percentage of the monthly budget spent so far (number)
+    threshold - highest monthly budget warning threshold reached (number)
 {% endcomment %}
 <article class="moj-ticket-panel app-usage-budget-banner"
-         aria-label="Sub navigation 1">
-  <section class="moj-ticket-panel__content" aria-label="Section 1">
+         aria-label="Monthly budget warning">
+  <section class="moj-ticket-panel__content" aria-label="Budget usage">
     <p class="govuk-body govuk-!-font-weight-bold govuk-!-margin-bottom-1">
-      You've spent more than {{ percent_used|floatformat:0 }}% of your monthly budget
+      You've spent more than {{ threshold }}% of your monthly budget
     </p>
     <p class="govuk-body govuk-!-margin-bottom-0">
       Learn how to <a class="govuk-link"
