@@ -5,6 +5,7 @@ from __future__ import annotations
 import calendar
 import secrets
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Any
 
 import sentry_sdk
@@ -14,19 +15,95 @@ from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.functional import cached_property
 from django.utils.text import slugify
 
 from ai_gateway.client import AIGatewayClient
-from ai_gateway.exceptions import AIGatewayError
-from ai_gateway.models import Key, Team
+from ai_gateway.exceptions import AIGatewayAPIError, AIGatewayError
+from ai_gateway.models import BudgetAlert, BudgetAlertNotification, Key, Team
+from data_platform_app.services import GovUKNotificationsService
+from data_platform_app.utils import build_base_url
 from projects.models import Project
 from users.models import User
 
 DAILY_SPEND_PREVIEW_COUNT = 10
 LINE_CHART_MIN_POINTS = 2
+BUDGET_ALERT_THRESHOLDS = [90, 50]
 
 logger = structlog.get_logger(__name__)
+
+
+def budget_alert_threshold(spend: Decimal, budget: Decimal | None) -> int | None:
+    """Return the highest threshold exceeded, without rounding the spend."""
+    if not budget:
+        return None
+
+    percent_used = (spend / budget) * 100
+    for threshold in BUDGET_ALERT_THRESHOLDS:
+        if percent_used > threshold:
+            return threshold
+
+    return None
+
+
+@transaction.atomic
+def record_budget_alert(
+    project: Project, threshold: int, spend: Decimal, budget: Decimal
+) -> BudgetAlert | None:
+    """Record a new threshold for this month's budget and snapshot its eligible recipients."""
+    month = timezone.localdate().replace(day=1)
+    if project.budget_alerts.filter(
+        period_start=month, budget=budget, threshold_percent__gte=threshold
+    ).exists():
+        return None
+
+    alert, created = BudgetAlert.objects.get_or_create(
+        project=project,
+        period_start=month,
+        budget=budget,
+        threshold_percent=threshold,
+        defaults={"spend": spend},
+    )
+    if not created:
+        return None
+
+    memberships = project.memberships.can_manage_api_keys().select_related("user")
+    for membership in memberships:
+        alert.notifications.get_or_create(
+            email_address=membership.user.email,
+            defaults={"recipient": membership.user},
+        )
+
+    return alert
+
+
+@transaction.atomic
+def send_budget_alert_notification(notification: BudgetAlertNotification) -> None:
+    """Submit a selected warning; failures propagate and remain retryable."""
+    notification = BudgetAlertNotification.objects.select_for_update().get(pk=notification.pk)
+    alert = notification.alert
+    if notification.sent_at:
+        return
+
+    template_id = settings.NOTIFY_BUDGET_ALERT_TEMPLATE_ID
+    if not template_id:
+        raise ImproperlyConfigured("Missing Notify settings: NOTIFY_BUDGET_ALERT_TEMPLATE_ID")
+
+    notification.notify_notification_id = GovUKNotificationsService.from_settings().send_email(
+        email_address=notification.email_address,
+        template_id=template_id,
+        personalisation={
+            "project_name": alert.project.name,
+            "project_url": (
+                f"{build_base_url(settings.APP_ENV)}"
+                f"{reverse('ai_gateway:usage', kwargs={'uuid': alert.project.uuid})}"
+            ),
+            "threshold_percent": str(alert.threshold_percent),
+        },
+    )
+    notification.sent_at = timezone.now()
+    notification.save(update_fields=["sent_at", "notify_notification_id", "modified"])
 
 
 def previous_month(value: date) -> date:
@@ -145,6 +222,15 @@ class UsageService:
             "model_data": self._build_model_usage(month_spend),
         }
 
+    def get_budget_usage(self, month: date) -> tuple[Decimal, Decimal | None]:
+        """Return monthly spend and budget without building the usage report."""
+        month_start = month.replace(day=1)
+        month_end = month_start.replace(day=calendar.monthrange(month.year, month.month)[1])
+        daily_rows = self._daily_rows(self._team_daily_activity(month_start, month_end))
+        spend = sum((Decimal(str(row["spend"])) for row in daily_rows), Decimal("0"))
+        budget = self.team_info["max_budget"]
+        return spend, None if budget is None else Decimal(str(budget))
+
     def _build_overview(
         self,
         month_start: date,
@@ -162,6 +248,12 @@ class UsageService:
         max_budget = self.team_info.get("max_budget")
         budget_remaining = None if max_budget is None else round(max_budget - total_spend, 2)
         percent_used = None if not max_budget else round((total_spend / max_budget) * 100, 1)
+        alert_threshold = None
+        if month_start == timezone.localdate().replace(day=1):
+            alert_threshold = budget_alert_threshold(
+                spend=sum((Decimal(str(day["spend"])) for day in daily_rows), Decimal("0")),
+                budget=None if max_budget is None else Decimal(str(max_budget)),
+            )
 
         daily_show_all = None
         if len(daily_rows) > DAILY_SPEND_PREVIEW_COUNT:
@@ -197,6 +289,7 @@ class UsageService:
             "max_budget": max_budget,
             "budget_remaining": budget_remaining,
             "percent_used": percent_used,
+            "budget_alert_threshold": alert_threshold,
             "daily_spend": daily_rows,
             "daily_spend_preview": daily_rows[:DAILY_SPEND_PREVIEW_COUNT],
             "daily_show_all": daily_show_all,
@@ -381,11 +474,13 @@ class KeyService:
         group's models are shown.
         """
         allowed = self._allowed_model_names(project)
-        return [
+        models = [
             self._enrich_model(model)
             for model in self._client.list_models_v1_info()
             if model.get("model_name") in allowed
         ]
+        models.sort(key=lambda model: model["display_name"].lower())
+        return models
 
     def list_all_models(self) -> list[dict[str, Any]]:
         """Return every model on the gateway, regardless of project access.
@@ -413,27 +508,34 @@ class KeyService:
         return set(data.get("team_info", {}).get("access_group_models") or [])
 
     def _enrich_model(self, model: dict[str, Any]) -> dict[str, Any]:
-        """Return a copy of ``model`` with display and pricing fields added."""
+        """Return a copy of ``model`` with display, pricing, and catalogue fields added."""
         model = model.copy()
         litellm_params = model.get("litellm_params", {})
         model_info = model.get("model_info", {})
 
         input_cost = model_info.get("input_cost_per_token")
         output_cost = model_info.get("output_cost_per_token")
+        uplift_multiplier = model_info.get("regional_endpoint_uplift_multiplier")
+        if uplift_multiplier is None:
+            uplift_multiplier = 1
 
         model["input_cost_per_million"] = (
-            input_cost * 1_000_000 if input_cost is not None else None
+            input_cost * uplift_multiplier * 1_000_000 if input_cost is not None else None
         )
         model["output_cost_per_million"] = (
-            output_cost * 1_000_000 if output_cost is not None else None
+            output_cost * uplift_multiplier * 1_000_000 if output_cost is not None else None
         )
         model["display_name"] = litellm_params.get("ai_model_name") or model.get("model_name")
         model["provider"] = litellm_params.get("ai_model_provider")
         model["family"] = litellm_params.get("ai_model_family")
+        model["generally_available"] = litellm_params.get("ai_model_generally_available")
+        model["region"] = litellm_params.get("ai_model_location") or "Not specified"
 
         return model
 
-    def create_key(self, project: Project, name: str, models: list[str], created_by: User) -> str:
+    def create_key(
+        self, project: Project, name: str, models: list[str], created_by: User
+    ) -> tuple[str, int]:
         """Generate a gateway key for ``project`` and persist its metadata.
 
         Lazily creates the project's gateway team, calls the gateway to generate
@@ -450,11 +552,14 @@ class KeyService:
             key_alias=litellm_alias,
         )
         data = self._client.generate_key(
-            team.litellm_team_id, key_alias=litellm_alias, models=models
+            team.litellm_team_id,
+            user_id=str(created_by.oid),
+            key_alias=litellm_alias,
+            models=models,
         )
 
         plaintext_key = data["key"]
-        Key.objects.create(
+        key = Key.objects.create(
             project=project,
             name=name,
             litellm_alias=litellm_alias,
@@ -464,7 +569,7 @@ class KeyService:
             models=models,
             created_by=created_by,
         )
-        return plaintext_key
+        return plaintext_key, key.pk
 
     def regenerate_key(self, key: Key) -> str:
         """Regenerate a gateway key for ``key`` and persist its metadata."""
@@ -600,21 +705,66 @@ class KeyService:
         """Return the ids of the access groups currently assigned to ``team``."""
         return self._client.get_team_access_group_ids(team.litellm_team_id)
 
+    def _is_team_logging_required(self, access_group_ids: list[str]) -> bool:
+        """Determine if logging is required based on access group IDs."""
+        try:
+            open_ai_access_group_id = self._client.get_access_group_id(
+                settings.AI_GATEWAY_OPEN_AI_ACCESS_GROUP_NAME
+            )
+        except AIGatewayAPIError as error:
+            if error.status_code != 404:
+                raise
+            open_ai_access_group_id = None
+
+        return open_ai_access_group_id in access_group_ids
+
+    def _is_team_logging_enabled(self, team: Team) -> bool:
+        callbacks = self.get_team_callbacks(team)
+        return "s3_v2" in callbacks["success_callbacks"]
+
+    def enable_team_logging(self, team: Team) -> None:
+        if self._is_team_logging_enabled(team):
+            return
+        self._client.enable_team_logging(team_id=team.litellm_team_id)
+
+    def disable_team_logging(self, team: Team) -> None:
+        if not self._is_team_logging_enabled(team):
+            return
+        self._client.disable_team_logging(team_id=team.litellm_team_id)
+
     def set_team_model_access(
         self,
         team: Team,
         access_group_ids: list[str],
         changed_by: User | None = None,
     ) -> tuple[list[str], list[str]]:
-        """Replace the access groups assigned to ``team`` and reconcile its keys.
+        """Replace the access groups assigned to ``team``, enable team logging if required, and
+        reconcile all team keys.
 
         Changing a team's access groups can shrink the models it may use, so
         every key is reconciled with the new allowed set to keep keys from calling
-        models the team no longer has. Returns the ``(updated, failed)`` key
+        models the team no longer has.
+
+        Returns the ``(updated, failed)`` key
         aliases from that reconciliation.
         """
+        logging_required = self._is_team_logging_required(access_group_ids)
+        # do this first, to avoid OpenAI access groups being enabled and enabling logging fails
+        if logging_required:
+            self.enable_team_logging(team=team)
+
         self._client.update_team_access_groups(team.litellm_team_id, access_group_ids)
+
+        # do this after updating access groups, to avoid disabling logging prematurely
+        if not logging_required:
+            self.disable_team_logging(team=team)
+
         return self.reconcile_team_keys_to_allowed_models(team, changed_by=changed_by)
+
+    def get_team_callbacks(self, team: Team) -> list[dict[str, Any]]:
+        """Return the callbacks configured for the given team."""
+        response = self._client.get_team_callbacks(team.litellm_team_id)
+        return response.get("data", [])
 
     @cached_property
     def models_indexed_by_id(self) -> dict[str, dict[str, Any]]:

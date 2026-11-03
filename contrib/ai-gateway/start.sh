@@ -47,7 +47,9 @@ curl \
       "model": "bedrock/eu.anthropic.claude-sonnet-5",
       "ai_model_provider": "Amazon Bedrock",
       "ai_model_family": "Anthropic Claude",
-      "ai_model_name": "Anthropic Claude Sonnet 5 (EU)",
+      "ai_model_name": "Anthropic Claude Sonnet 5",
+      "ai_model_location": "United Kingdom",
+      "aws_region_name": "eu-west-2",
       "ai_model_generally_available": true
     },
     "model_info": {}
@@ -68,6 +70,8 @@ curl \
       "ai_model_provider": "Google Gemini Enterprise Agent Platform",
       "ai_model_family": "Google Gemini",
       "ai_model_name": "Google Gemini 2.5 Pro",
+      "ai_model_location": "Belgium",
+      "vertex_location": "europe-west1",
       "ai_model_generally_available": true
     },
     "model_info": {}
@@ -87,6 +91,7 @@ curl \
       "model": "azure/gpt-5.2",
       "ai_model_provider": "Microsoft Foundry",
       "ai_model_family": "OpenAI GPT",
+      "ai_model_location": "European Union",
       "ai_model_name": "OpenAI GPT 5.2",
       "ai_model_generally_available": true
     },
@@ -110,7 +115,9 @@ curl \
       "model": "bedrock/eu.anthropic.claude-opus-5",
       "ai_model_provider": "Amazon Bedrock",
       "ai_model_family": "Anthropic Claude",
-      "ai_model_name": "Anthropic Claude Opus 5 (EU)",
+      "ai_model_name": "Anthropic Claude Opus 5",
+      "ai_model_location": "United Kingdom",
+      "aws_region_name": "eu-west-2",
       "ai_model_generally_available": false
     },
     "model_info": {}
@@ -131,9 +138,69 @@ curl \
       "ai_model_provider": "Microsoft Foundry",
       "ai_model_family": "OpenAI GPT",
       "ai_model_name": "OpenAI GPT 5.2 Preview",
+      "ai_model_location": "European Union",
       "ai_model_generally_available": false
     },
     "model_info": {}
+  }'
+
+curl \
+  --silent \
+  --fail-with-body \
+  --show-error \
+  --request POST \
+  --url "http://localhost:4000/model/new" \
+  --header "Content-Type: application/json" \
+  --header "Authorization: Bearer sk-123456789" \
+  --data '{
+    "model_name": "dpr-test-claude-sonnet-5",
+    "litellm_params": {
+      "model": "bedrock/eu.anthropic.claude-sonnet-5",
+      "ai_model_provider": "Amazon Bedrock (Digital Prison Reporting Test)",
+      "ai_model_family": "Anthropic Claude",
+      "ai_model_name": "Anthropic Claude Sonnet 5",
+      "ai_model_location": "United Kingdom",
+      "ai_aws_account_name": "digital-prison-reporting-test",
+      "aws_region_name": "eu-west-2",
+      "ai_model_generally_available": false
+    },
+    "model_info": {}
+  }'
+
+echo "Seeding AI Gateway OpenAI Models"
+curl \
+  --silent \
+  --fail-with-body \
+  --show-error \
+  --request POST \
+  --url "http://localhost:4000/model/new" \
+  --header "Content-Type: application/json" \
+  --header "Authorization: Bearer sk-123456789" \
+  --data '{
+    "model_name": "openai-gpt-5-5-cyber-preview",
+    "litellm_params": {
+      "model": "openai/gpt-5.5-cyber-preview",
+      "ai_model_provider": "OpenAI",
+      "ai_model_family": "OpenAI GPT",
+      "ai_model_name": "OpenAI GPT 5.5 Cyber Preview",
+      "ai_model_location": "Global",
+      "ai_model_generally_available": false
+    },
+    "model_info": {}
+  }'
+
+echo "Seeding AI Gateway OpenAI Access Group"
+curl \
+  --silent \
+  --fail-with-body \
+  --show-error \
+  --request POST \
+  --url "http://localhost:4000/v1/unified_access_group" \
+  --header "Content-Type: application/json" \
+  --header "Authorization: Bearer sk-123456789" \
+  --data '{
+    "access_group_name": "openai-models",
+    "access_model_names": ["openai-gpt-5-5-cyber-preview"]
   }'
 
 echo "Seeding AI Gateway Unified Access Group"

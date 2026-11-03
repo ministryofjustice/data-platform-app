@@ -154,16 +154,18 @@ class AIGatewayClient:
     def generate_key(
         self,
         team_id: str,
+        user_id: str,
         key_alias: str | None = None,
         models: list[str] | None = None,
     ) -> dict[str, Any]:
-        """Generate a virtual key for ``team_id`` and return the gateway response.
+        """Generate a virtual key for ``team_id`` by a given user ``user_id`` and return
+        the gateway response.
 
         ``key_alias`` tags the key so it can be managed later (for example deleted
         by alias) without the plaintext. ``models`` scopes the key to the given
         model ids; when omitted the gateway applies its default access.
         """
-        payload: dict[str, Any] = {"team_id": team_id}
+        payload: dict[str, Any] = {"team_id": team_id, "user_id": user_id}
         if key_alias is not None:
             payload["key_alias"] = key_alias
         if models is not None:
@@ -239,6 +241,10 @@ class AIGatewayClient:
         """Replace the models the virtual key ``key`` is allowed to call."""
         self._request("POST", "/key/update", json={"key": key, "models": models})
 
+    def update_key_user_id(self, key: str, user_id: str) -> None:
+        """Set the owner user id for the virtual key ``key``."""
+        self._request("POST", "/key/update", json={"key": key, "user_id": user_id})
+
     def get_team_access_group_ids(self, team_id: str) -> list[str]:
         """Return the ids of the access groups assigned to team ``team_id``."""
         data = self.team_info(team_id)
@@ -251,3 +257,23 @@ class AIGatewayClient:
             "/team/update",
             json={"team_id": team_id, "access_group_ids": access_group_ids},
         )
+
+    def enable_team_logging(self, team_id: str) -> None:
+        """Enable S3 logging for the team ``team_id``."""
+        self._request(
+            "POST",
+            f"/team/{team_id}/callback",
+            json={
+                "callback_name": "s3_v2",
+                "callback_type": "success",
+                "callback_vars": {},
+            },
+        )
+
+    def disable_team_logging(self, team_id: str) -> None:
+        """Disable logging for the team ``team_id``."""
+        self._request("POST", f"/team/{team_id}/disable_logging")
+
+    def get_team_callbacks(self, team_id: str) -> list[dict[str, Any]]:
+        """Return the callbacks configured for the given team."""
+        return self._request("GET", f"/team/{team_id}/callback")

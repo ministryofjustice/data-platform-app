@@ -19,12 +19,12 @@ repos:
       - id: gitleaks
 
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
-    rev: fa412071e4f5d44d44f9e365f4676f9df92456a2  # frozen: v1.30.1
+    rev: c92afdf2c6ca336aaa8f39e2bd8d48f62dbd8e1f  # frozen: v1.31.1
     hooks:
       - id: zizmor
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.9
+    rev: v0.17.1
     hooks:
       # Run the linter.
       - id: ruff
@@ -33,7 +33,7 @@ repos:
       - id: ruff-format
 
   - repo: https://github.com/djlint/djLint
-    rev: v1.46.3
+    rev: v1.46.6
     hooks:
       - id: djlint
         args: ["--lint", "--profile=django"]

@@ -197,6 +197,12 @@ AI_GATEWAY_MASTER_KEY = os.environ.get("AI_GATEWAY_MASTER_KEY")
 DEFAULT_ACCESS_GROUP_NAME = os.environ.get(
     "DEFAULT_ACCESS_GROUP_NAME", "generally-available-models"
 )
+AI_GATEWAY_OPEN_AI_ACCESS_GROUP_NAME = "openai-models"
+
+AI_GATEWAY_CATALOGUE_EXCLUSIONS = [
+    {"field": "litellm_params.ai_aws_account_name", "pattern": "digital-prison-reporting-*"},
+    {"field": "litellm_params.ai_aws_account_name", "pattern": "octo-engineering-ai-enablement-*"},
+]
 
 # GOV.UK Notify
 NOTIFY_API_KEY = os.environ.get("NOTIFY_API_KEY")
@@ -206,6 +212,7 @@ NOTIFY_PROJECT_MEMBER_ADDED_TEMPLATE_ID = os.environ.get(
 NOTIFY_PROJECT_MEMBER_REMOVED_TEMPLATE_ID = os.environ.get(
     "NOTIFY_PROJECT_MEMBER_REMOVED_TEMPLATE_ID", ""
 )
+NOTIFY_BUDGET_ALERT_TEMPLATE_ID = os.environ.get("NOTIFY_BUDGET_ALERT_TEMPLATE_ID", "")
 
 # Keys used to encrypt sensitive model fields at rest
 FIELD_ENCRYPTION_KEYS = [

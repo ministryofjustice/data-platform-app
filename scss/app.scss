@@ -1,16 +1,19 @@
-@use "node_modules/govuk-frontend/dist/govuk" as * with (
-  $govuk-assets-path: "/static/assets/",
-  $govuk-page-width: 1280px
-);
-
-// Share config with MOJ Frontend
+// MOJ Frontend configures GOV.UK Frontend (via $moj-* settings), so it must be
+// loaded first and GOV.UK Frontend must not be configured again with `with`
 @forward "node_modules/@ministryofjustice/frontend/moj/all" with (
-  $moj-assets-path: $govuk-assets-path,
-  $moj-page-width: $govuk-page-width
+  $moj-assets-path: "/static/assets/",
+  $moj-page-width: 1280px
 );
+@use "node_modules/govuk-frontend/dist/govuk" as *;
+@use "node_modules/govuk-frontend/dist/govuk/helpers/font-faces--internal" as
+  govuk-font-faces;
 @use "node_modules/@x-govuk/govuk-prototype-components/src/x-govuk";
 @use "components/copy-button/copy-button";
 @use "components/usage/usage";
+
+// MOJ Frontend hard-codes $govuk-include-default-font-face to false, so the
+// GDS Transport @font-face rules must be output explicitly.
+@include govuk-font-faces.gds-transport;
 
 $masthead-background-color: #381a62;
 
@@ -45,18 +48,10 @@ $masthead-background-color: #381a62;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+}
 
-  .govuk-link:last-child {
-    margin-top: 1rem;
-  }
-
-  @include govuk-media-query($from: tablet) {
-    height: 100%;
-
-    .govuk-link:last-child {
-      margin-top: auto;
-    }
-  }
+.info-panel-no-overflow {
+  overflow-wrap: anywhere;
 }
 
 .app-link-icon {
@@ -68,6 +63,15 @@ $masthead-background-color: #381a62;
 .app-equal-height-panels {
   display: flex;
   flex-wrap: wrap;
+  align-items: stretch;
+
+  > .govuk-grid-column-one-half {
+    display: flex;
+  }
+
+  .info-panel {
+    flex: 1;
+  }
 }
 
 .app-model-usage-rows {
@@ -375,4 +379,10 @@ $masthead-background-color: #381a62;
   color: govuk-colour("purple", $variant: "shade-25");
   background-color: govuk-colour("purple", $variant: "tint-80");
   padding: 5px 8px 4px 8px;
+}
+
+.govuk-summary-list__key-width {
+  @include govuk-media-query($from: tablet) {
+    width: 15%;
+  }
 }

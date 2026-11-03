@@ -3,6 +3,7 @@ from unittest.mock import create_autospec, patch
 
 import pytest
 from django.urls import reverse
+from freezegun import freeze_time
 from model_bakery import baker
 from pytest_django.asserts import (
     assertContains,
@@ -164,8 +165,15 @@ class TestKeyCreateView:
         assert not Key.objects.filter(project=project).exists()
         key_service.create_key.assert_not_called()
 
+    def test_member_can_manage_api_keys_can_access(self, client, user, project, key_service):
+        client.force_login(user)
+
+        response = client.get(reverse("ai_gateway:key_create", args=[project.uuid]))
+
+        assert response.status_code == 200
+
     def test_denied_without_manage_api_keys_permission(
-        self, client, project, key_service, project_member_without_permissions
+        self, client, project, project_member_without_permissions
     ):
         client.force_login(project_member_without_permissions)
 
@@ -685,7 +693,7 @@ class TestKeyCreateConfirmView:
         assert response.url.startswith(reverse("ai_gateway:key_create", args=[project.uuid]))
 
     def test_post_creates_key_and_renders_created_page(self, client, user, project, key_service):
-        key_service.create_key.return_value = PLAINTEXT_KEY
+        key_service.create_key.return_value = (PLAINTEXT_KEY, 1)
         client.force_login(user)
 
         response = client.post(
@@ -696,6 +704,10 @@ class TestKeyCreateConfirmView:
         assert response.status_code == 200
         assertTemplateUsed(response, "ai_gateway/key-created.html")
         assertContains(response, PLAINTEXT_KEY)
+        assertContains(
+            response,
+            f'href="{reverse("ai_gateway:key_detail", args=[project.uuid, 1])}"',
+        )
         assert "no-store" in response["Cache-Control"]
         key_service.create_key.assert_called_once_with(
             project=project,
@@ -821,6 +833,11 @@ class TestKeyDetailView:
 
         response = client.get(reverse("ai_gateway:key_detail", args=[project.uuid, key.pk]))
 
+        assert response.status_code == 200
+        assertContains(
+            response,
+            f'href="{reverse("ai_gateway:key_history", args=[project.uuid, key.pk])}"',
+        )
         assertNotContains(
             response,
             f'href="{reverse("ai_gateway:key_model_change", args=[project.uuid, key.pk])}"',
@@ -880,10 +897,27 @@ class TestKeyHistoryView:
         assertTemplateUsed(response, "ai_gateway/key-history.html")
         assert latest_record in response.context["history_records"]
         assertContains(response, "data-sort-value=")
-        assertContains(response, "Model changed")
+        assertContains(response, "Models changed")
         assertContains(response, "claude-3")
         assertContains(response, "gpt-4")
         assertContains(response, "Foo Bar")
+
+    def test_does_not_render_history_record_without_model_changes(
+        self, client, user, project, key
+    ):
+        user.first_name = "Unchanged"
+        user.last_name = "Snapshot"
+        user.save(update_fields=["first_name", "last_name"])
+        key._history_user = user
+        key.save()
+        unchanged_record = key.history.latest()
+        client.force_login(user)
+
+        response = client.get(reverse("ai_gateway:key_history", args=[project.uuid, key.pk]))
+
+        assert unchanged_record.model_change_type is None
+        assert response.status_code == 200
+        assertNotContains(response, "Unchanged Snapshot")
 
     def test_does_not_show_another_keys_history(self, client, user, project, key):
         other_key = baker.make(
@@ -925,14 +959,22 @@ class TestKeyHistoryView:
 
         assert response.status_code == 404
 
-    def test_denied_without_manage_api_keys_permission(
+    def test_member_without_manage_api_keys_permission_can_view_history(
         self, client, project, key, project_member_without_permissions
     ):
         client.force_login(project_member_without_permissions)
 
         response = client.get(reverse("ai_gateway:key_history", args=[project.uuid, key.pk]))
 
-        assert response.status_code == 403
+        assert response.status_code == 200
+        assertTemplateUsed(response, "ai_gateway/key-history.html")
+
+    def test_non_member_gets_404(self, client, non_project_user, project, key):
+        client.force_login(non_project_user)
+
+        response = client.get(reverse("ai_gateway:key_history", args=[project.uuid, key.pk]))
+
+        assert response.status_code == 404
 
 
 class TestKeyRegenerateView:
@@ -1085,6 +1127,60 @@ class TestKeyRevokeView:
 
 
 class TestUsageView:
+    @freeze_time("2026-10-28 05:00:00")
+    @pytest.mark.parametrize(
+        ("spend", "threshold"),
+        [(50.5, 50), (90.5, 90)],
+    )
+    def test_shows_budget_banner(self, client, user, team, spend, threshold):
+        with patch("ai_gateway.services.AIGatewayClient.from_settings") as factory:
+            gateway = factory.return_value
+            gateway.team_info.return_value = {
+                "team_info": {"created_at": "2026-09-01T00:00:00Z", "max_budget": 100}
+            }
+            gateway.team_daily_activity.return_value = {
+                "results": [{"date": "2026-10-01", "metrics": {"spend": spend}}]
+            }
+            client.force_login(user)
+
+            response = client.get(
+                reverse("ai_gateway:usage", kwargs={"uuid": team.project.uuid}),
+                {"month": "2026-10"},
+            )
+
+        assert response.context["overview_data"]["budget_alert_threshold"] == threshold
+        assertContains(response, 'class="moj-ticket-panel app-usage-budget-banner"', count=1)
+        assertContains(response, f"You've spent more than {threshold}% of your monthly budget")
+        assertContains(
+            response,
+            "https://user-guide.data-platform.service.justice.gov.uk/support/"
+            "index.html#request-an-increase-to-your-ai-usage-limits",
+        )
+
+    @freeze_time("2026-10-28 05:00:00")
+    @pytest.mark.parametrize(
+        ("spend", "budget", "month"),
+        [(50, 100, "2026-10"), (90.5, None, "2026-10"), (90.5, 100, "2026-09")],
+    )
+    def test_hides_budget_banner(self, client, user, team, spend, budget, month):
+        with patch("ai_gateway.services.AIGatewayClient.from_settings") as factory:
+            gateway = factory.return_value
+            gateway.team_info.return_value = {
+                "team_info": {"created_at": "2026-09-01T00:00:00Z", "max_budget": budget}
+            }
+            gateway.team_daily_activity.return_value = {
+                "results": [{"date": f"{month}-01", "metrics": {"spend": spend}}]
+            }
+            client.force_login(user)
+
+            response = client.get(
+                reverse("ai_gateway:usage", kwargs={"uuid": team.project.uuid}),
+                {"month": month},
+            )
+
+        assert response.context["overview_data"]["budget_alert_threshold"] is None
+        assertNotContains(response, 'class="moj-ticket-panel app-usage-budget-banner"')
+
     @pytest.mark.parametrize("month", ["2026-01", "not-a-month", "2025-12", None])
     def test_selects_valid_month_or_defaults_to_current_available_month(
         self, client, user, team, month

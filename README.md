@@ -165,6 +165,33 @@ FEATURE_AI_GATEWAY_COSTS=true
 
 After updating your `.env`, restart the app (`make run`) so the new flag values are loaded.
 
+## AI model catalogue exclusions
+
+`AI_GATEWAY_CATALOGUE_EXCLUSIONS` in Django settings hides models from the catalogue only.
+It does not change project access, API-key model selection, or the cost calculator.
+Models whose `litellm_params.ai_aws_account_name` matches `digital-prison-reporting-*` are
+excluded by default.
+
+Each rule specifies a dotted field path in the enriched LiteLLM model response and a
+case-sensitive shell-style wildcard pattern. A model is excluded if **any** rule matches.
+Missing fields and non-string values do not match. Exclusions are applied before search,
+result counts and provider/region dropdown options, including HTMX responses.
+
+For example, an environment-specific settings module can override the list:
+
+```python
+AI_GATEWAY_CATALOGUE_EXCLUSIONS = [
+    {"field": "litellm_params.ai_aws_account_name", "pattern": "digital-prison-reporting-*"},
+    {"field": "litellm_params.ai_model_region", "pattern": "us-*"},
+    {"field": "region", "pattern": "Global"},
+]
+```
+
+Use `model_info.<field>` if your gateway returns metadata there instead of `litellm_params`.
+`region` at the top level is the friendly display label; nested API fields retain their raw
+values. Set the list to `[]` to disable exclusions. Restart the application after changing
+settings. These visibility rules are not an authorisation boundary.
+
 ## GOV.UK Notify integration
 
 GOV UK Notify is used to send emails. Set these environment variables in your `.env`:
@@ -223,6 +250,11 @@ DEFAULT_ACCESS_GROUP_NAME=generally-available-models
 ```
 
 `AI_GATEWAY_MASTER_KEY` must match the gateway's `LITELLM_MASTER_KEY` value. If you changed it in Docker compose or your environment, use that value instead. `DEFAULT_ACCESS_GROUP_NAME` is the name of the access group that defines which models are available by default; the app looks up its ID on the gateway at runtime.
+
+The local seed script also creates an `openai-models` access group containing
+`openai-gpt-5-5-cyber-preview`. Assign this group to a team using Django admin
+to test access to restricted OpenAI models. The model is not generally available,
+and seeding it does not configure credentials for live OpenAI requests.
 
 The app stores each generated key's secret encrypted at rest (Fernet), so you must
 also set a `FIELD_ENCRYPTION_KEY`. Generate one with:

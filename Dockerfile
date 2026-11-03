@@ -1,3 +1,8 @@
+##### UV
+
+# Declared as a stage (rather than inline in COPY --from) so Dependabot can update it
+FROM ghcr.io/astral-sh/uv:0.13.6@sha256:af22a52f5eafef3d78e551599d405c02df61919d18028f0cea8eda93bc9986d0 AS uv
+
 ##### BUILD PYTHON
 
 FROM docker.io/library/ubuntu:26.04@sha256:da6fc2be547864451aa253836dd926da33623312df4a9a243e35dc877c378a78 AS build-python
@@ -15,7 +20,7 @@ apt-get install --quiet --yes \
 EOF
 
 # Install uv
-COPY --from=ghcr.io/astral-sh/uv:0.11.26@sha256:3d868e555f8f1dbc324afa005066cd11e1053fc4743b9808ca8025283e65efa5 /uv /usr/local/bin/uv
+COPY --from=uv /uv /usr/local/bin/uv
 
 # - Silence uv complaining about not being able to use hard links,
 # - tell uv to byte-compile packages for faster application startups,
@@ -40,7 +45,10 @@ RUN --mount=type=cache,target=/root/.cache \
 
 ##### BUILD NODE
 
-FROM docker.io/library/node:26.10.0-alpine@sha256:0b36e8c136b94cd4fcf02188228e76c31ad5872eef3fec8cbd2eee500cfd9e80 AS build-node
+FROM docker.io/library/node:26.12.0-alpine@sha256:6f08a523443ddedf52941874c203475b0ad503e859ad70cb26ab8be9a517dbd5 AS build-node
+
+# Alpine has no bash; fail on any error in multi-line RUN blocks
+SHELL ["/bin/sh", "-e", "-u", "-c"]
 
 WORKDIR /build
 

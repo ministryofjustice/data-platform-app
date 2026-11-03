@@ -1,29 +1,13 @@
 import logging
-from collections.abc import Iterable
 
 from django import forms
-from django.conf import settings
 from django.contrib import admin, messages
 from simple_history.admin import SimpleHistoryAdmin
 
-from ai_gateway.models import Key, Team
+from ai_gateway.models import BudgetAlert, BudgetAlertNotification, Key, Team
 from ai_gateway.services import KeyService
 
 logger = logging.getLogger(__name__)
-
-
-class AccessGroupCheckboxSelectMultiple(forms.CheckboxSelectMultiple):
-    """Checkbox list that renders selected option values as disabled."""
-
-    def __init__(self, *args, disabled_values: Iterable[str] | None = None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.disabled_values = set(disabled_values or ())
-
-    def create_option(self, name, value, *args, **kwargs):
-        option = super().create_option(name, value, *args, **kwargs)
-        if str(value) in self.disabled_values:
-            option["attrs"]["disabled"] = True
-        return option
 
 
 class AIGatewayTeamAdminForm(forms.ModelForm):
@@ -56,12 +40,19 @@ class AIGatewayTeamInline(admin.StackedInline):
 
 class AIGatewayTeamAdmin(SimpleHistoryAdmin):
     form = AIGatewayTeamAdminForm
-    list_display = ("project", "litellm_team_id", "created")
-    readonly_fields = ("project", "litellm_team_id", "created", "modified")
+    list_display = ("project_name", "litellm_team_id", "created")
+    search_fields = ("project__uuid", "project__name", "litellm_team_id")
+    list_select_related = ("project",)
+    readonly_fields = ("project", "litellm_team_id", "created", "modified", "logging_callbacks")
     fieldsets = (
         (None, {"fields": ("project", "litellm_team_id", "created", "modified")}),
         ("Access groups", {"fields": ("access_groups",)}),
+        ("Logging callbacks", {"fields": ("logging_callbacks",)}),
     )
+
+    @admin.display(description="Project", ordering="project__name")
+    def project_name(self, obj: Team) -> str:
+        return obj.project.name
 
     def has_add_permission(self, request):
         return False
@@ -86,11 +77,8 @@ class AIGatewayTeamAdmin(SimpleHistoryAdmin):
             initial = service.get_team_access_group_ids(obj)
 
         choices = []
-        default_access_group_id = None
         for group in groups:
             choices.append((group["access_group_id"], group["access_group_name"]))
-            if group["access_group_name"] == settings.DEFAULT_ACCESS_GROUP_NAME:
-                default_access_group_id = group["access_group_id"]
 
         logger.info(
             "AI Gateway access groups for team %s viewed by %s: %s",
@@ -100,22 +88,10 @@ class AIGatewayTeamAdmin(SimpleHistoryAdmin):
         )
 
         class AIGatewayTeamForm(base_form_class):
-            default_group_id = default_access_group_id
-
             def __init__(self, *args, **form_kwargs):
                 super().__init__(*args, **form_kwargs)
                 self.initial["access_groups"] = initial
-                self.fields["access_groups"].widget = AccessGroupCheckboxSelectMultiple(
-                    disabled_values={default_access_group_id} if default_access_group_id else set()
-                )
                 self.fields["access_groups"].choices = choices
-
-            def clean_access_groups(self):
-                # The default group is disabled in the form, so it is never submitted.
-                selected = self.cleaned_data["access_groups"]
-                if self.default_group_id and self.default_group_id not in selected:
-                    selected.append(self.default_group_id)
-                return selected
 
         return AIGatewayTeamForm
 
@@ -153,6 +129,11 @@ class AIGatewayTeamAdmin(SimpleHistoryAdmin):
                 request,
                 f"Could not update {len(failed)} key(s): {', '.join(failed)}.",
             )
+
+    @admin.display(description="Logging callbacks")
+    def logging_callbacks(self, obj):
+        with KeyService.from_settings() as service:
+            return service.get_team_callbacks(obj)
 
 
 class KeyAdmin(SimpleHistoryAdmin):
@@ -201,6 +182,52 @@ class KeyAuditAdmin(admin.ModelAdmin):
         return False
 
     def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(BudgetAlert)
+class BudgetAlertAdmin(admin.ModelAdmin):
+    list_display = ("project", "period_start", "threshold_percent", "created")
+    list_filter = ("period_start", "threshold_percent")
+    search_fields = ("project__name", "project__uuid")
+    list_select_related = ("project",)
+    readonly_fields = (
+        "project",
+        "period_start",
+        "threshold_percent",
+        "spend",
+        "budget",
+        "created",
+        "modified",
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(BudgetAlertNotification)
+class BudgetAlertNotificationAdmin(admin.ModelAdmin):
+    list_display = ("alert", "email_address", "sent_at", "notify_notification_id")
+    list_filter = ("sent_at",)
+    search_fields = ("alert__project__name", "email_address")
+    list_select_related = ("alert__project",)
+    readonly_fields = (
+        "alert",
+        "recipient",
+        "email_address",
+        "sent_at",
+        "notify_notification_id",
+        "created",
+        "modified",
+    )
+
+    def has_add_permission(self, request):
         return False
 
     def has_delete_permission(self, request, obj=None):

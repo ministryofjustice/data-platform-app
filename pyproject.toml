@@ -5,33 +5,34 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
-    "django==6.1.1",
+    "django==6.1.2",
     "django-azure-auth==2.6.0",
     "django-extensions==4.1",
     "django-simple-history==3.13.0",
     "django-structlog==10.1.0",
     "gunicorn==26.2.0",
     "httpx==0.28.1",
-    "model-bakery==1.24.1",
-    "python-dotenv==1.2.3",
+    "model-bakery==1.24.2",
+    "python-dotenv==1.2.4",
     "psycopg[binary]==3.3.6",
     "pytest-django==4.14.0",
     "pytest-cov==7.1.0",
+    "freezegun==1.5.5",
     "whitenoise==6.12.0",
-    "cryptography==50.0.1",
-    "sentry-sdk==2.71.0",
+    "cryptography==50.0.2",
+    "sentry-sdk==2.72.0",
     "django-htmx==1.29.0",
     "notifications-python-client==12.2.0",
 ]
 
 [dependency-groups]
 dev = [
-    "djlint==1.46.3",
+    "djlint==1.46.6",
     "django-debug-toolbar==8.0.0",
-    "pre-commit==4.6.2",
+    "pre-commit==4.7.0",
     "pytest==9.1.1",
-    "ruff==0.16.9",
     "pytest-playwright==0.9.0",
+    "ruff==0.17.1",
 ]
 
 [tool.ruff]
@@ -39,6 +40,9 @@ line-length = 99
 
 [tool.uv]
 exclude-newer = "7d"
+
+[tool.uv.exclude-newer-package]
+certifi = "P0D"
 
 [tool.ruff.lint]
 select = [

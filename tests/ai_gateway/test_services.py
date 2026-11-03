@@ -55,6 +55,48 @@ class TestBuildAlias:
 
 
 class TestKeyServiceListModels:
+    @pytest.mark.parametrize("multiplier", [None, 1, 1.1])
+    @pytest.mark.parametrize("project_scoped", [False, True])
+    def test_regional_uplift_applies_to_prices_and_estimates(
+        self, project, gateway_client, multiplier, project_scoped
+    ):
+        gateway_client.list_models_for_access_group.return_value = ["gpt-4"]
+        gateway_client.list_models_v1_info.return_value = [
+            {
+                "model_name": "gpt-4",
+                "litellm_params": {},
+                "model_info": {
+                    "input_cost_per_token": 0.00003,
+                    "output_cost_per_token": 0.00006,
+                    "regional_endpoint_uplift_multiplier": multiplier,
+                },
+            },
+        ]
+
+        with KeyService(gateway_client) as service:
+            models = (
+                service.list_available_models(project)
+                if project_scoped
+                else service.list_all_models()
+            )
+
+        expected_multiplier = 1 if multiplier is None else multiplier
+        assert models[0]["input_cost_per_million"] == pytest.approx(30 * expected_multiplier)
+        assert models[0]["output_cost_per_million"] == pytest.approx(60 * expected_multiplier)
+        result = estimate_costs(
+            usage_period="monthly",
+            model_rows=[
+                {
+                    "model": "gpt-4",
+                    "input_tokens": 1_000,
+                    "output_tokens": 500,
+                    "requests_per_period": 100,
+                }
+            ],
+            available_models=models,
+        )
+        assert result["total_cost"] == pytest.approx(6 * expected_multiplier)
+
     def test_returns_default_group_models_with_costs(self, project, gateway_client):
         gateway_client.list_models_for_access_group.return_value = ["gpt-4"]
         gateway_client.list_models_v1_info.return_value = [
@@ -89,12 +131,17 @@ class TestKeyServiceListModels:
                     "ai_model_name": "GPT-4",
                     "ai_model_family": "GPT",
                     "ai_model_provider": "OpenAI",
+                    "ai_model_location": "United Kingdom",
+                    "ai_model_generally_available": True,
                 },
                 "model_info": {},
             },
             {
                 "model_name": "bare-model",
-                "litellm_params": {},
+                "litellm_params": {
+                    "ai_model_location": "Belgium",
+                    "ai_model_generally_available": False,
+                },
                 "model_info": {},
             },
         ]
@@ -102,18 +149,25 @@ class TestKeyServiceListModels:
         with KeyService(gateway_client) as service:
             models = service.list_available_models(project)
 
-        assert models[0]["display_name"] == "GPT-4"
-        assert models[0]["family"] == "GPT"
-        assert models[0]["provider"] == "OpenAI"
-        assert models[1]["display_name"] == "bare-model"
+        assert [model["display_name"] for model in models] == ["bare-model", "GPT-4"]
+        gpt_model = next(model for model in models if model["model_name"] == "gpt-4")
+        bare_model = next(model for model in models if model["model_name"] == "bare-model")
 
-    def test_costs_are_none_when_pricing_is_missing(self, project, gateway_client):
+        assert gpt_model["family"] == "GPT"
+        assert gpt_model["provider"] == "OpenAI"
+        assert gpt_model["generally_available"] is True
+        assert gpt_model["region"] == "United Kingdom"
+        assert bare_model["generally_available"] is False
+        assert bare_model["region"] == "Belgium"
+
+    @pytest.mark.parametrize("model_info", [{}, {"regional_endpoint_uplift_multiplier": 1.1}])
+    def test_costs_are_none_when_pricing_is_missing(self, project, gateway_client, model_info):
         gateway_client.list_models_for_access_group.return_value = ["gpt-4"]
         gateway_client.list_models_v1_info.return_value = [
             {
                 "model_name": "gpt-4",
                 "litellm_params": {},
-                "model_info": {},
+                "model_info": model_info,
             },
         ]
 
@@ -122,6 +176,8 @@ class TestKeyServiceListModels:
 
         assert models[0]["input_cost_per_million"] is None
         assert models[0]["output_cost_per_million"] is None
+        assert models[0]["generally_available"] is None
+        assert models[0]["region"] == "Not specified"
 
     def test_includes_access_group_models_for_a_team(self, project, gateway_client):
         Team.objects.create(project=project, litellm_team_id="team-xyz")
@@ -162,7 +218,7 @@ class TestKeyServiceCreateKey:
         gateway_client.get_access_group_id.return_value = "ag-default"
 
         with KeyService(gateway_client) as service:
-            plaintext = service.create_key(project, "primary-key", ["gpt-4"], user)
+            plaintext, key_pk = service.create_key(project, "primary-key", ["gpt-4"], user)
 
         assert plaintext == PLAINTEXT_KEY
         gateway_client.get_access_group_id.assert_called_once_with("generally-available-models")
@@ -172,12 +228,14 @@ class TestKeyServiceCreateKey:
 
         gateway_client.generate_key.assert_called_once()
         assert gateway_client.generate_key.call_args.args == ("team-xyz",)
+        assert gateway_client.generate_key.call_args.kwargs["user_id"] == str(user.oid)
         assert gateway_client.generate_key.call_args.kwargs["models"] == ["gpt-4"]
         alias_sent = gateway_client.generate_key.call_args.kwargs["key_alias"]
         assert alias_sent.startswith(f"{project.uuid}-primary-key-")
 
         key = Key.objects.get(project=project)
         assert key.name == "primary-key"
+        assert key.pk == key_pk
         assert key.litellm_alias == alias_sent
         assert key.litellm_secret == PLAINTEXT_KEY
         assert key.litellm_token == "tok-1"
@@ -196,6 +254,7 @@ class TestKeyServiceCreateKey:
         gateway_client.create_team.assert_not_called()
         gateway_client.generate_key.assert_called_once()
         assert gateway_client.generate_key.call_args.args == ("existing-team",)
+        assert gateway_client.generate_key.call_args.kwargs["user_id"] == str(user.oid)
         assert gateway_client.generate_key.call_args.kwargs["key_alias"].startswith(
             f"{project.uuid}-primary-key-"
         )
@@ -547,6 +606,96 @@ class TestKeyServiceAccessGroups:
         gateway_client.update_key_models.assert_called_once_with("hash-1", ["gpt-4"])
         assert updated == ["alias-1"]
         assert failed == []
+
+    @pytest.mark.parametrize(
+        "access_group_ids",
+        [["open-ai-models-id"], ["open-ai-models-id", "some-other-access-group-id"]],
+    )
+    def test_adding_open_ai_access_group_enables_logging(
+        self, project, gateway_client, access_group_ids
+    ):
+        team = Team.objects.create(project=project, litellm_team_id="team-with-openai-access")
+
+        gateway_client.get_access_group_id.return_value = "open-ai-models-id"
+        gateway_client.get_team_callbacks.return_value = {
+            "data": {"success_callbacks": [], "failure_callbacks": []}
+        }
+        with KeyService(gateway_client) as service:
+            service.set_team_model_access(team=team, access_group_ids=access_group_ids)
+
+        gateway_client.enable_team_logging.assert_called_once_with(
+            team_id="team-with-openai-access"
+        )
+        gateway_client.disable_team_logging.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "callbacks",
+        [
+            {"success_callbacks": ["s3_v2"], "failure_callbacks": []},
+            {"success_callbacks": ["s3_v2"], "failure_callbacks": ["s3_v2"]},
+        ],
+    )
+    def test_adding_open_ai_access_group_does_not_enable_logging_if_already_enabled(
+        self, project, gateway_client, callbacks
+    ):
+        team = Team.objects.create(project=project, litellm_team_id="team-with-openai-access")
+
+        gateway_client.get_access_group_id.return_value = "open-ai-models-id"
+        gateway_client.get_team_callbacks.return_value = {"data": callbacks}
+        with KeyService(gateway_client) as service:
+            service.set_team_model_access(team=team, access_group_ids=["open-ai-models-id"])
+
+        gateway_client.enable_team_logging.assert_not_called()
+        gateway_client.disable_team_logging.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "callbacks",
+        [
+            {"success_callbacks": ["s3_v2"], "failure_callbacks": []},
+            {"success_callbacks": ["s3_v2"], "failure_callbacks": ["s3_v2"]},
+        ],
+    )
+    def test_removing_open_ai_access_group_disables_logging(
+        self, project, gateway_client, callbacks
+    ):
+        team = Team.objects.create(project=project, litellm_team_id="team-without-openai-access")
+
+        gateway_client.get_team_callbacks.return_value = {"data": callbacks}
+        with KeyService(gateway_client) as service:
+            service.set_team_model_access(
+                team=team, access_group_ids=["some-other-access-group-id"]
+            )
+
+        gateway_client.enable_team_logging.assert_not_called()
+        gateway_client.disable_team_logging.assert_called_once_with(
+            team_id="team-without-openai-access"
+        )
+
+    def test_team_without_open_ai_access_group_logging_not_enabled(self, project, gateway_client):
+        team = Team.objects.create(project=project, litellm_team_id="team-without-openai-access")
+
+        gateway_client.get_team_callbacks.return_value = {
+            "data": {"success_callbacks": [], "failure_callbacks": []}
+        }
+        with KeyService(gateway_client) as service:
+            service.set_team_model_access(
+                team=team, access_group_ids=["some-other-access-group-id"]
+            )
+
+        gateway_client.enable_team_logging.assert_not_called()
+        gateway_client.disable_team_logging.assert_not_called()
+
+    def test_openai_models_access_group_not_found(self, project, gateway_client):
+        team = Team.objects.create(project=project, litellm_team_id="team-no-openai-access")
+
+        gateway_client.get_access_group_id.side_effect = AIGatewayAPIError(404, "Not Found")
+        with KeyService(gateway_client) as service:
+            service.set_team_model_access(
+                team=team, access_group_ids=["some-other-access-group-id"]
+            )
+
+        gateway_client.enable_team_logging.assert_not_called()
+        gateway_client.disable_team_logging.assert_not_called()
 
 
 class TestEstimateCosts:

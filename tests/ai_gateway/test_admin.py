@@ -37,6 +37,37 @@ def key_service():
         yield service
 
 
+class TestAIGatewayTeamAdminChangelist:
+    @pytest.mark.parametrize("search_field", ["project_uuid", "project_name", "team_id"])
+    def test_search_finds_matching_team(self, client, superuser, team, search_field):
+        baker.make("ai_gateway.Team", project__name="Unrelated project")
+        search_terms = {
+            "project_uuid": str(team.project.uuid),
+            "project_name": team.project.name,
+            "team_id": team.litellm_team_id,
+        }
+        client.force_login(superuser)
+
+        response = client.get(
+            reverse("admin:ai_gateway_team_changelist"), {"q": search_terms[search_field]}
+        )
+
+        assert response.status_code == 200
+        assert list(response.context["cl"].result_list) == [team]
+
+    @pytest.mark.parametrize("ordering", ["0", "-0"])
+    def test_project_column_sorts_by_project_name(self, client, superuser, ordering):
+        zebra = baker.make("ai_gateway.Team", project__name="Zebra project")
+        alpha = baker.make("ai_gateway.Team", project__name="Alpha project")
+        client.force_login(superuser)
+
+        response = client.get(reverse("admin:ai_gateway_team_changelist"), {"o": ordering})
+
+        assert response.status_code == 200
+        expected = [alpha, zebra] if ordering == "0" else [zebra, alpha]
+        assert list(response.context["cl"].result_list) == expected
+
+
 class TestAIGatewayTeamAdminChangeView:
     def test_renders_access_groups_with_current_selection(
         self, client, superuser, team, key_service
@@ -57,8 +88,7 @@ class TestAIGatewayTeamAdminChangeView:
             str(widget.data["value"]): widget.data["attrs"]
             for widget in form["access_groups"].subwidgets
         }
-        assert options["ag-1"].get("disabled") is True
-        assert "disabled" not in options["ag-2"]
+        assert all("disabled" not in attrs for attrs in options.values())
 
     def test_rendering_fetches_from_gateway_once(self, client, superuser, team, key_service):
         client.force_login(superuser)
@@ -93,7 +123,7 @@ class TestAIGatewayTeamAdminChangeView:
         assert response.status_code == 302
         key_service.set_team_model_access.assert_called_once_with(
             team,
-            ["ag-2", "ag-1"],
+            ["ag-2"],
             changed_by=superuser,
         )
 
@@ -134,7 +164,7 @@ class TestAIGatewayTeamAdminChangeView:
         client.force_login(superuser)
         url = reverse("admin:ai_gateway_team_change", args=[team.pk])
 
-        response = client.post(url, {"_save": ""}, follow=True)
+        response = client.post(url, {"access_groups": ["ag-1"], "_save": ""}, follow=True)
 
         assert response.status_code == 200
         key_service.set_team_model_access.assert_called_once_with(
@@ -154,7 +184,7 @@ class TestAIGatewayTeamAdminChangeView:
         client.force_login(superuser)
         url = reverse("admin:ai_gateway_team_change", args=[team.pk])
 
-        client.post(url, {"access_groups": ["ag-2"], "_save": ""})
+        client.post(url, {"access_groups": ["ag-1", "ag-2"], "_save": ""})
 
         key_service.set_team_model_access.assert_not_called()
 
