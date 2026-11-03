@@ -733,6 +733,11 @@ class KeyService:
             self._client.disable_team_logging(team_id=team.litellm_team_id)
         return self.reconcile_team_keys_to_allowed_models(team, changed_by=changed_by)
 
+    def get_team_callbacks(self, team: Team) -> list[dict[str, Any]]:
+        """Return the callbacks configured for the given team."""
+        response = self._client.get_team_callbacks(team.litellm_team_id)
+        return response.get("data", [])
+
     @cached_property
     def models_indexed_by_id(self) -> dict[str, dict[str, Any]]:
         """Return models keyed by their ID."""

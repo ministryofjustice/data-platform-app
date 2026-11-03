@@ -43,10 +43,11 @@ class AIGatewayTeamAdmin(SimpleHistoryAdmin):
     list_display = ("project_name", "litellm_team_id", "created")
     search_fields = ("project__uuid", "project__name", "litellm_team_id")
     list_select_related = ("project",)
-    readonly_fields = ("project", "litellm_team_id", "created", "modified")
+    readonly_fields = ("project", "litellm_team_id", "created", "modified", "logging_callbacks")
     fieldsets = (
         (None, {"fields": ("project", "litellm_team_id", "created", "modified")}),
         ("Access groups", {"fields": ("access_groups",)}),
+        ("Logging callbacks", {"fields": ("logging_callbacks",)}),
     )
 
     @admin.display(description="Project", ordering="project__name")
@@ -128,6 +129,11 @@ class AIGatewayTeamAdmin(SimpleHistoryAdmin):
                 request,
                 f"Could not update {len(failed)} key(s): {', '.join(failed)}.",
             )
+
+    @admin.display(description="Logging callbacks")
+    def logging_callbacks(self, obj):
+        with KeyService.from_settings() as service:
+            return service.get_team_callbacks(obj)
 
 
 class KeyAdmin(SimpleHistoryAdmin):

@@ -273,3 +273,7 @@ class AIGatewayClient:
     def disable_team_logging(self, team_id: str) -> None:
         """Disable logging for the team ``team_id``."""
         self._request("POST", f"/team/{team_id}/disable_logging")
+
+    def get_team_callbacks(self, team_id: str) -> list[dict[str, Any]]:
+        """Return the callbacks configured for the given team."""
+        return self._request("GET", f"/team/{team_id}/callback")
