@@ -193,6 +193,7 @@ AI_GATEWAY_MASTER_KEY = os.environ.get("AI_GATEWAY_MASTER_KEY")
 DEFAULT_ACCESS_GROUP_NAME = os.environ.get(
     "DEFAULT_ACCESS_GROUP_NAME", "generally-available-models"
 )
+AI_GATEWAY_OPEN_AI_ACCESS_GROUP_NAME = "openai-models"
 
 AI_GATEWAY_CATALOGUE_EXCLUSIONS = [
     {"field": "litellm_params.ai_aws_account_name", "pattern": "digital-prison-reporting-*"},

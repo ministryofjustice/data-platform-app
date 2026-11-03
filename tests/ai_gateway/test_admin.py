@@ -88,8 +88,7 @@ class TestAIGatewayTeamAdminChangeView:
             str(widget.data["value"]): widget.data["attrs"]
             for widget in form["access_groups"].subwidgets
         }
-        assert options["ag-1"].get("disabled") is True
-        assert "disabled" not in options["ag-2"]
+        assert all("disabled" not in attrs for attrs in options.values())
 
     def test_rendering_fetches_from_gateway_once(self, client, superuser, team, key_service):
         client.force_login(superuser)
@@ -124,7 +123,7 @@ class TestAIGatewayTeamAdminChangeView:
         assert response.status_code == 302
         key_service.set_team_model_access.assert_called_once_with(
             team,
-            ["ag-2", "ag-1"],
+            ["ag-2"],
             changed_by=superuser,
         )
 
@@ -165,7 +164,7 @@ class TestAIGatewayTeamAdminChangeView:
         client.force_login(superuser)
         url = reverse("admin:ai_gateway_team_change", args=[team.pk])
 
-        response = client.post(url, {"_save": ""}, follow=True)
+        response = client.post(url, {"access_groups": ["ag-1"], "_save": ""}, follow=True)
 
         assert response.status_code == 200
         key_service.set_team_model_access.assert_called_once_with(
@@ -185,7 +184,7 @@ class TestAIGatewayTeamAdminChangeView:
         client.force_login(superuser)
         url = reverse("admin:ai_gateway_team_change", args=[team.pk])
 
-        client.post(url, {"access_groups": ["ag-2"], "_save": ""})
+        client.post(url, {"access_groups": ["ag-1", "ag-2"], "_save": ""})
 
         key_service.set_team_model_access.assert_not_called()
 

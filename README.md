@@ -224,6 +224,11 @@ DEFAULT_ACCESS_GROUP_NAME=generally-available-models
 
 `AI_GATEWAY_MASTER_KEY` must match the gateway's `LITELLM_MASTER_KEY` value. If you changed it in Docker compose or your environment, use that value instead. `DEFAULT_ACCESS_GROUP_NAME` is the name of the access group that defines which models are available by default; the app looks up its ID on the gateway at runtime.
 
+The local seed script also creates an `openai-models` access group containing
+`openai-gpt-5-5-cyber-preview`. Assign this group to a team using Django admin
+to test access to restricted OpenAI models. The model is not generally available,
+and seeding it does not configure credentials for live OpenAI requests.
+
 The app stores each generated key's secret encrypted at rest (Fernet), so you must
 also set a `FIELD_ENCRYPTION_KEY`. Generate one with:
 

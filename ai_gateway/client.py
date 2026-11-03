@@ -257,3 +257,23 @@ class AIGatewayClient:
             "/team/update",
             json={"team_id": team_id, "access_group_ids": access_group_ids},
         )
+
+    def enable_team_logging(self, team_id: str) -> None:
+        """Enable S3 logging for the team ``team_id``."""
+        self._request(
+            "POST",
+            f"/team/{team_id}/callback",
+            json={
+                "callback_name": "s3_v2",
+                "callback_type": "success",
+                "callback_vars": {},
+            },
+        )
+
+    def disable_team_logging(self, team_id: str) -> None:
+        """Disable logging for the team ``team_id``."""
+        self._request("POST", f"/team/{team_id}/disable_logging")
+
+    def get_team_callbacks(self, team_id: str) -> list[dict[str, Any]]:
+        """Return the callbacks configured for the given team."""
+        return self._request("GET", f"/team/{team_id}/callback")

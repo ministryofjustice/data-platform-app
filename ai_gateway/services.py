@@ -20,7 +20,7 @@ from django.utils.functional import cached_property
 from django.utils.text import slugify
 
 from ai_gateway.client import AIGatewayClient
-from ai_gateway.exceptions import AIGatewayError
+from ai_gateway.exceptions import AIGatewayAPIError, AIGatewayError
 from ai_gateway.models import BudgetAlert, BudgetAlertNotification, Key, Team
 from data_platform_app.services import GovUKNotificationsService
 from data_platform_app.utils import build_base_url
@@ -919,21 +919,66 @@ class KeyService:
         """Return the ids of the access groups currently assigned to ``team``."""
         return self._client.get_team_access_group_ids(team.litellm_team_id)
 
+    def _is_team_logging_required(self, access_group_ids: list[str]) -> bool:
+        """Determine if logging is required based on access group IDs."""
+        try:
+            open_ai_access_group_id = self._client.get_access_group_id(
+                settings.AI_GATEWAY_OPEN_AI_ACCESS_GROUP_NAME
+            )
+        except AIGatewayAPIError as error:
+            if error.status_code != 404:
+                raise
+            open_ai_access_group_id = None
+
+        return open_ai_access_group_id in access_group_ids
+
+    def _is_team_logging_enabled(self, team: Team) -> bool:
+        callbacks = self.get_team_callbacks(team)
+        return "s3_v2" in callbacks["success_callbacks"]
+
+    def enable_team_logging(self, team: Team) -> None:
+        if self._is_team_logging_enabled(team):
+            return
+        self._client.enable_team_logging(team_id=team.litellm_team_id)
+
+    def disable_team_logging(self, team: Team) -> None:
+        if not self._is_team_logging_enabled(team):
+            return
+        self._client.disable_team_logging(team_id=team.litellm_team_id)
+
     def set_team_model_access(
         self,
         team: Team,
         access_group_ids: list[str],
         changed_by: User | None = None,
     ) -> tuple[list[str], list[str]]:
-        """Replace the access groups assigned to ``team`` and reconcile its keys.
+        """Replace the access groups assigned to ``team``, enable team logging if required, and
+        reconcile all team keys.
 
         Changing a team's access groups can shrink the models it may use, so
         every key is reconciled with the new allowed set to keep keys from calling
-        models the team no longer has. Returns the ``(updated, failed)`` key
+        models the team no longer has.
+
+        Returns the ``(updated, failed)`` key
         aliases from that reconciliation.
         """
+        logging_required = self._is_team_logging_required(access_group_ids)
+        # do this first, to avoid OpenAI access groups being enabled and enabling logging fails
+        if logging_required:
+            self.enable_team_logging(team=team)
+
         self._client.update_team_access_groups(team.litellm_team_id, access_group_ids)
+
+        # do this after updating access groups, to avoid disabling logging prematurely
+        if not logging_required:
+            self.disable_team_logging(team=team)
+
         return self.reconcile_team_keys_to_allowed_models(team, changed_by=changed_by)
+
+    def get_team_callbacks(self, team: Team) -> list[dict[str, Any]]:
+        """Return the callbacks configured for the given team."""
+        response = self._client.get_team_callbacks(team.litellm_team_id)
+        return response.get("data", [])
 
     @cached_property
     def models_indexed_by_id(self) -> dict[str, dict[str, Any]]:
