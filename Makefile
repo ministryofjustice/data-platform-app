@@ -66,7 +66,7 @@ test:
 	DB_USER=data_platform_app \
 	DB_PASSWORD=data_platform_app \
 	DB_NAME=data_platform_app \
-	uv run pytest -m "not e2e" --failed-first --maxfail=5 $(ARGS)
+	uv run pytest --failed-first --maxfail=5 $(ARGS)
 
 test-e2e:
 	uv run pytest -c pytest-e2e.ini --no-cov $(ARGS)
