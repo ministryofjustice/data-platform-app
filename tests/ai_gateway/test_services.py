@@ -607,6 +607,37 @@ class TestKeyServiceAccessGroups:
         assert updated == ["alias-1"]
         assert failed == []
 
+    @pytest.mark.parametrize(
+        "access_group_ids",
+        [["open-ai-models-id"], ["open-ai-models-id", "some-other-access-group-id"]],
+    )
+    def test_adding_open_ai_access_group_enables_logging(
+        self, project, gateway_client, access_group_ids
+    ):
+        team = Team.objects.create(project=project, litellm_team_id="team-with-openai-access")
+
+        gateway_client.get_access_group_id.return_value = "open-ai-models-id"
+        with KeyService(gateway_client) as service:
+            service.set_team_model_access(team=team, access_group_ids=access_group_ids)
+
+        gateway_client.enable_team_logging.assert_called_once_with(
+            team_id="team-with-openai-access"
+        )
+        gateway_client.disable_team_logging.assert_not_called()
+
+    def test_team_without_open_ai_access_group_logging_not_enabled(self, project, gateway_client):
+        team = Team.objects.create(project=project, litellm_team_id="team-without-openai-access")
+
+        with KeyService(gateway_client) as service:
+            service.set_team_model_access(
+                team=team, access_group_ids=["some-other-access-group-id"]
+            )
+
+        gateway_client.enable_team_logging.assert_not_called()
+        gateway_client.disable_team_logging.assert_called_once_with(
+            team_id="team-without-openai-access"
+        )
+
 
 class TestEstimateCosts:
     AVAILABLE_MODELS = [

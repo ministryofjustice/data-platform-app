@@ -715,10 +715,22 @@ class KeyService:
 
         Changing a team's access groups can shrink the models it may use, so
         every key is reconciled with the new allowed set to keep keys from calling
-        models the team no longer has. Returns the ``(updated, failed)`` key
+        models the team no longer has.
+
+        If the team has the OpenAI access group, logging will be enabled for the team.
+
+        Returns the ``(updated, failed)`` key
         aliases from that reconciliation.
         """
         self._client.update_team_access_groups(team.litellm_team_id, access_group_ids)
+
+        open_ai_access_group_id = self._client.get_access_group_id(
+            settings.AI_GATEWAY_OPEN_AI_ACCESS_GROUP_NAME
+        )
+        if open_ai_access_group_id in access_group_ids:
+            self._client.enable_team_logging(team_id=team.litellm_team_id)
+        if open_ai_access_group_id not in access_group_ids:
+            self._client.disable_team_logging(team_id=team.litellm_team_id)
         return self.reconcile_team_keys_to_allowed_models(team, changed_by=changed_by)
 
     @cached_property
