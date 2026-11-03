@@ -705,25 +705,8 @@ class KeyService:
         """Return the ids of the access groups currently assigned to ``team``."""
         return self._client.get_team_access_group_ids(team.litellm_team_id)
 
-    def set_team_model_access(
-        self,
-        team: Team,
-        access_group_ids: list[str],
-        changed_by: User | None = None,
-    ) -> tuple[list[str], list[str]]:
-        """Replace the access groups assigned to ``team`` and reconcile its keys.
-
-        Changing a team's access groups can shrink the models it may use, so
-        every key is reconciled with the new allowed set to keep keys from calling
-        models the team no longer has.
-
-        If the team has the OpenAI access group, logging will be enabled for the team.
-
-        Returns the ``(updated, failed)`` key
-        aliases from that reconciliation.
-        """
-        self._client.update_team_access_groups(team.litellm_team_id, access_group_ids)
-
+    def _is_team_logging_required(self, access_group_ids: list[str]) -> bool:
+        """Determine if logging is required based on access group IDs."""
         try:
             open_ai_access_group_id = self._client.get_access_group_id(
                 settings.AI_GATEWAY_OPEN_AI_ACCESS_GROUP_NAME
@@ -733,10 +716,44 @@ class KeyService:
                 raise
             open_ai_access_group_id = None
 
-        if open_ai_access_group_id in access_group_ids:
-            self._client.enable_team_logging(team_id=team.litellm_team_id)
-        if open_ai_access_group_id not in access_group_ids:
-            self._client.disable_team_logging(team_id=team.litellm_team_id)
+        return open_ai_access_group_id in access_group_ids
+
+    def _is_team_logging_enabled(self, team: Team) -> bool:
+        callbacks = self.get_team_callbacks(team)
+        return bool(callbacks["success_callbacks"] or callbacks["failure_callbacks"])
+
+    def enable_team_logging(self, team: Team) -> None:
+        if self._is_team_logging_enabled(team):
+            return
+        self._client.enable_team_logging(team_id=team.litellm_team_id)
+
+    def disable_team_logging(self, team: Team) -> None:
+        if not self._is_team_logging_enabled(team):
+            return
+        self._client.disable_team_logging(team_id=team.litellm_team_id)
+
+    def set_team_model_access(
+        self,
+        team: Team,
+        access_group_ids: list[str],
+        changed_by: User | None = None,
+    ) -> tuple[list[str], list[str]]:
+        """Replace the access groups assigned to ``team``, enable team logging if required, and
+        reconcile all team keys.
+
+        Changing a team's access groups can shrink the models it may use, so
+        every key is reconciled with the new allowed set to keep keys from calling
+        models the team no longer has.
+
+        Returns the ``(updated, failed)`` key
+        aliases from that reconciliation.
+        """
+        if self._is_team_logging_required(access_group_ids):
+            self.enable_team_logging(team=team)
+        else:
+            self.disable_team_logging(team=team)
+
+        self._client.update_team_access_groups(team.litellm_team_id, access_group_ids)
         return self.reconcile_team_keys_to_allowed_models(team, changed_by=changed_by)
 
     def get_team_callbacks(self, team: Team) -> list[dict[str, Any]]:

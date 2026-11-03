@@ -617,6 +617,9 @@ class TestKeyServiceAccessGroups:
         team = Team.objects.create(project=project, litellm_team_id="team-with-openai-access")
 
         gateway_client.get_access_group_id.return_value = "open-ai-models-id"
+        gateway_client.get_team_callbacks.return_value = {
+            "data": {"success_callbacks": [], "failure_callbacks": []}
+        }
         with KeyService(gateway_client) as service:
             service.set_team_model_access(team=team, access_group_ids=access_group_ids)
 
@@ -625,9 +628,41 @@ class TestKeyServiceAccessGroups:
         )
         gateway_client.disable_team_logging.assert_not_called()
 
-    def test_team_without_open_ai_access_group_logging_not_enabled(self, project, gateway_client):
+    @pytest.mark.parametrize(
+        "callbacks",
+        [
+            {"success_callbacks": ["logging_callback"], "failure_callbacks": []},
+            {"success_callbacks": ["logging_callback"], "failure_callbacks": ["logging_callback"]},
+            {"success_callbacks": [""], "failure_callbacks": ["logging_callback"]},
+        ],
+    )
+    def test_adding_open_ai_access_group_does_not_enable_logging_if_already_enabled(
+        self, project, gateway_client, callbacks
+    ):
+        team = Team.objects.create(project=project, litellm_team_id="team-with-openai-access")
+
+        gateway_client.get_access_group_id.return_value = "open-ai-models-id"
+        gateway_client.get_team_callbacks.return_value = {"data": callbacks}
+        with KeyService(gateway_client) as service:
+            service.set_team_model_access(team=team, access_group_ids=["open-ai-models-id"])
+
+        gateway_client.enable_team_logging.assert_not_called()
+        gateway_client.disable_team_logging.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "callbacks",
+        [
+            {"success_callbacks": ["logging_callback"], "failure_callbacks": []},
+            {"success_callbacks": ["logging_callback"], "failure_callbacks": ["logging_callback"]},
+            {"success_callbacks": [""], "failure_callbacks": ["logging_callback"]},
+        ],
+    )
+    def test_removing_open_ai_access_group_disables_logging(
+        self, project, gateway_client, callbacks
+    ):
         team = Team.objects.create(project=project, litellm_team_id="team-without-openai-access")
 
+        gateway_client.get_team_callbacks.return_value = {"data": callbacks}
         with KeyService(gateway_client) as service:
             service.set_team_model_access(
                 team=team, access_group_ids=["some-other-access-group-id"]
@@ -637,6 +672,20 @@ class TestKeyServiceAccessGroups:
         gateway_client.disable_team_logging.assert_called_once_with(
             team_id="team-without-openai-access"
         )
+
+    def test_team_without_open_ai_access_group_logging_not_enabled(self, project, gateway_client):
+        team = Team.objects.create(project=project, litellm_team_id="team-without-openai-access")
+
+        gateway_client.get_team_callbacks.return_value = {
+            "data": {"success_callbacks": [], "failure_callbacks": []}
+        }
+        with KeyService(gateway_client) as service:
+            service.set_team_model_access(
+                team=team, access_group_ids=["some-other-access-group-id"]
+            )
+
+        gateway_client.enable_team_logging.assert_not_called()
+        gateway_client.disable_team_logging.assert_not_called()
 
     def test_openai_models_access_group_not_found(self, project, gateway_client):
         team = Team.objects.create(project=project, litellm_team_id="team-no-openai-access")
