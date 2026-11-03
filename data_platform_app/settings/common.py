@@ -198,6 +198,7 @@ AI_GATEWAY_OPEN_AI_ACCESS_GROUP_NAME = "openai-models"
 AI_GATEWAY_CATALOGUE_EXCLUSIONS = [
     {"field": "litellm_params.ai_aws_account_name", "pattern": "digital-prison-reporting-*"},
     {"field": "litellm_params.ai_aws_account_name", "pattern": "octo-engineering-ai-enablement-*"},
+    {"field": "litellm_params.ai_model_provider", "pattern": "OpenAI"},
 ]
 
 # GOV.UK Notify
