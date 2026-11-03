@@ -631,9 +631,8 @@ class TestKeyServiceAccessGroups:
     @pytest.mark.parametrize(
         "callbacks",
         [
-            {"success_callbacks": ["logging_callback"], "failure_callbacks": []},
-            {"success_callbacks": ["logging_callback"], "failure_callbacks": ["logging_callback"]},
-            {"success_callbacks": [""], "failure_callbacks": ["logging_callback"]},
+            {"success_callbacks": ["s3_v2"], "failure_callbacks": []},
+            {"success_callbacks": ["s3_v2"], "failure_callbacks": ["s3_v2"]},
         ],
     )
     def test_adding_open_ai_access_group_does_not_enable_logging_if_already_enabled(
@@ -652,9 +651,8 @@ class TestKeyServiceAccessGroups:
     @pytest.mark.parametrize(
         "callbacks",
         [
-            {"success_callbacks": ["logging_callback"], "failure_callbacks": []},
-            {"success_callbacks": ["logging_callback"], "failure_callbacks": ["logging_callback"]},
-            {"success_callbacks": [""], "failure_callbacks": ["logging_callback"]},
+            {"success_callbacks": ["s3_v2"], "failure_callbacks": []},
+            {"success_callbacks": ["s3_v2"], "failure_callbacks": ["s3_v2"]},
         ],
     )
     def test_removing_open_ai_access_group_disables_logging(
@@ -697,9 +695,7 @@ class TestKeyServiceAccessGroups:
             )
 
         gateway_client.enable_team_logging.assert_not_called()
-        gateway_client.disable_team_logging.assert_called_once_with(
-            team_id="team-no-openai-access"
-        )
+        gateway_client.disable_team_logging.assert_not_called()
 
 
 class TestEstimateCosts:

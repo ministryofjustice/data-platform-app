@@ -720,7 +720,7 @@ class KeyService:
 
     def _is_team_logging_enabled(self, team: Team) -> bool:
         callbacks = self.get_team_callbacks(team)
-        return bool(callbacks["success_callbacks"] or callbacks["failure_callbacks"])
+        return "s3_v2" in callbacks["success_callbacks"]
 
     def enable_team_logging(self, team: Team) -> None:
         if self._is_team_logging_enabled(team):
@@ -748,12 +748,17 @@ class KeyService:
         Returns the ``(updated, failed)`` key
         aliases from that reconciliation.
         """
-        if self._is_team_logging_required(access_group_ids):
+        logging_required = self._is_team_logging_required(access_group_ids)
+        # do this first, to avoid OpenAI access groups being enabled and enabling logging fails
+        if logging_required:
             self.enable_team_logging(team=team)
-        else:
-            self.disable_team_logging(team=team)
 
         self._client.update_team_access_groups(team.litellm_team_id, access_group_ids)
+
+        # do this after updating access groups, to avoid disabling logging prematurely
+        if not logging_required:
+            self.disable_team_logging(team=team)
+
         return self.reconcile_team_keys_to_allowed_models(team, changed_by=changed_by)
 
     def get_team_callbacks(self, team: Team) -> list[dict[str, Any]]:
