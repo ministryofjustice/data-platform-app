@@ -74,9 +74,9 @@ This runs the full test suite with coverage analysis. Tests must maintain **≥9
 
 The Playwright tests live in `tests_e2e/` and run against an already-running app; they do not start Django or use `live_server`. Run them separately from the normal test suite with `make test-e2e`. This target does not load `.env` or `.env.e2e`.
 
-For a local run, configure the app server with E2E authentication enabled. The configured user must already exist in the local database and have permission to manage API keys for the project identified by `E2E_PROJECT_UUID`.
+For a local run, configure the app server with end-to-end authentication enabled. The configured user must already exist in the local database and have permission to manage API keys for the project identified by `E2E_PROJECT_UUID`.
 
-Start the local app with these E2E settings (keep the token in your ignored `.env` or shell environment; do not commit it):
+Start the local app with these end-to-end settings (keep the token in your ignored `.env` or shell environment; do not commit it):
 
 ```bash
 APP_ENV=local \
