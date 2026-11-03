@@ -59,6 +59,19 @@ class TestExcludeCatalogueModels:
 
         assert exclude_catalogue_models(models, [{"field": "region", "pattern": "*"}]) == models
 
+    def test_open_ai_models_excluded(self, settings):
+        """
+        Regression test to ensure OpenAI models are correctly excluded based on current settings
+        """
+        models = [
+            {"model_name": "gpt-4", "litellm_params": {"ai_model_provider": "OpenAI"}},
+            {"model_name": "claude-3", "litellm_params": {"ai_model_provider": "Anthropic"}},
+        ]
+
+        assert exclude_catalogue_models(models, settings.AI_GATEWAY_CATALOGUE_EXCLUSIONS) == [
+            models[1]
+        ]
+
 
 class TestFilterModels:
     def test_no_filters_returns_all_in_order(self):
