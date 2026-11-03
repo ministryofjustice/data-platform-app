@@ -638,6 +638,20 @@ class TestKeyServiceAccessGroups:
             team_id="team-without-openai-access"
         )
 
+    def test_openai_models_access_group_not_found(self, project, gateway_client):
+        team = Team.objects.create(project=project, litellm_team_id="team-no-openai-access")
+
+        gateway_client.get_access_group_id.side_effect = AIGatewayAPIError(404, "Not Found")
+        with KeyService(gateway_client) as service:
+            service.set_team_model_access(
+                team=team, access_group_ids=["some-other-access-group-id"]
+            )
+
+        gateway_client.enable_team_logging.assert_not_called()
+        gateway_client.disable_team_logging.assert_called_once_with(
+            team_id="team-no-openai-access"
+        )
+
 
 class TestEstimateCosts:
     AVAILABLE_MODELS = [

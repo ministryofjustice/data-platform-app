@@ -20,7 +20,7 @@ from django.utils.functional import cached_property
 from django.utils.text import slugify
 
 from ai_gateway.client import AIGatewayClient
-from ai_gateway.exceptions import AIGatewayError
+from ai_gateway.exceptions import AIGatewayAPIError, AIGatewayError
 from ai_gateway.models import BudgetAlert, BudgetAlertNotification, Key, Team
 from data_platform_app.services import GovUKNotificationsService
 from data_platform_app.utils import build_base_url
@@ -724,9 +724,15 @@ class KeyService:
         """
         self._client.update_team_access_groups(team.litellm_team_id, access_group_ids)
 
-        open_ai_access_group_id = self._client.get_access_group_id(
-            settings.AI_GATEWAY_OPEN_AI_ACCESS_GROUP_NAME
-        )
+        try:
+            open_ai_access_group_id = self._client.get_access_group_id(
+                settings.AI_GATEWAY_OPEN_AI_ACCESS_GROUP_NAME
+            )
+        except AIGatewayAPIError as error:
+            if error.status_code != 404:
+                raise
+            open_ai_access_group_id = None
+
         if open_ai_access_group_id in access_group_ids:
             self._client.enable_team_logging(team_id=team.litellm_team_id)
         if open_ai_access_group_id not in access_group_ids:
