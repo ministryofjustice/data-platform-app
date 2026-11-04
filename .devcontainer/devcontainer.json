@@ -22,6 +22,10 @@
         "GitHub.copilot-chat",
         "GitHub.vscode-github-actions",
         "GitHub.vscode-pull-request-github",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.debugpy",
+        "ms-python.vscode-python-envs",
         "streetsidesoftware.code-spell-checker"
       ]
     }
