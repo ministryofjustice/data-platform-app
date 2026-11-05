@@ -4,7 +4,7 @@
 {% endcomment %}
 <section aria-labelledby="{{ tab_id }}-daily-heading">
   <h3 class="govuk-heading-m" id="{{ tab_id }}-daily-heading">Daily usage</h3>
-  <p class="govuk-body">Select {{ selection_prompt }} to see its daily usage for {{ selected_month|date:"F Y" }}.</p>
+  <p class="govuk-body">Select {{ selection_prompt }} to see its daily usage for {{ selected_month|date:"F" }}.</p>
   {% if daily.choices %}
     <form method="get"
           action="{{ usage_url }}#{{ tab_id }}"
