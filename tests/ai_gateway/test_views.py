@@ -1647,7 +1647,7 @@ class TestAICostUsageCalculatorView:
     ]
 
     def test_calculator_view_renders(self, client, user, key_service):
-        key_service.list_all_models.return_value = self.CALCULATOR_MODELS
+        key_service.list_public_models.return_value = self.CALCULATOR_MODELS
         client.force_login(user)
 
         response = client.get(reverse("ai_cost_usage_calculator"))
@@ -1656,7 +1656,7 @@ class TestAICostUsageCalculatorView:
         assertTemplateUsed(response, "ai_gateway/ai_cost_usage_calculator.html")
 
     def test_valid_post_renders_estimate(self, client, user, key_service):
-        key_service.list_all_models.return_value = self.CALCULATOR_MODELS
+        key_service.list_public_models.return_value = self.CALCULATOR_MODELS
         client.force_login(user)
 
         response = client.post(
@@ -1681,7 +1681,7 @@ class TestAICostUsageCalculatorView:
         assertContains(response, "6.00")
 
     def test_multi_row_post_renders_both_models(self, client, user, key_service):
-        key_service.list_all_models.return_value = self.CALCULATOR_MODELS
+        key_service.list_public_models.return_value = self.CALCULATOR_MODELS
         client.force_login(user)
 
         response = client.post(
@@ -1737,7 +1737,7 @@ class TestAICostUsageCalculatorView:
     def test_htmx_returns_filtered_models(self, client, user, key_service):
         client.force_login(user)
 
-        key_service.list_all_models.return_value = self.CALCULATOR_MODELS
+        key_service.list_public_models.return_value = self.CALCULATOR_MODELS
         response = client.get(
             reverse("ai_cost_usage_calculator"),
             {"provider": self.CALCULATOR_MODELS[1]["provider"]},

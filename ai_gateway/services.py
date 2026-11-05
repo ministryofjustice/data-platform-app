@@ -21,6 +21,7 @@ from django.utils.text import slugify
 
 from ai_gateway.client import AIGatewayClient
 from ai_gateway.exceptions import AIGatewayAPIError, AIGatewayError
+from ai_gateway.filtering import exclude_catalogue_models
 from ai_gateway.models import BudgetAlert, BudgetAlertNotification, Key, Team
 from data_platform_app.services import GovUKNotificationsService
 from data_platform_app.utils import build_base_url
@@ -695,6 +696,12 @@ class KeyService:
         ]
         models.sort(key=lambda model: model["display_name"].lower())
         return models
+
+    def list_public_models(self) -> list[dict[str, Any]]:
+        """Returns models that are publicly available/can be requested"""
+        return exclude_catalogue_models(
+            self.list_all_models(), settings.AI_GATEWAY_CATALOGUE_EXCLUSIONS
+        )
 
     def list_all_models(self) -> list[dict[str, Any]]:
         """Return every model on the gateway, regardless of project access.

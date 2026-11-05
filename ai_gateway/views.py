@@ -6,7 +6,6 @@ from urllib.parse import urlencode
 
 import sentry_sdk
 import structlog
-from django.conf import settings
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -15,7 +14,7 @@ from django.views.generic import DeleteView, DetailView, FormView, ListView, Tem
 from django.views.generic.detail import SingleObjectMixin
 
 from ai_gateway.exceptions import AIGatewayError
-from ai_gateway.filtering import VISIBLE_LIMIT, exclude_catalogue_models, filter_models
+from ai_gateway.filtering import VISIBLE_LIMIT, filter_models
 from ai_gateway.forms import (
     KeyCreateForm,
     KeyModelChangeForm,
@@ -65,9 +64,7 @@ class AIModelAvailabilityView(TemplateView):
 
         try:
             with KeyService.from_settings() as service:
-                all_models = exclude_catalogue_models(
-                    service.list_all_models(), settings.AI_GATEWAY_CATALOGUE_EXCLUSIONS
-                )
+                all_models = service.list_public_models()
         except AIGatewayError as error:
             sentry_sdk.capture_exception(error)
             all_models = []
@@ -103,7 +100,7 @@ class AICostUsageCalculatorView(TemplateView):
     @cached_property
     def available_models(self) -> list[dict[str, Any]]:
         with KeyService.from_settings() as service:
-            return service.list_all_models()
+            return service.list_public_models()
 
     def get(self, request, *args, **kwargs):
         if not request.htmx:
