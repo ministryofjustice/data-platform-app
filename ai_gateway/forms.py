@@ -26,6 +26,28 @@ class UsageMonthForm(forms.Form):
         ]
 
 
+class UsageDailyFilterForm(forms.Form):
+    """Select a key or model from the selected month's eligible usage rows."""
+
+    key = forms.ChoiceField(
+        label="API Key", required=False, widget=forms.Select(attrs={"class": "govuk-select"})
+    )
+    model = forms.ChoiceField(
+        label="Model", required=False, widget=forms.Select(attrs={"class": "govuk-select"})
+    )
+
+    def __init__(
+        self,
+        *args,
+        key_choices: list[tuple[str, str]],
+        model_choices: list[tuple[str, str]],
+        **kwargs,
+    ) -> None:
+        super().__init__(*args, **kwargs)
+        self.fields["key"].choices = [("", "Select an API key"), *key_choices]
+        self.fields["model"].choices = [("", "Select a model"), *model_choices]
+
+
 class KeyCreateForm(forms.ModelForm):
     models = forms.MultipleChoiceField(
         label="AI Model",

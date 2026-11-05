@@ -1,10 +1,10 @@
 {% load usage_extras %}
 {% comment %}
-  Renders spend as a simple SVG bar chart behind a "Show chart" disclosure.
+  Renders an ECharts chart from a safely serialised usage payload.
 
   Expects:
     chart_name  - name of the chart (e.g. "daily-spend", "monthly-spend")
-    chart_data  - geometry from ai_gateway.charts.bar_chart
+    chart_data  - labels, values, axis labels and optional rendering settings
     chart_label - accessible label describing what the chart shows
 {% endcomment %}
 <div class="ai-gateway-chart-toggle govuk-!-margin-top-3">
@@ -16,6 +16,6 @@
          aria-label="{{ chart_label }}"
          aria-describedby="{{ chart_desc_id }}"></div>
     <p id="{{ chart_desc_id }}"
-       class="govuk-visually-hidden">The exact figures behind this chart are in the table above.</p>
+       class="govuk-visually-hidden">Select Table to view the exact figures behind this chart.</p>
   {% endwith %}
 </div>

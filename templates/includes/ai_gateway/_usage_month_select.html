@@ -1,16 +1,21 @@
 {% comment %}
   Expects:
-    month_choices  - list of date objects, most recent first
+    month_form     - month choice form
     selected_month - the currently selected date object
+    usage_url, tab_id, usage_filters - form action and validated filter state
 {% endcomment %}
 <form method="get"
+      action="{{ usage_url }}#{{ tab_id }}"
       class="app-usage-month-select"
       data-module="app-auto-submit-select">
+  {% for name, value in usage_filters.items %}
+    {% if value %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endif %}
+  {% endfor %}
   <div class="govuk-form-group govuk-!-margin-bottom-0 govuk-!-display-inline-block">
     <label class="govuk-label govuk-!-font-weight-bold govuk-!-display-inline-block"
-           for="{{ month_form.month.id_for_label }}">{{ month_form.month.label }}</label>
+           for="{{ month_form.month.id_for_label }}-{{ tab_id }}">{{ month_form.month.label }}</label>
     <select class="govuk-select"
-            id="{{ month_form.month.id_for_label }}"
+            id="{{ month_form.month.id_for_label }}-{{ tab_id }}"
             name="{{ month_form.month.html_name }}">
       {% for value, label in month_form.month.field.choices %}
         <option value="{{ value }}"

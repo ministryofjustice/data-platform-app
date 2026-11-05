@@ -5,7 +5,8 @@
 
   Expects:
     column_label - label for the first table column (e.g. "Date", "API key")
-    rows         - list of {label, spend, url (optional)}
+    rows         - list of {label, spend, requests, url (optional)}
+    show_tokens  - add input/output token columns for model usage only
     show_all     - optional {shown, total, url}; when set, renders the truncation note
                    and HTMX "Show all" link. Omitted once the table is expanded.
 {% endcomment %}
@@ -16,12 +17,24 @@
       <th scope="col"
           class="govuk-table__header govuk-table__header--numeric"
           aria-sort="none">Spend</th>
+      <th scope="col"
+          class="govuk-table__header govuk-table__header--numeric"
+          aria-sort="none">Requests</th>
+      {% if show_tokens %}
+        <th scope="col"
+            class="govuk-table__header govuk-table__header--numeric"
+            aria-sort="none">Input tokens</th>
+        <th scope="col"
+            class="govuk-table__header govuk-table__header--numeric"
+            aria-sort="none">Output tokens</th>
+      {% endif %}
     </tr>
   </thead>
   <tbody class="govuk-table__body">
     {% for row in rows %}
       <tr class="govuk-table__row">
-        <td class="govuk-table__cell">
+        <td class="govuk-table__cell"
+            {% if row.date %}data-sort-value="{{ row.date|date:'Y-m-d' }}"{% endif %}>
           {% if row.url %}
             <a class="govuk-link" href="{{ row.url }}">{{ row.label }}</a>
           {% else %}
@@ -29,6 +42,11 @@
           {% endif %}
         </td>
         <td class="govuk-table__cell govuk-table__cell--numeric">{{ row.spend|usd }}</td>
+        <td class="govuk-table__cell govuk-table__cell--numeric">{{ row.requests|default_if_none:"Not available" }}</td>
+        {% if show_tokens %}
+          <td class="govuk-table__cell govuk-table__cell--numeric">{{ row.input_tokens|default_if_none:"Not available" }}</td>
+          <td class="govuk-table__cell govuk-table__cell--numeric">{{ row.output_tokens|default_if_none:"Not available" }}</td>
+        {% endif %}
       </tr>
     {% endfor %}
   </tbody>

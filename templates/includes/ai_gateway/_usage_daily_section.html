@@ -1,0 +1,34 @@
+{% comment %}
+  Expects: daily usage data, field (key/model BoundField), selection_prompt,
+  selected_month, usage_url, tab_id, validated usage_filters and optional show_tokens.
+{% endcomment %}
+<section aria-labelledby="{{ tab_id }}-daily-heading">
+  <h3 class="govuk-heading-m" id="{{ tab_id }}-daily-heading">Daily usage</h3>
+  <p class="govuk-body">Select {{ selection_prompt }} to see its daily usage for {{ selected_month|date:"F Y" }}.</p>
+  {% if daily.choices %}
+    <form method="get"
+          action="{{ usage_url }}#{{ tab_id }}"
+          data-module="app-auto-submit-select">
+      <input type="hidden" name="month" value="{{ selected_month|date:'Y-m' }}">
+      {% for name, value in usage_filters.items %}
+        {% if value and name != field.name %}
+          <input type="hidden" name="{{ name }}" value="{{ value }}">
+        {% endif %}
+      {% endfor %}
+      <div class="govuk-form-group">
+        <label class="govuk-label govuk-!-font-weight-bold"
+               for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+      </div>
+      <noscript>
+        <button type="submit" class="govuk-button govuk-button--secondary">View</button>
+      </noscript>
+    </form>
+    {% if daily.selected %}
+      <h4 class="govuk-heading-s">{{ daily.label }}</h4>
+      {% include "includes/ai_gateway/_usage_spend_section.html" with column_label="Date" rows=daily.rows chart_name=daily.chart_name chart_data=daily.chart_data chart_label=daily.chart_label requests_chart_name=daily.requests_chart_name requests_chart_data=daily.requests_chart_data requests_chart_label=daily.requests_chart_label show_tokens=show_tokens tokens_chart_name=daily.tokens_chart_name tokens_chart_data=daily.tokens_chart_data tokens_chart_label=daily.tokens_chart_label empty_message="No daily usage recorded for this selection." only %}
+    {% endif %}
+  {% else %}
+    <p class="govuk-body">No usage recorded for this month.</p>
+  {% endif %}
+</section>

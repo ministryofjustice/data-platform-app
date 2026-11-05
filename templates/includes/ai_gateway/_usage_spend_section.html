@@ -1,16 +1,16 @@
 {% load usage_extras %}
 {% comment %}
-  A labelled table of spend rows, with an optional chart shown via a "Show chart"
-  disclosure (the same progressive-disclosure pattern as "Show filter" on the key
-  creation page, so no extra JavaScript is needed to switch views).
+  A labelled usage table with a Table/Chart toggle and Spend/Requests chart tabs.
 
   Expects:
     heading        - section heading text (e.g. "Daily spend")
     heading_level  - "h3" or "h4", matching the surrounding heading structure
     column_label   - label for the first table column (e.g. "Date", "API key")
-    rows           - list of {label, spend, url (optional)}
+    rows           - list of {label, spend, requests, url (optional)}
     chart_name     - name of the chart to render (e.g. "daily-spend", "monthly-spend")
     chart_label    - accessible label describing what the chart shows
+    requests_chart_name, requests_chart_data, requests_chart_label - request chart
+    show_tokens, tokens_chart_name, tokens_chart_data, tokens_chart_label - optional tokens
     show_all       - optional {shown, total, url} to render a "Showing X of Y" note and link
     empty_message  - message shown when rows is empty
 {% endcomment %}
@@ -20,12 +20,75 @@
   {% endif %}
   {% if rows %}
     {% include "includes/ai_gateway/_usage_view_toggle.html" with param_name=chart_name current_view="table" only %}
-    <div class="app-usage-view" data-view="table">
-      {% include "includes/ai_gateway/_usage_spend_table.html" with column_label=column_label rows=rows show_all=show_all only %}
+    <div class="app-usage-view{% if show_tokens %} app-usage-token-table{% endif %}"
+         data-view="table"
+         {% if show_tokens %}role="region" aria-label="{{ column_label }} usage table" tabindex="0"{% endif %}>
+      {% include "includes/ai_gateway/_usage_spend_table.html" with column_label=column_label rows=rows show_all=show_all show_tokens=show_tokens only %}
     </div>
     {% if chart_data %}
       <div class="app-usage-view" data-view="chart" hidden>
-        {% include "includes/ai_gateway/_usage_chart.html" with chart_data=chart_data chart_name=chart_name chart_label=chart_label only %}
+        <div class="app-usage-metric-tabs{% if show_tokens %} app-usage-metric-tabs--tokens{% endif %}"
+             role="tablist"
+             aria-label="Chart metric: {{ column_label }}">
+          <button type="button"
+                  class="app-usage-metric-tabs__tab"
+                  id="{{ chart_name }}-tab-spend"
+                  role="tab"
+                  aria-selected="true"
+                  aria-controls="{{ chart_name }}-panel-spend"
+                  data-chart-metric="spend">Spend</button>
+          <button type="button"
+                  class="app-usage-metric-tabs__tab"
+                  id="{{ chart_name }}-tab-requests"
+                  role="tab"
+                  aria-selected="false"
+                  aria-controls="{{ chart_name }}-panel-requests"
+                  tabindex="-1"
+                  data-chart-metric="requests">Requests</button>
+          {% if show_tokens %}
+            <button type="button"
+                    class="app-usage-metric-tabs__tab"
+                    id="{{ chart_name }}-tab-tokens"
+                    role="tab"
+                    aria-selected="false"
+                    aria-controls="{{ chart_name }}-panel-tokens"
+                    tabindex="-1"
+                    data-chart-metric="tokens">Tokens</button>
+          {% endif %}
+        </div>
+        <div id="{{ chart_name }}-panel-spend"
+             role="tabpanel"
+             aria-labelledby="{{ chart_name }}-tab-spend"
+             tabindex="0"
+             data-chart-panel="spend">
+          {% include "includes/ai_gateway/_usage_chart.html" with chart_data=chart_data chart_name=chart_name chart_label=chart_label only %}
+        </div>
+        <div id="{{ chart_name }}-panel-requests"
+             role="tabpanel"
+             aria-labelledby="{{ chart_name }}-tab-requests"
+             tabindex="0"
+             data-chart-panel="requests"
+             hidden>
+          {% if requests_chart_data %}
+            {% include "includes/ai_gateway/_usage_chart.html" with chart_data=requests_chart_data chart_name=requests_chart_name chart_label=requests_chart_label only %}
+          {% else %}
+            <p class="govuk-body govuk-!-margin-top-3">Request data is not available for this period.</p>
+          {% endif %}
+        </div>
+        {% if show_tokens %}
+          <div id="{{ chart_name }}-panel-tokens"
+               role="tabpanel"
+               aria-labelledby="{{ chart_name }}-tab-tokens"
+               tabindex="0"
+               data-chart-panel="tokens"
+               hidden>
+            {% if tokens_chart_data %}
+              {% include "includes/ai_gateway/_usage_chart.html" with chart_data=tokens_chart_data chart_name=tokens_chart_name chart_label=tokens_chart_label only %}
+            {% else %}
+              <p class="govuk-body govuk-!-margin-top-3">Token data is not available for this period.</p>
+            {% endif %}
+          </div>
+        {% endif %}
       </div>
     {% endif %}
   {% else %}
