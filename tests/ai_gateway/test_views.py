@@ -1242,8 +1242,8 @@ class TestUsageView:
             response = client.get(reverse("ai_gateway:usage", args=[team.project.uuid]))
 
         assertContains(response, ">Daily usage</h3>", count=2)
-        assertContains(response, "Select an API key to see its daily usage for January.")
-        assertContains(response, "Select a model to see its daily usage for January.")
+        assertContains(response, "Select an API key to see its daily usage for January")
+        assertContains(response, "Select a model to see its daily usage for January")
         assertContains(response, 'id="id_usage_key"', count=1)
         assertContains(response, 'id="id_usage_model"', count=1)
         assertContains(response, 'for="id_usage_key"', count=1)
