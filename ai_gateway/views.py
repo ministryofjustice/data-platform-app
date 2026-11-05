@@ -25,7 +25,12 @@ from ai_gateway.forms import (
     build_model_usage_rate_formset,
 )
 from ai_gateway.models import Key, Team
-from ai_gateway.services import KeyService, UsageService, estimate_costs
+from ai_gateway.services import (
+    DAILY_SPEND_PREVIEW_COUNT,
+    KeyService,
+    UsageService,
+    estimate_costs,
+)
 from data_platform_app.mixins import FeatureRequiredMixin
 from projects.mixins import (
     ExistingProjectMixin,
@@ -201,6 +206,19 @@ class UsageView(
                     "show_all": overview_data["daily_show_all"],
                 },
             )
+        if request.htmx:
+            for param, dimension in (("key_daily", "key_data"), ("model_daily", "model_data")):
+                daily = context[dimension].get("daily", {})
+                if request.GET.get(param) == "all" and daily.get("expanded"):
+                    return render(
+                        request,
+                        "includes/ai_gateway/_usage_spend_table.html",
+                        {
+                            "column_label": "Date",
+                            "rows": daily["rows"],
+                            "show_tokens": dimension == "model_data",
+                        },
+                    )
         return self.render_to_response(context)
 
     def get_context_data(self, **kwargs):
@@ -260,7 +278,39 @@ class UsageView(
                 "key": key_daily.get("selected", ""),
                 "model": model_daily.get("selected", ""),
                 "daily": "all" if self.request.GET.get("daily") == "all" else "",
+                "key_daily": "",
+                "model_daily": "",
             }
+            daily_sections = (
+                ("key_daily", key_daily, "spend-per-key"),
+                ("model_daily", model_daily, "spend-per-model"),
+            )
+            for param, daily, tab_id in daily_sections:
+                rows = daily.get("rows", [])
+                expanded = (
+                    self.request.GET.get(param) == "all"
+                    and bool(daily.get("selected"))
+                    and len(rows) > DAILY_SPEND_PREVIEW_COUNT
+                )
+                filters[param] = "all" if expanded else ""
+                daily["expanded"] = expanded
+                daily["table_rows"] = rows if expanded else rows[:DAILY_SPEND_PREVIEW_COUNT]
+                show_all = None
+                if len(rows) > DAILY_SPEND_PREVIEW_COUNT and daily.get("selected"):
+                    query = {name: value for name, value in filters.items() if value}
+                    query.update(
+                        {
+                            "month": selected_month.strftime("%Y-%m"),
+                            param: "all",
+                        }
+                    )
+                    show_all = {
+                        "shown": DAILY_SPEND_PREVIEW_COUNT,
+                        "total": len(rows),
+                        "url": f"?{urlencode(query)}#{tab_id}",
+                    }
+                daily["show_all"] = None if expanded else show_all
+
             daily_filter_form = UsageDailyFilterForm(
                 key_choices=key_daily.get("choices", []),
                 model_choices=model_daily.get("choices", []),

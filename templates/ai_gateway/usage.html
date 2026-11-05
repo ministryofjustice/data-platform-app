@@ -22,10 +22,10 @@
           <a class="govuk-tabs__tab" href="#overview">Overview</a>
         </li>
         <li class="govuk-tabs__list-item">
-          <a class="govuk-tabs__tab" href="#spend-per-key">Spend per API key</a>
+          <a class="govuk-tabs__tab" href="#spend-per-key">Usage by API key</a>
         </li>
         <li class="govuk-tabs__list-item">
-          <a class="govuk-tabs__tab" href="#spend-per-model">Spend per model</a>
+          <a class="govuk-tabs__tab" href="#spend-per-model">Usage by model</a>
         </li>
       </ul>
       <div class="govuk-tabs__panel" id="overview">
@@ -79,8 +79,8 @@
           {% if overview_data.budget_alert_threshold %}
             {% include "includes/ai_gateway/_usage_budget_banner.html" with threshold=overview_data.budget_alert_threshold only %}
           {% endif %}
-          {% include "includes/ai_gateway/_usage_spend_section.html" with heading="Daily spend" heading_level="h4" column_label="Date" rows=overview_data.daily_spend_preview chart_name=overview_data.daily_chart_name chart_data=overview_data.daily_chart_data chart_label=overview_data.daily_chart_label requests_chart_name=overview_data.daily_requests_chart_name requests_chart_data=overview_data.daily_requests_chart_data requests_chart_label=overview_data.daily_requests_chart_label show_all=overview_data.daily_show_all empty_message="No spend recorded for this month." only %}
-          {% include "includes/ai_gateway/_usage_spend_section.html" with heading="Monthly spend" heading_level="h4" column_label="Month" rows=overview_data.monthly_spend_rows chart_name=overview_data.monthly_chart_name chart_data=overview_data.monthly_chart_data chart_label="Monthly spend" requests_chart_name=overview_data.monthly_requests_chart_name requests_chart_data=overview_data.monthly_requests_chart_data requests_chart_label=overview_data.monthly_requests_chart_label empty_message="No spend recorded yet." only %}
+          {% include "includes/ai_gateway/_usage_spend_section.html" with heading="Daily usage" heading_level="h4" column_label="Date" rows=overview_data.daily_spend_preview chart_name=overview_data.daily_chart_name chart_data=overview_data.daily_chart_data chart_label=overview_data.daily_chart_label requests_chart_name=overview_data.daily_requests_chart_name requests_chart_data=overview_data.daily_requests_chart_data requests_chart_label=overview_data.daily_requests_chart_label show_all=overview_data.daily_show_all empty_message="No spend recorded for this month." only %}
+          {% include "includes/ai_gateway/_usage_spend_section.html" with heading="Monthly usage" heading_level="h4" column_label="Month" rows=overview_data.monthly_spend_rows chart_name=overview_data.monthly_chart_name chart_data=overview_data.monthly_chart_data chart_label="Monthly spend" requests_chart_name=overview_data.monthly_requests_chart_name requests_chart_data=overview_data.monthly_requests_chart_data requests_chart_label=overview_data.monthly_requests_chart_label empty_message="No spend recorded yet." only %}
         {% endif %}
         <div class="govuk-grid-row govuk-!-margin-bottom-2">
           <div class="govuk-grid-column-full">
@@ -100,19 +100,25 @@
         {% else %}
           <div class="govuk-grid-row govuk-!-margin-bottom-4">
             <div class="govuk-grid-column-two-thirds">
-              <h3 class="govuk-heading-m govuk-!-margin-bottom-1">Spend per API key</h3>
+              <h3 class="govuk-heading-m govuk-!-margin-bottom-1">Usage by API key</h3>
             </div>
           </div>
           <div class="govuk-grid-row govuk-!-margin-bottom-4">
             <div class="govuk-grid-column-one-third govuk-!-padding-top-2">
-              <p class="govuk-body govuk-!-margin-bottom-0">Spend for {{ selected_month|date:"F Y" }}</p>
+              <p class="govuk-hint govuk-!-margin-bottom-0 govuk-!-margin-top-0">{{ selected_month|date:"F Y" }}</p>
             </div>
             <div class="govuk-grid-column-two-thirds govuk-!-text-align-right">
               {% include "includes/ai_gateway/_usage_month_select.html" with month_form=month_form selected_month=selected_month usage_url=usage_url usage_filters=usage_filters tab_id="spend-per-key" only %}
             </div>
           </div>
-          {% include "includes/ai_gateway/_usage_spend_section.html" with heading_level="h4" column_label="API key" rows=key_data.rows chart_name=key_data.chart_name chart_data=key_data.chart_data chart_label=key_data.chart_label requests_chart_name=key_data.requests_chart_name requests_chart_data=key_data.requests_chart_data requests_chart_label=key_data.requests_chart_label empty_message="No API key spend recorded for this month." only %}
-          {% include "includes/ai_gateway/_usage_daily_section.html" with daily=key_data.daily field=daily_filter_form.key selection_prompt="an API key" selected_month=selected_month usage_url=usage_url usage_filters=usage_filters tab_id="spend-per-key" only %}
+          <div class="govuk-grid-row govuk-!-margin-bottom-3">
+            <div class="govuk-grid-column-two-thirds">
+              <h3 class="govuk-heading-m govuk-!-margin-bottom-1">Monthly usage</h3>
+              <p class="govuk-hint govuk-!-margin-bottom-0 govuk-!-margin-top-0">Total usage for each API key</p>
+            </div>
+          </div>
+          {% include "includes/ai_gateway/_usage_spend_section.html" with heading_level="h4" column_label="API key" rows=key_data.rows chart_name=key_data.chart_name chart_data=key_data.chart_data chart_label=key_data.chart_label requests_chart_name=key_data.requests_chart_name requests_chart_data=key_data.requests_chart_data requests_chart_label=key_data.requests_chart_label empty_message="No API key usage recorded for this month." only %}
+          {% include "includes/ai_gateway/_usage_daily_section.html" with daily=key_data.daily field=daily_filter_form.key selection_prompt="an API key" selected_month=selected_month usage_url=usage_url usage_filters=usage_filters show_all_param="key_daily" tab_id="spend-per-key" only %}
         {% endif %}
       </div>
       <div class="govuk-tabs__panel govuk-tabs__panel--hidden"
@@ -122,19 +128,25 @@
         {% else %}
           <div class="govuk-grid-row govuk-!-margin-bottom-4">
             <div class="govuk-grid-column-two-thirds">
-              <h3 class="govuk-heading-m govuk-!-margin-bottom-1">Spend per model</h3>
+              <h3 class="govuk-heading-m govuk-!-margin-bottom-1">Usage by model</h3>
             </div>
           </div>
           <div class="govuk-grid-row govuk-!-margin-bottom-4">
             <div class="govuk-grid-column-one-third govuk-!-padding-top-2">
-              <p class="govuk-body govuk-!-margin-bottom-0">Spend for {{ selected_month|date:"F Y" }}</p>
+              <p class="govuk-hint govuk-!-margin-bottom-0 govuk-!-margin-top-0">{{ selected_month|date:"F Y" }}</p>
             </div>
             <div class="govuk-grid-column-two-thirds govuk-!-text-align-right">
               {% include "includes/ai_gateway/_usage_month_select.html" with month_form=month_form selected_month=selected_month usage_url=usage_url usage_filters=usage_filters tab_id="spend-per-model" only %}
             </div>
           </div>
-          {% include "includes/ai_gateway/_usage_spend_section.html" with heading_level="h4" column_label="Model" rows=model_data.rows chart_name=model_data.chart_name chart_data=model_data.chart_data chart_label=model_data.chart_label requests_chart_name=model_data.requests_chart_name requests_chart_data=model_data.requests_chart_data requests_chart_label=model_data.requests_chart_label show_tokens=True tokens_chart_name=model_data.tokens_chart_name tokens_chart_data=model_data.tokens_chart_data tokens_chart_label=model_data.tokens_chart_label empty_message="No model spend recorded for this month." only %}
-          {% include "includes/ai_gateway/_usage_daily_section.html" with daily=model_data.daily field=daily_filter_form.model selection_prompt="a model" selected_month=selected_month usage_url=usage_url usage_filters=usage_filters tab_id="spend-per-model" show_tokens=True only %}
+          <div class="govuk-grid-row govuk-!-margin-bottom-3">
+            <div class="govuk-grid-column-two-thirds">
+              <h3 class="govuk-heading-m govuk-!-margin-bottom-1">Monthly usage</h3>
+              <p class="govuk-hint govuk-!-margin-bottom-0 govuk-!-margin-top-0">Total usage for each model</p>
+            </div>
+          </div>
+          {% include "includes/ai_gateway/_usage_spend_section.html" with heading_level="h4" column_label="Model" rows=model_data.rows chart_name=model_data.chart_name chart_data=model_data.chart_data chart_label=model_data.chart_label requests_chart_name=model_data.requests_chart_name requests_chart_data=model_data.requests_chart_data requests_chart_label=model_data.requests_chart_label show_tokens=True tokens_chart_name=model_data.tokens_chart_name tokens_chart_data=model_data.tokens_chart_data tokens_chart_label=model_data.tokens_chart_label empty_message="No model usage recorded for this month." only %}
+          {% include "includes/ai_gateway/_usage_daily_section.html" with daily=model_data.daily field=daily_filter_form.model selection_prompt="a model" selected_month=selected_month usage_url=usage_url usage_filters=usage_filters show_all_param="model_daily" tab_id="spend-per-model" show_tokens=True only %}
         {% endif %}
         <div class="govuk-grid-row govuk-!-margin-bottom-2">
           <div class="govuk-grid-column-full">
