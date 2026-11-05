@@ -55,6 +55,46 @@ class TestBuildAlias:
 
 
 class TestKeyServiceListModels:
+    def test_list_public_models_applies_configured_exclusions(self, gateway_client, settings):
+        settings.AI_GATEWAY_CATALOGUE_EXCLUSIONS = [
+            {"field": "region", "pattern": "Global"},
+            {
+                "field": "litellm_params.ai_aws_account_name",
+                "pattern": "digital-prison-reporting-*",
+            },
+        ]
+        gateway_client.list_models_v1_info.return_value = [
+            {
+                "model_name": "global",
+                "litellm_params": {"ai_model_location": "Global"},
+                "model_info": {},
+            },
+            {
+                "model_name": "restricted",
+                "litellm_params": {
+                    "ai_model_location": "United Kingdom",
+                    "ai_aws_account_name": "digital-prison-reporting-production",
+                },
+                "model_info": {},
+            },
+            {
+                "model_name": "shared",
+                "litellm_params": {
+                    "ai_model_name": "Shared model",
+                    "ai_model_location": "United Kingdom",
+                    "ai_aws_account_name": "shared-account",
+                },
+                "model_info": {},
+            },
+        ]
+
+        with KeyService(gateway_client) as service:
+            models = service.list_public_models()
+
+        assert [model["model_name"] for model in models] == ["shared"]
+        assert models[0]["display_name"] == "Shared model"
+        assert models[0]["region"] == "United Kingdom"
+
     @pytest.mark.parametrize("multiplier", [None, 1, 1.1])
     @pytest.mark.parametrize("project_scoped", [False, True])
     def test_regional_uplift_applies_to_prices_and_estimates(

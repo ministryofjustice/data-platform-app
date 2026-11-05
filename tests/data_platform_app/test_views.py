@@ -201,31 +201,11 @@ class TestAICostUsageCalculatorView:
 
 
 class TestAIModelAvailabilityView:
-    def test_supports_configured_region_exclusions(self, client, user, key_service, settings):
-        settings.AI_GATEWAY_CATALOGUE_EXCLUSIONS = [{"field": "region", "pattern": "Global"}]
-        key_service.list_all_models.return_value = [
-            {"model_name": "global", "display_name": "Global model", "region": "Global"},
-            {"model_name": "uk", "display_name": "UK model", "region": "United Kingdom"},
-        ]
-        client.force_login(user)
-
-        response = client.get(reverse("ai_model_availability"))
-
-        assertContains(response, "UK model")
-        assertNotContains(response, "Global model")
-
     @pytest.mark.parametrize("htmx", [False, True])
-    def test_exclusions_apply_before_filters_counts_and_options(
+    def test_uses_public_models_for_results_and_filter_options(
         self, client, user, key_service, htmx
     ):
-        key_service.list_all_models.return_value = [
-            {
-                "model_name": "restricted",
-                "display_name": "Restricted model",
-                "provider": "Restricted provider",
-                "region": "Global",
-                "litellm_params": {"ai_aws_account_name": "digital-prison-reporting-production"},
-            },
+        key_service.list_public_models.return_value = [
             {
                 "model_name": "shared",
                 "display_name": "Shared model",
@@ -240,7 +220,6 @@ class TestAIModelAvailabilityView:
         assert [model["model_name"] for model in response.context["models"]] == ["shared"]
         assert response.context["model_providers"] == ["Shared provider"]
         assert response.context["model_regions"] == ["United Kingdom"]
-        assertNotContains(response, "Restricted model")
         assertContains(response, "1 model</strong>")
 
     def test_redirects_anonymous_user_to_login(self, client):
@@ -250,7 +229,7 @@ class TestAIModelAvailabilityView:
         assert response.url.startswith(reverse("login"))
 
     def test_renders_model_catalogue(self, client, user, key_service):
-        key_service.list_all_models.return_value = [
+        key_service.list_public_models.return_value = [
             {
                 "model_name": "gpt-4",
                 "display_name": "GPT-4",
@@ -284,7 +263,7 @@ class TestAIModelAvailabilityView:
         assertContains(response, 'data-module="moj-sortable-table"')
 
     def test_filters_models_by_search_provider_and_region(self, client, user, key_service):
-        key_service.list_all_models.return_value = [
+        key_service.list_public_models.return_value = [
             {
                 "model_name": "gpt-4",
                 "display_name": "GPT-4",
@@ -313,7 +292,7 @@ class TestAIModelAvailabilityView:
         assertNotContains(response, "GPT-4")
 
     def test_htmx_request_returns_results_fragment(self, client, user, key_service):
-        key_service.list_all_models.return_value = [
+        key_service.list_public_models.return_value = [
             {
                 "model_name": "gpt-4",
                 "display_name": "GPT-4",
@@ -336,7 +315,7 @@ class TestAIModelAvailabilityView:
         assertNotContains(response, "AI model availability")
 
     def test_displays_error_when_gateway_is_unavailable(self, client, user, key_service):
-        key_service.list_all_models.side_effect = AIGatewayAPIError(503, "unavailable")
+        key_service.list_public_models.side_effect = AIGatewayAPIError(503, "unavailable")
         client.force_login(user)
 
         with patch("ai_gateway.views.sentry_sdk.capture_exception") as capture_exception:

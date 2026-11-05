@@ -140,8 +140,8 @@ After updating your `.env`, restart the app (`make run`) so the new flag values 
 
 ## AI model catalogue exclusions
 
-`AI_GATEWAY_CATALOGUE_EXCLUSIONS` in Django settings hides models from the catalogue only.
-It does not change project access, API-key model selection, or the cost calculator.
+`AI_GATEWAY_CATALOGUE_EXCLUSIONS` in Django settings hides models from the model availability
+catalogue and cost calculator. It does not change project access or API-key model selection.
 Models whose `litellm_params.ai_aws_account_name` matches `digital-prison-reporting-*` are
 excluded by default.
 
