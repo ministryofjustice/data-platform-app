@@ -1242,8 +1242,8 @@ class TestUsageView:
             response = client.get(reverse("ai_gateway:usage", args=[team.project.uuid]))
 
         assertContains(response, ">Daily usage</h3>", count=2)
-        assertContains(response, "Select an API key to see its daily usage for January 2026.")
-        assertContains(response, "Select a model to see its daily usage for January 2026.")
+        assertContains(response, "Select an API key to see its daily usage for January.")
+        assertContains(response, "Select a model to see its daily usage for January.")
         assertContains(response, 'id="id_usage_key"', count=1)
         assertContains(response, 'id="id_usage_model"', count=1)
         assertContains(response, 'for="id_usage_key"', count=1)
@@ -1305,7 +1305,7 @@ class TestUsageView:
                 "input_tokens": day * 100,
                 "output_tokens": day * 10,
             }
-            for day in range(1, 14)
+            for day in range(13, 0, -1)
         ]
         query = {"month": "2026-01", "key": "key-alias", "model": "model-name"}
         url = reverse("ai_gateway:usage", args=[team.project.uuid])
@@ -1314,7 +1314,7 @@ class TestUsageView:
             preview = client.get(url, query)
 
             assertContains(preview, "Showing 10 of 13 days", count=2)
-            assertContains(preview, 'data-sort-value="2026-01-13"', count=2)
+            assertContains(preview, 'data-sort-value="2026-01-13"', count=1)
             assertNotContains(preview, 'data-sort-value="2026-01-03"')
             assertContains(preview, f"{expand_param}=all", count=2)
 
@@ -1348,7 +1348,13 @@ class TestUsageView:
 
         assert response.context["daily_filter_form"]["key"].value() == ""
         assert response.context["daily_filter_form"]["model"].value() == ""
-        assert response.context["usage_filters"] == {"key": "", "model": "", "daily": ""}
+        assert response.context["usage_filters"] == {
+            "key": "",
+            "model": "",
+            "daily": "",
+            "key_daily": "",
+            "model_daily": "",
+        }
         assertNotContains(response, 'value="stale-key"')
         assertNotContains(response, 'value="stale-model"')
 
