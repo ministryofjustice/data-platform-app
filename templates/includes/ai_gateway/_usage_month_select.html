@@ -9,7 +9,9 @@
       class="app-usage-month-select"
       data-module="app-auto-submit-select">
   {% for name, value in usage_filters.items %}
-    {% if value %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endif %}
+    {% if value and name != "key_daily" and name != "model_daily" %}
+      <input type="hidden" name="{{ name }}" value="{{ value }}">
+    {% endif %}
   {% endfor %}
   <div class="govuk-form-group govuk-!-margin-bottom-0 govuk-!-display-inline-block">
     <label class="govuk-label govuk-!-font-weight-bold govuk-!-display-inline-block"
