@@ -117,7 +117,7 @@
               <p class="govuk-hint govuk-!-margin-bottom-0 govuk-!-margin-top-0">Total usage for each API key</p>
             </div>
           </div>
-          {% include "includes/ai_gateway/_usage_spend_section.html" with heading_level="h4" column_label="API key" rows=key_data.rows chart_name=key_data.chart_name chart_data=key_data.chart_data chart_label=key_data.chart_label requests_chart_name=key_data.requests_chart_name requests_chart_data=key_data.requests_chart_data requests_chart_label=key_data.requests_chart_label empty_message="No API key usage recorded for this month." only %}
+          {% include "includes/ai_gateway/_usage_spend_section.html" with heading_level="h4" column_label="Key" rows=key_data.rows chart_name=key_data.chart_name chart_data=key_data.chart_data chart_label=key_data.chart_label requests_chart_name=key_data.requests_chart_name requests_chart_data=key_data.requests_chart_data requests_chart_label=key_data.requests_chart_label empty_message="No API key usage recorded for this month." only %}
           {% include "includes/ai_gateway/_usage_daily_section.html" with daily=key_data.daily field=daily_filter_form.key selection_prompt="an API key" selected_month=selected_month usage_url=usage_url usage_filters=usage_filters show_all_param="key_daily" tab_id="spend-per-key" only %}
         {% endif %}
       </div>
