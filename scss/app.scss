@@ -1,7 +1,11 @@
-// MOJ Frontend configures GOV.UK Frontend (via $moj-* settings), so it must be
-// loaded first and GOV.UK Frontend must not be configured again with `with`
+// Configure GOV.UK Frontend before MOJ Frontend so MOJ inherits its settings.
+@forward "node_modules/govuk-frontend/dist/govuk" with (
+  $govuk-assets-path: "/static/assets/",
+  $govuk-page-width: 1280px,
+  $govuk-include-default-font-face: false,
+  $govuk-global-styles: true
+);
 @forward "node_modules/@ministryofjustice/frontend/moj/all" with (
-  $moj-assets-path: "/static/assets/",
   $moj-page-width: 1280px
 );
 @use "node_modules/govuk-frontend/dist/govuk" as *;
