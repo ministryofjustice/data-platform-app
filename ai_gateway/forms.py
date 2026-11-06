@@ -6,6 +6,7 @@ from django.forms import BaseFormSet, formset_factory
 
 from ai_gateway.filtering import filter_models
 from ai_gateway.models import Key
+from ai_gateway.services import estimate_costs
 from projects.models import Project
 
 
@@ -156,6 +157,7 @@ class ModelUsageRateForm(forms.Form):
 
     def __init__(self, *args, available_models: list[dict[str, Any]], **kwargs):
         super().__init__(*args, **kwargs)
+        self.available_models = available_models
         models = available_models
         self.fields["provider"].choices = sorted(
             {(model["provider"], model["provider"]) for model in available_models}
@@ -168,6 +170,16 @@ class ModelUsageRateForm(forms.Form):
             (model["model_name"], model["display_name"]) for model in models
         ]
 
+    def clean(self) -> dict[str, Any]:
+        cleaned_data = super().clean()
+        if not self.errors:
+            estimate_costs(
+                usage_period="monthly",
+                model_rows=[cleaned_data],
+                available_models=self.available_models,
+            )
+        return cleaned_data
+
 
 class BaseModelUsageRateFormSet(BaseFormSet):
     def __init__(self, *args, available_models: list[dict[str, Any]], **kwargs):
@@ -178,6 +190,17 @@ class BaseModelUsageRateFormSet(BaseFormSet):
         kwargs = super().get_form_kwargs(index)
         kwargs["available_models"] = self.available_models
         return kwargs
+
+    def clean(self) -> None:
+        """Reject totals that overflow even when each individual row is representable."""
+        super().clean()
+        if any(self.errors):
+            return
+        estimate_costs(
+            usage_period="monthly",
+            model_rows=[row for row in self.cleaned_data if row],
+            available_models=self.available_models,
+        )
 
 
 def build_model_usage_rate_formset(*, available_models, data=None, initial=None, extra=0):

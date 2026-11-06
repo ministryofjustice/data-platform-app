@@ -3,6 +3,7 @@ from unittest.mock import create_autospec, patch
 
 import pytest
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 
 from ai_gateway.client import AIGatewayClient
 from ai_gateway.exceptions import AIGatewayAPIError
@@ -739,6 +740,26 @@ class TestKeyServiceAccessGroups:
 
 
 class TestEstimateCosts:
+    @pytest.mark.parametrize(
+        "field_name", ["input_tokens", "output_tokens", "requests_per_period"]
+    )
+    def test_rejects_integer_conversion_overflow(self, field_name):
+        row = {**self.MODEL_ROWS[0], field_name: 10**309}
+
+        with pytest.raises(ValidationError, match="Enter smaller token or request values"):
+            estimate_costs(
+                usage_period="monthly", model_rows=[row], available_models=self.AVAILABLE_MODELS
+            )
+
+    @pytest.mark.parametrize("price", [float("inf"), float("nan")])
+    def test_rejects_non_finite_estimates(self, price):
+        models = [{**self.AVAILABLE_MODELS[0], "input_cost_per_million": price}]
+
+        with pytest.raises(ValidationError, match="Enter smaller token or request values"):
+            estimate_costs(
+                usage_period="monthly", model_rows=[self.MODEL_ROWS[0]], available_models=models
+            )
+
     AVAILABLE_MODELS = [
         {
             "model_name": "gpt-4",

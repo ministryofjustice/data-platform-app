@@ -159,6 +159,11 @@ class AICostUsageCalculatorView(TemplateView):
             for error in formset.non_form_errors()
         ]
         items += [
+            {"href": "#models-usage-rates", "message": error}
+            for form in formset
+            for error in form.non_field_errors()
+        ]
+        items += [
             {"href": f"#{field.id_for_label}", "message": error}
             for form in formset
             for field in form

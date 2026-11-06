@@ -6,13 +6,14 @@ import calendar
 import secrets
 from datetime import date, datetime
 from decimal import Decimal
+from math import isfinite
 from typing import Any, NotRequired, TypedDict
 
 import sentry_sdk
 import structlog
 from django.conf import settings
 from django.core.cache import cache
-from django.core.exceptions import ImproperlyConfigured
+from django.core.exceptions import ImproperlyConfigured, ValidationError
 from django.db import transaction
 from django.urls import reverse
 from django.utils import timezone
@@ -31,6 +32,9 @@ from users.models import User
 DAILY_SPEND_PREVIEW_COUNT = 10
 LINE_CHART_MIN_POINTS = 2
 BUDGET_ALERT_THRESHOLDS = [90, 50]
+_ESTIMATE_TOO_LARGE = (
+    "The estimated cost is too large to calculate. Enter smaller token or request values."
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -131,6 +135,7 @@ def estimate_costs(
 
     ``model_rows`` are cleaned_data dicts from ModelUsageRateForm; ``usage_period``
     is "daily" or "monthly" from UsagePeriodForm (does not impact calculation).
+    Raises ValidationError when the inputs cannot produce finite float costs.
     """
     models_by_name = {model["model_name"]: model for model in available_models}
 
@@ -143,16 +148,25 @@ def estimate_costs(
         if not model:
             continue
 
-        input_cost = (model.get("input_cost_per_million") or 0) * row["input_tokens"] / 1_000_000
-        output_cost = (
-            (model.get("output_cost_per_million") or 0) * row["output_tokens"] / 1_000_000
-        )
+        try:
+            input_cost = (
+                (model.get("input_cost_per_million") or 0) * row["input_tokens"] / 1_000_000
+            )
+            output_cost = (
+                (model.get("output_cost_per_million") or 0) * row["output_tokens"] / 1_000_000
+            )
+            per_request_cost = input_cost + output_cost
+            row_cost = per_request_cost * row["requests_per_period"]
+            total_per_request += per_request_cost
+            total_cost += row_cost
+        except OverflowError as error:
+            raise ValidationError(_ESTIMATE_TOO_LARGE, code="estimate_too_large") from error
 
-        per_request_cost = input_cost + output_cost
-        row_cost = per_request_cost * row["requests_per_period"]
-
-        total_per_request += per_request_cost
-        total_cost += row_cost
+        if not all(
+            isfinite(value)
+            for value in (per_request_cost, row_cost, total_per_request, total_cost)
+        ):
+            raise ValidationError(_ESTIMATE_TOO_LARGE, code="estimate_too_large")
         rows.append(
             {
                 "model_name": model["display_name"],
