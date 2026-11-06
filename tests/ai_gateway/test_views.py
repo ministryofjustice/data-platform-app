@@ -1629,6 +1629,42 @@ class TestUsageView:
 
 
 class TestAICostUsageCalculatorView:
+    @pytest.mark.parametrize(
+        "field_name", ["input_tokens", "output_tokens", "requests_per_period"]
+    )
+    def test_oversized_estimate_shows_validation_error_instead_of_server_error(
+        self, client, user, key_service, field_name
+    ):
+        key_service.list_public_models.return_value = self.CALCULATOR_MODELS
+        data = {
+            "usage_period": "monthly",
+            "models-TOTAL_FORMS": "1",
+            "models-INITIAL_FORMS": "0",
+            "models-0-provider": "OpenAI",
+            "models-0-model": "gpt-4",
+            "models-0-input_tokens": "1000",
+            "models-0-output_tokens": "500",
+            "models-0-requests_per_period": "100",
+            f"models-0-{field_name}": "9" * 310,
+        }
+        client.force_login(user)
+
+        response = client.post(reverse("ai_cost_usage_calculator"), data=data)
+
+        assert response.status_code == 200
+        assert "estimate_result" not in response.context
+        assert response.context["formset_has_errors"] is True
+        assert response.context["error_summary_items"] == [
+            {
+                "href": "#models-usage-rates",
+                "message": (
+                    "The estimated cost is too large to calculate. "
+                    "Enter smaller token or request values."
+                ),
+            }
+        ]
+        assertContains(response, "Enter smaller token or request values")
+
     CALCULATOR_MODELS = [
         {
             "model_name": "gpt-4",

@@ -82,12 +82,32 @@ class TestAIUsageCostCalculatorForm:
             "requests_per_period",
         ],
     )
-    def test_rejects_values_above_one_million(self, field_name):
+    def test_accepts_values_above_one_million(self, field_name):
         form_data = calculator_form_data(**{field_name: "1000001"})
         form = ModelUsageRateForm(data=form_data, available_models=AVAILABLE_MODELS)
 
+        assert form.is_valid()
+
+    @pytest.mark.parametrize(
+        "field_name", ["input_tokens", "output_tokens", "requests_per_period"]
+    )
+    def test_rejects_values_that_overflow_the_estimate(self, field_name):
+        form = ModelUsageRateForm(
+            data=calculator_form_data(**{field_name: "9" * 310}),
+            available_models=AVAILABLE_MODELS,
+        )
+
         assert not form.is_valid()
-        assert "Ensure this value is less than or equal to 1000000."
+        assert "Enter smaller token or request values" in str(form.non_field_errors())
+
+    def test_rejects_a_non_finite_estimate_from_finite_inputs(self):
+        form = ModelUsageRateForm(
+            data=calculator_form_data(input_tokens=str(10**200), requests_per_period=str(10**200)),
+            available_models=AVAILABLE_MODELS,
+        )
+
+        assert not form.is_valid()
+        assert form.non_field_errors()
 
     def test_filters_model_choices_by_selected_provider(self):
         form = ModelUsageRateForm(
@@ -101,6 +121,30 @@ class TestAIUsageCostCalculatorForm:
 
 
 class TestModelUsageRateFormSet:
+    def test_rejects_an_overflowing_total_when_individual_rows_are_valid(self):
+        models = [
+            {
+                **AVAILABLE_MODELS[0],
+                "input_cost_per_million": 1_000_000.0,
+                "output_cost_per_million": 0.0,
+            }
+        ]
+        data = calculator_formset_management_data(total_forms=2)
+        for index in range(2):
+            data.update(
+                {
+                    f"models-{index}-{name}": value
+                    for name, value in calculator_form_data(
+                        input_tokens="1", output_tokens="0", requests_per_period=str(10**308)
+                    ).items()
+                }
+            )
+        formset = build_model_usage_rate_formset(data=data, available_models=models)
+
+        assert all(form.is_valid() for form in formset.forms)
+        assert not formset.is_valid()
+        assert "Enter smaller token or request values" in str(formset.non_form_errors())
+
     def test_formset_accepts_valid_data(self):
         management_data = calculator_formset_management_data(total_forms=1)
         form_data = {
