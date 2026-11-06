@@ -194,7 +194,7 @@ class BaseModelUsageRateFormSet(BaseFormSet):
     def clean(self) -> None:
         """Reject totals that overflow even when each individual row is representable."""
         super().clean()
-        if any(self.errors):
+        if not self.management_form.is_valid() or any(self.errors):
             return
         estimate_costs(
             usage_period="monthly",
