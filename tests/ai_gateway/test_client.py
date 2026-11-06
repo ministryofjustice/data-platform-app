@@ -245,6 +245,73 @@ class TestDeleteKey:
         assert captured["body"] == {"keys": ["sk-old"]}
 
 
+class TestTeamDailyActivity:
+    @pytest.mark.parametrize("metadata", [{}, {"total_pages": 1}, {"total_pages": 0}])
+    @pytest.mark.parametrize("results", [[], [{"date": "2026-10-15"}]])
+    def test_returns_single_page_results(self, metadata, results):
+        requested_pages = []
+
+        def handler(request):
+            requested_pages.append(request.url.params.get("page"))
+            return httpx.Response(200, json={"results": results, "metadata": metadata})
+
+        client = build_client(handler)
+
+        assert client.team_daily_activity("team-123", "2026-10-01", "2026-10-31") == {
+            "results": results
+        }
+        assert requested_pages == ["1"]
+
+    def test_combines_results_from_all_pages(self):
+        results = [
+            {"date": "2026-10-15", "metrics": {"spend": 4.0, "api_requests": 10}},
+            {"date": "2026-10-13", "metrics": {"spend": 2.0, "api_requests": 5}},
+            {"date": "2026-10-05", "metrics": {"spend": 3.0, "api_requests": 7}},
+        ]
+        requested_pages = []
+
+        def handler(request):
+            assert request.method == "GET"
+            assert request.url.path == "/team/daily/activity"
+            assert request.url.params.get("team_ids") == "team-123"
+            assert request.url.params.get("start_date") == "2026-10-01"
+            assert request.url.params.get("end_date") == "2026-10-31"
+            assert request.url.params.get("page_size") == "31"
+            page = int(request.url.params["page"])
+            requested_pages.append(page)
+            return httpx.Response(
+                200,
+                json={
+                    "results": [results[page - 1]],
+                    "metadata": {"page": page, "total_pages": 3},
+                },
+            )
+
+        client = build_client(handler)
+
+        assert client.team_daily_activity("team-123", "2026-10-01", "2026-10-31") == {
+            "results": results
+        }
+        assert requested_pages == [1, 2, 3]
+
+    def test_raises_when_later_page_fails(self):
+        def handler(request):
+            if request.url.params.get("page") == "1":
+                return httpx.Response(
+                    200,
+                    json={
+                        "results": [{"date": "2026-10-15"}],
+                        "metadata": {"total_pages": 2},
+                    },
+                )
+            return httpx.Response(503, text="Gateway unavailable")
+
+        client = build_client(handler)
+
+        with pytest.raises(AIGatewayAPIError):
+            client.team_daily_activity("team-123", "2026-10-01", "2026-10-31")
+
+
 class TestListTeamKeys:
     def test_returns_full_key_objects_for_team(self):
         def handler(request):

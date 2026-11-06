@@ -198,18 +198,28 @@ class AIGatewayClient:
         Dates are ``YYYY-MM-DD`` strings, inclusive. The response contains a
         ``results`` list with one entry per day, each carrying total ``metrics``
         (including ``spend``) and a ``breakdown`` of spend by ``api_keys`` and
-        ``models`` for that day.
+        ``models`` for that day. Results from all pages are combined; gateway
+        pagination metadata is omitted from the returned dictionary.
         """
-        return self._request(
-            "GET",
-            "/team/daily/activity",
-            params={
-                "team_ids": team_id,
-                "start_date": start_date,
-                "end_date": end_date,
-                "page_size": 31,
-            },
-        )
+        results: list[dict[str, Any]] = []
+        page = 1
+        while True:
+            data = self._request(
+                "GET",
+                "/team/daily/activity",
+                params={
+                    "team_ids": team_id,
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "page_size": 31,
+                    "page": page,
+                },
+            )
+            results.extend(data.get("results", []))
+            if page >= data.get("metadata", {}).get("total_pages", 1):
+                break
+            page += 1
+        return {"results": results}
 
     def list_team_keys(self, team_id: str) -> list[dict[str, Any]]:
         """Return the full key objects belonging to team ``team_id``.
