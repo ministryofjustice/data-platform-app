@@ -141,19 +141,16 @@ class ModelUsageRateForm(forms.Form):
     input_tokens = forms.IntegerField(
         label="Input tokens",
         min_value=0,
-        max_value=1000000,
         error_messages={"required": "Enter the number of input tokens"},
     )
     output_tokens = forms.IntegerField(
         label="Output tokens",
         min_value=0,
-        max_value=1000000,
         error_messages={"required": "Enter the number of output tokens"},
     )
     requests_per_period = forms.IntegerField(
         label="Requests",
         min_value=0,
-        max_value=1000000,
         error_messages={"required": "Enter the number of requests"},
     )
 

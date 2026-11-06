@@ -1,5 +1,3 @@
-import pytest
-
 from ai_gateway.forms import ModelUsageRateForm, build_model_usage_rate_formset
 
 AVAILABLE_MODELS = [
@@ -73,21 +71,6 @@ class TestAIUsageCostCalculatorForm:
 
         assert not form.is_valid()
         assert "Enter the number of requests" in form.errors["requests_per_period"]
-
-    @pytest.mark.parametrize(
-        "field_name",
-        [
-            "input_tokens",
-            "output_tokens",
-            "requests_per_period",
-        ],
-    )
-    def test_rejects_values_above_one_million(self, field_name):
-        form_data = calculator_form_data(**{field_name: "1000001"})
-        form = ModelUsageRateForm(data=form_data, available_models=AVAILABLE_MODELS)
-
-        assert not form.is_valid()
-        assert "Ensure this value is less than or equal to 1000000."
 
     def test_filters_model_choices_by_selected_provider(self):
         form = ModelUsageRateForm(
