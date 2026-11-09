@@ -1,6 +1,9 @@
 name: End-to-end tests
 
 on:
+  push:
+    branches:
+      - feat/end-to-end-tests
   workflow_dispatch:
     inputs:
       target:
@@ -17,7 +20,7 @@ jobs:
   e2e:
     name: End-to-end tests
     runs-on: ubuntu-latest
-    environment: ${{ inputs.target }}
+    environment: ${{ inputs.target || 'test' }}
     timeout-minutes: 1
     permissions:
       contents: read
