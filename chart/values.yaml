@@ -143,7 +143,11 @@ app:
           key: e2e-auth-token
           optional: true
     - name: E2E_USER_EMAIL
-      value: ""
+      valueFrom:
+        secretKeyRef:
+          name: app-secrets
+          key: e2e-user-email
+          optional: true
   port: 8000
   # Probes hit the app's /healthcheck/ endpoint
   livenessProbe:

@@ -174,6 +174,7 @@ AUTHENTICATION_BACKENDS = [
 E2E_AUTH_ENABLED = os.environ.get("E2E_AUTH_ENABLED", "false").lower() == "true"
 E2E_AUTH_TOKEN = os.environ.get("E2E_AUTH_TOKEN", "")
 E2E_USER_EMAIL = os.environ.get("E2E_USER_EMAIL", "")
+E2E_ENABLED_ENVS = ["local", "test", "preproduction"]
 
 LOGIN_URL = reverse_lazy("login")
 LOGIN_REDIRECT_URL = reverse_lazy("landing")
