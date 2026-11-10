@@ -1,9 +1,7 @@
 name: End-to-end tests
 
 on:
-  push:
-    branches:
-      - feat/end-to-end-tests
+  pull_request:
   workflow_dispatch:
     inputs:
       target:
@@ -16,12 +14,16 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: e2e-${{ inputs.target || 'test' }}
+  cancel-in-progress: false
+
 jobs:
   e2e:
     name: End-to-end tests
     runs-on: octo-production
     environment: ${{ inputs.target || 'test' }}
-    timeout-minutes: 1
+    timeout-minutes: 5
     permissions:
       contents: read
     steps:
