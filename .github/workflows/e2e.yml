@@ -19,7 +19,7 @@ permissions: {}
 jobs:
   e2e:
     name: End-to-end tests
-    runs-on: ubuntu-latest
+    runs-on: octo-production
     environment: ${{ inputs.target || 'test' }}
     timeout-minutes: 1
     permissions:
