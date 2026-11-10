@@ -54,7 +54,7 @@ def budget_alert_threshold(spend: Decimal, budget: Decimal | None) -> int | None
 
     percent_used = (spend / budget) * 100
     if percent_used >= MAX_BUDGET_ALERT_THRESHOLD:
-        return percent_used
+        return MAX_BUDGET_ALERT_THRESHOLD
 
     for threshold in BUDGET_ALERT_THRESHOLDS:
         if percent_used > threshold:
@@ -74,13 +74,11 @@ def record_budget_alert(
     ).exists():
         return None
 
-    alert_threshold = 100 if threshold > MAX_BUDGET_ALERT_THRESHOLD else threshold
-
     alert, created = BudgetAlert.objects.get_or_create(
         project=project,
         period_start=month,
         budget=budget,
-        threshold_percent=alert_threshold,
+        threshold_percent=threshold,
         defaults={"spend": spend},
     )
     if not created:
