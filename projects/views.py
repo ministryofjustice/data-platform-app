@@ -137,8 +137,14 @@ class ProjectDetailView(
             context["show_budget_limit_banner"] = False
             return context
 
-        with UsageService.from_settings(team=team) as service:
-            context["show_budget_limit_banner"] = service.is_at_budget_limit(timezone.localdate())
+        try:
+            with UsageService.from_settings(team=team) as service:
+                context["show_budget_limit_banner"] = service.is_at_budget_limit(
+                    timezone.localdate()
+                )
+        except AIGatewayError as error:
+            sentry_sdk.capture_exception(error)
+            context["show_budget_limit_banner"] = False
 
         return context
 
