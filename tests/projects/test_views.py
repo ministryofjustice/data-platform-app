@@ -33,7 +33,7 @@ class TestDetailView:
         service.__enter__.return_value = service
         service.__exit__.return_value = False
         service.is_at_budget_limit.return_value = False
-        with patch("projects.views.UsageService.from_settings", return_value=service):
+        with patch("ai_gateway.mixins.UsageService.from_settings", return_value=service):
             yield service
 
     def test_detail_page_renders(self, client, project, project_member):

@@ -47,11 +47,14 @@ class _UsageTotals(TypedDict):
 
 
 def budget_alert_threshold(spend: Decimal, budget: Decimal | None) -> int | None:
-    """Return the highest threshold exceeded, without rounding the spend."""
+    """Return the highest threshold reached, without rounding the spend."""
     if not budget:
         return None
 
     percent_used = (spend / budget) * 100
+    if percent_used >= 100:
+        return 100
+
     for threshold in BUDGET_ALERT_THRESHOLDS:
         if percent_used > threshold:
             return threshold
@@ -98,21 +101,30 @@ def send_budget_alert_notification(notification: BudgetAlertNotification) -> Non
     if notification.sent_at:
         return
 
-    template_id = settings.NOTIFY_BUDGET_ALERT_TEMPLATE_ID
+    limit_hit = alert.threshold_percent >= 100
+    if limit_hit:
+        template_id = settings.NOTIFY_BUDGET_LIMIT_HIT_TEMPLATE_ID
+        setting_name = "NOTIFY_BUDGET_LIMIT_HIT_TEMPLATE_ID"
+    else:
+        template_id = settings.NOTIFY_BUDGET_ALERT_TEMPLATE_ID
+        setting_name = "NOTIFY_BUDGET_ALERT_TEMPLATE_ID"
     if not template_id:
-        raise ImproperlyConfigured("Missing Notify settings: NOTIFY_BUDGET_ALERT_TEMPLATE_ID")
+        raise ImproperlyConfigured(f"Missing Notify settings: {setting_name}")
+
+    personalisation = {
+        "project_name": alert.project.name,
+        "project_url": (
+            f"{build_base_url(settings.APP_ENV)}"
+            f"{reverse('ai_gateway:usage', kwargs={'uuid': alert.project.uuid})}"
+        ),
+    }
+    if not limit_hit:
+        personalisation["threshold_percent"] = str(alert.threshold_percent)
 
     notification.notify_notification_id = GovUKNotificationsService.from_settings().send_email(
         email_address=notification.email_address,
         template_id=template_id,
-        personalisation={
-            "project_name": alert.project.name,
-            "project_url": (
-                f"{build_base_url(settings.APP_ENV)}"
-                f"{reverse('ai_gateway:usage', kwargs={'uuid': alert.project.uuid})}"
-            ),
-            "threshold_percent": str(alert.threshold_percent),
-        },
+        personalisation=personalisation,
     )
     notification.sent_at = timezone.now()
     notification.save(update_fields=["sent_at", "notify_notification_id", "modified"])

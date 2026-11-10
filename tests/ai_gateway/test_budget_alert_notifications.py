@@ -43,6 +43,27 @@ class TestSendBudgetAlertNotification:
             "11111111-1111-1111-1111-111111111111"
         )
 
+    def test_limit_hit_uses_dedicated_template_and_personalisation(
+        self, budget_alert_notification, notify_client
+    ):
+        alert = budget_alert_notification.alert
+        alert.threshold_percent = 100
+        alert.save()
+
+        send_budget_alert_notification(notification=budget_alert_notification)
+
+        notify_client.send_email_notification.assert_called_once_with(
+            email_address=budget_alert_notification.email_address,
+            template_id="budget-limit-hit-template",
+            personalisation={
+                "project_name": alert.project.name,
+                "project_url": (
+                    "https://test.data-platform.service.justice.gov.uk"
+                    f"/app/projects/{alert.project.uuid}/ai-gateway/usage/"
+                ),
+            },
+        )
+
     def test_repeated_send_does_not_resubmit_an_accepted_notification(
         self, budget_alert_notification, notify_client
     ):

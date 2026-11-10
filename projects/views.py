@@ -5,7 +5,6 @@ from django.db.models import Case, F, IntegerField, Prefetch, Value, When
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
-from django.utils import timezone
 from django.utils.functional import cached_property
 from django.views.generic.base import TemplateView, View
 from django.views.generic.detail import DetailView
@@ -13,8 +12,9 @@ from django.views.generic.edit import DeleteView, FormView
 from django.views.generic.list import ListView
 
 from ai_gateway.exceptions import AIGatewayError
+from ai_gateway.mixins import BudgetLimitBannerMixin
 from ai_gateway.models import Team
-from ai_gateway.services import KeyService, UsageService
+from ai_gateway.services import KeyService
 from projects.forms import (
     ProjectCreateAddUsersDecisionForm,
     ProjectCreateForm,
@@ -113,7 +113,11 @@ class ProjectListView(ListView):
 
 
 class ProjectDetailView(
-    ProjectAccessMixin, ProjectLayoutContextMixin, UUIDObjectMixin, DetailView
+    BudgetLimitBannerMixin,
+    ProjectAccessMixin,
+    ProjectLayoutContextMixin,
+    UUIDObjectMixin,
+    DetailView,
 ):
     template_name = "projects/detail.html"
     context_object_name = "project"
@@ -130,22 +134,6 @@ class ProjectDetailView(
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["error_message"] = self.request.session.pop("error_message", None)
-
-        try:
-            team = self.object.ai_gateway_team
-        except Team.DoesNotExist:
-            context["show_budget_limit_banner"] = False
-            return context
-
-        try:
-            with UsageService.from_settings(team=team) as service:
-                context["show_budget_limit_banner"] = service.is_at_budget_limit(
-                    timezone.localdate()
-                )
-        except AIGatewayError as error:
-            sentry_sdk.capture_exception(error)
-            context["show_budget_limit_banner"] = False
-
         return context
 
 
