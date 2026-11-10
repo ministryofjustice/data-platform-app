@@ -67,6 +67,7 @@
     "libpq",
     "litellm",
     "linted",
+    "linters",
     "maxfail",
     "makemigrations",
     "ministryofjustice",
