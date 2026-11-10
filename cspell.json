@@ -112,6 +112,7 @@
     "urllib",
     "urlopen",
     "userdel",
+    "vars",
     "venv",
     "virtualenv",
     "whitenoise",
