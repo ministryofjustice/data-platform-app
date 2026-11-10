@@ -264,6 +264,13 @@ class UsageService:
         budget = self.team_info["max_budget"]
         return spend, None if budget is None else Decimal(str(budget))
 
+    def is_at_budget_limit(self, month: date) -> bool:
+        """Return True if the team is at or over budget for the month."""
+        spend, budget = self.get_budget_usage(month)
+        if budget is None:
+            return False
+        return spend >= budget
+
     def _build_overview(
         self,
         month_start: date,

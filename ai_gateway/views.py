@@ -9,6 +9,7 @@ import structlog
 from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.cache import add_never_cache_headers
 from django.views.generic import DeleteView, DetailView, FormView, ListView, TemplateView, View
 from django.views.generic.detail import SingleObjectMixin
@@ -325,12 +326,19 @@ class UsageView(
                 query.update({"month": selected_month.strftime("%Y-%m"), "daily": "all"})
                 show_all["url"] = f"?{urlencode(query)}"
 
+            this_month = selected_month.month == timezone.localdate().month
+            show_budget_limit = (
+                False if not this_month else service.is_at_budget_limit(selected_month)
+            )
+
             return {
                 "month_form": month_form,
                 "selected_month": selected_month,
                 "daily_filter_form": daily_filter_form,
                 "usage_filters": filters,
                 "usage_url": reverse("ai_gateway:usage", args=[self.project.uuid]),
+                "at_budget_limit": service.is_at_budget_limit(selected_month),
+                "show_budget_limit_banner": show_budget_limit,
                 **usage,
             }
 

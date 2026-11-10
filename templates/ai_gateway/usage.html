@@ -6,6 +6,11 @@
 {% block back_link %}
   <a href="{% url 'projects:projects_list' %}" class="govuk-back-link">Back to projects</a>
 {% endblock back_link %}
+{% block budget_limit_content %}
+  {% if show_budget_limit_banner %}
+    {% include "includes/ai_gateway/_budget_limit_warning.html" only %}
+  {% endif %}
+{% endblock budget_limit_content %}
 {% block project_main_content %}
   {% include "includes/ai_gateway/_usage_intro.html" %}
   {% if usage_error %}

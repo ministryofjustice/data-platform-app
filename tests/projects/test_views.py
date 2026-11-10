@@ -1,5 +1,5 @@
 import uuid
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from django.core.exceptions import ImproperlyConfigured
@@ -26,6 +26,15 @@ def member_selection(user, permissions=None):
 
 class TestDetailView:
     """Tests for the ProjectDetailView at '/projects/<uuid>/'."""
+
+    @pytest.fixture(autouse=True)
+    def _gateway_team_and_usage_service(self, team_without_key):
+        service = MagicMock()
+        service.__enter__.return_value = service
+        service.__exit__.return_value = False
+        service.is_at_budget_limit.return_value = False
+        with patch("projects.views.UsageService.from_settings", return_value=service):
+            yield service
 
     def test_detail_page_renders(self, client, project, project_member):
         client.force_login(project_member)

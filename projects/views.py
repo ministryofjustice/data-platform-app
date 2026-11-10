@@ -5,6 +5,7 @@ from django.db.models import Case, F, IntegerField, Prefetch, Value, When
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
+from django.utils import timezone
 from django.utils.functional import cached_property
 from django.views.generic.base import TemplateView, View
 from django.views.generic.detail import DetailView
@@ -13,7 +14,7 @@ from django.views.generic.list import ListView
 
 from ai_gateway.exceptions import AIGatewayError
 from ai_gateway.models import Team
-from ai_gateway.services import KeyService
+from ai_gateway.services import KeyService, UsageService
 from projects.forms import (
     ProjectCreateAddUsersDecisionForm,
     ProjectCreateForm,
@@ -127,9 +128,11 @@ class ProjectDetailView(
         )
 
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["error_message"] = self.request.session.pop("error_message", None)
-        return context
+        with UsageService.from_settings(team=self.object.ai_gateway_team) as service:
+            context = super().get_context_data(**kwargs)
+            context["error_message"] = self.request.session.pop("error_message", None)
+            context["show_budget_limit_banner"] = service.is_at_budget_limit(timezone.localdate())
+            return context
 
 
 class ProjectCreateView(FormView):
