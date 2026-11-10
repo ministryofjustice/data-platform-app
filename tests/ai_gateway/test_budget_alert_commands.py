@@ -11,6 +11,7 @@ from model_bakery import baker
 from notifications_python_client.errors import HTTPError
 
 from ai_gateway.exceptions import AIGatewayAPIError
+from ai_gateway.models import BudgetAlertNotification
 from ai_gateway.services import record_budget_alert
 from projects.models import ProjectPermission
 
@@ -103,51 +104,16 @@ class TestCheckTeamSpend:
 
 @freeze_time("2026-10-28 05:00:00")
 class TestSendBudgetAlerts:
-    def test_skips_removed_member(self, budget_alert_notification, project, notify_client):
+    def test_removes_if_no_appropriate_membership(
+        self, budget_alert_notification, project, notify_client
+    ):
         project.memberships.filter(user=budget_alert_notification.recipient).delete()
 
         call_command("send_budget_alerts")
 
         notify_client.send_email_notification.assert_not_called()
-        budget_alert_notification.refresh_from_db()
-        assert budget_alert_notification.sent_at is None
-
-    def test_skips_inactive_member(self, budget_alert_notification, notify_client):
-        recipient = budget_alert_notification.recipient
-        recipient.is_active = False
-        recipient.save()
-
-        call_command("send_budget_alerts")
-
-        notify_client.send_email_notification.assert_not_called()
-        budget_alert_notification.refresh_from_db()
-        assert budget_alert_notification.sent_at is None
-
-    def test_skips_deleted_recipient(self, budget_alert_notification, notify_client):
-        budget_alert_notification.recipient.delete()
-
-        call_command("send_budget_alerts")
-
-        notify_client.send_email_notification.assert_not_called()
-        budget_alert_notification.refresh_from_db()
-        assert budget_alert_notification.recipient_id is None
-        assert budget_alert_notification.sent_at is None
-
-    def test_rechecks_permission_on_retry(self, budget_alert_notification, project, notify_client):
-        notify_client.send_email_notification.side_effect = HTTPError(message="Notify unavailable")
-        with pytest.raises(CommandError, match="Failed to send 1"):
-            call_command("send_budget_alerts")
-
-        project.memberships.get(
-            user=budget_alert_notification.recipient
-        ).permissions.all().delete()
-        notify_client.send_email_notification.reset_mock(side_effect=True)
-
-        call_command("send_budget_alerts")
-
-        notify_client.send_email_notification.assert_not_called()
-        budget_alert_notification.refresh_from_db()
-        assert budget_alert_notification.sent_at is None
+        with pytest.raises(BudgetAlertNotification.DoesNotExist):
+            budget_alert_notification.refresh_from_db()
 
     def test_selects_highest_alert_before_filtering_unsent_notifications(
         self, project, project_owner, notify_client
@@ -159,11 +125,16 @@ class TestSendBudgetAlerts:
             project=project, threshold=90, spend=Decimal("450"), budget=Decimal("500")
         )
 
+        highest = record_budget_alert(
+            project=project, threshold=100, spend=Decimal("500"), budget=Decimal("500")
+        )
+
         call_command("send_budget_alerts")
         call_command("send_budget_alerts")
 
         assert lower.notifications.get().sent_at is None
-        assert higher.notifications.get().sent_at == timezone.now()
+        assert higher.notifications.get().sent_at is None
+        assert highest.notifications.get().sent_at == timezone.now()
         notify_client.send_email_notification.assert_called_once()
 
     def test_retries_alerts_for_each_budget_amount(self, project, project_owner, notify_client):

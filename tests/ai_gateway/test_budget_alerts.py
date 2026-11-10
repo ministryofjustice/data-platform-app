@@ -18,7 +18,7 @@ class TestBudgetAlertThreshold:
             ("90.001", 90),
             ("99.999", 90),
             ("100", 100),
-            ("110", 100),
+            ("110", 110),
         ],
     )
     def test_uses_unrounded_spend(self, spend, expected):

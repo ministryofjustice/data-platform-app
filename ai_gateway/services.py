@@ -31,6 +31,7 @@ from users.models import User
 
 DAILY_SPEND_PREVIEW_COUNT = 10
 LINE_CHART_MIN_POINTS = 2
+MAX_BUDGET_ALERT_THRESHOLD = 100
 BUDGET_ALERT_THRESHOLDS = [90, 50]
 _ESTIMATE_TOO_LARGE = (
     "The estimated cost is too large to calculate. Enter smaller token or request values."
@@ -52,8 +53,8 @@ def budget_alert_threshold(spend: Decimal, budget: Decimal | None) -> int | None
         return None
 
     percent_used = (spend / budget) * 100
-    if percent_used >= 100:
-        return 100
+    if percent_used >= MAX_BUDGET_ALERT_THRESHOLD:
+        return percent_used
 
     for threshold in BUDGET_ALERT_THRESHOLDS:
         if percent_used > threshold:
@@ -73,17 +74,24 @@ def record_budget_alert(
     ).exists():
         return None
 
+    alert_threshold = 100 if threshold > MAX_BUDGET_ALERT_THRESHOLD else threshold
+
     alert, created = BudgetAlert.objects.get_or_create(
         project=project,
         period_start=month,
         budget=budget,
-        threshold_percent=threshold,
+        threshold_percent=alert_threshold,
         defaults={"spend": spend},
     )
     if not created:
         return None
 
-    memberships = project.memberships.can_manage_api_keys().select_related("user")
+    memberships = None
+    if threshold >= MAX_BUDGET_ALERT_THRESHOLD:
+        memberships = project.memberships.select_related("user")
+    else:
+        memberships = project.memberships.can_manage_api_keys().select_related("user")
+
     for membership in memberships:
         alert.notifications.get_or_create(
             email_address=membership.user.email,
@@ -101,7 +109,7 @@ def send_budget_alert_notification(notification: BudgetAlertNotification) -> Non
     if notification.sent_at:
         return
 
-    limit_hit = alert.threshold_percent >= 100
+    limit_hit = alert.threshold_percent >= MAX_BUDGET_ALERT_THRESHOLD
     if limit_hit:
         template_id = settings.NOTIFY_BUDGET_LIMIT_HIT_TEMPLATE_ID
         setting_name = "NOTIFY_BUDGET_LIMIT_HIT_TEMPLATE_ID"

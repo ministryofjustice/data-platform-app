@@ -5,7 +5,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
 from ai_gateway.models import BudgetAlert, BudgetAlertNotification
-from ai_gateway.services import send_budget_alert_notification
+from ai_gateway.services import MAX_BUDGET_ALERT_THRESHOLD, send_budget_alert_notification
 from data_platform_app.services import GovUKNotificationError
 
 
@@ -25,11 +25,16 @@ class Command(BaseCommand):
         failed = 0
         sent = 0
         for notification in notifications:
-            if (
-                not notification.alert.project.memberships.can_manage_api_keys()
-                .filter(user_id=notification.recipient_id)
-                .exists()
-            ):
+            project = notification.alert.project
+            memberships = project.memberships
+
+            if notification.alert.threshold_percent >= MAX_BUDGET_ALERT_THRESHOLD:
+                eligible_memberships = memberships.filter(user__is_active=True)
+            else:
+                eligible_memberships = memberships.can_manage_api_keys()
+
+            if not eligible_memberships.filter(user_id=notification.recipient_id).exists():
+                notification.delete()
                 continue
 
             try:
