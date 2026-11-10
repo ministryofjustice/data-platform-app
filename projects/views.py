@@ -128,11 +128,19 @@ class ProjectDetailView(
         )
 
     def get_context_data(self, **kwargs):
-        with UsageService.from_settings(team=self.object.ai_gateway_team) as service:
-            context = super().get_context_data(**kwargs)
-            context["error_message"] = self.request.session.pop("error_message", None)
-            context["show_budget_limit_banner"] = service.is_at_budget_limit(timezone.localdate())
+        context = super().get_context_data(**kwargs)
+        context["error_message"] = self.request.session.pop("error_message", None)
+
+        try:
+            team = self.object.ai_gateway_team
+        except Team.DoesNotExist:
+            context["show_budget_limit_banner"] = False
             return context
+
+        with UsageService.from_settings(team=team) as service:
+            context["show_budget_limit_banner"] = service.is_at_budget_limit(timezone.localdate())
+
+        return context
 
 
 class ProjectCreateView(FormView):

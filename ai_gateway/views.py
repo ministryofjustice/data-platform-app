@@ -326,7 +326,7 @@ class UsageView(
                 query.update({"month": selected_month.strftime("%Y-%m"), "daily": "all"})
                 show_all["url"] = f"?{urlencode(query)}"
 
-            this_month = selected_month.month == timezone.localdate().month
+            this_month = selected_month.replace(day=1) == timezone.localdate().replace(day=1)
             show_budget_limit = (
                 False if not this_month else service.is_at_budget_limit(selected_month)
             )
@@ -337,7 +337,6 @@ class UsageView(
                 "daily_filter_form": daily_filter_form,
                 "usage_filters": filters,
                 "usage_url": reverse("ai_gateway:usage", args=[self.project.uuid]),
-                "at_budget_limit": service.is_at_budget_limit(selected_month),
                 "show_budget_limit_banner": show_budget_limit,
                 **usage,
             }
