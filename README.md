@@ -103,6 +103,8 @@ E2E_PROJECT_UUID='<accessible project UUID>' \
 make test-e2e
 ```
 
+For GitHub Actions, create `test` and `preproduction` environments in the repository settings. In each environment, set `E2E_BASE_URL` and `E2E_PROJECT_UUID` as variables, and `E2E_AUTH_TOKEN` as a secret. The secret must match the token configured in the app secrets.
+
 ## Database note
 
 For initial development, we are using SQLite locally.
