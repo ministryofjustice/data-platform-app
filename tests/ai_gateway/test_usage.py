@@ -104,6 +104,30 @@ class TestUsageServiceMonthChoices:
         gateway_client.team_info.assert_called_once_with("team-xyz")
 
 
+class TestUsageServiceBudgetLimit:
+    @pytest.mark.parametrize(
+        ("spend", "budget", "expected"),
+        [
+            (Decimal("99.99"), Decimal("100"), False),
+            (Decimal("100"), Decimal("100"), True),
+            (Decimal("100.01"), Decimal("100"), True),
+            (Decimal("100.01"), None, False),
+        ],
+    )
+    def test_checks_spend_against_budget(self, team, gateway_client, spend, budget, expected):
+        month = date(2026, 10, 1)
+
+        with (
+            UsageService(gateway_client, team) as service,
+            patch.object(
+                service, "get_budget_usage", return_value=(spend, budget)
+            ) as get_budget_usage,
+        ):
+            assert service.is_at_budget_limit(month) is expected
+
+        get_budget_usage.assert_called_once_with(month)
+
+
 class TestUsageServiceGetUsage:
     def test_model_tokens_are_aggregated_for_monthly_and_daily_charts_only(
         self, team, gateway_client, key

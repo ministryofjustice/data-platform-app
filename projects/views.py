@@ -12,6 +12,7 @@ from django.views.generic.edit import DeleteView, FormView
 from django.views.generic.list import ListView
 
 from ai_gateway.exceptions import AIGatewayError
+from ai_gateway.mixins import BudgetLimitBannerMixin
 from ai_gateway.models import Team
 from ai_gateway.services import KeyService
 from projects.forms import (
@@ -112,7 +113,11 @@ class ProjectListView(ListView):
 
 
 class ProjectDetailView(
-    ProjectAccessMixin, ProjectLayoutContextMixin, UUIDObjectMixin, DetailView
+    BudgetLimitBannerMixin,
+    ProjectAccessMixin,
+    ProjectLayoutContextMixin,
+    UUIDObjectMixin,
+    DetailView,
 ):
     template_name = "projects/detail.html"
     context_object_name = "project"

@@ -44,6 +44,7 @@ def budget_alert_notification(project, project_owner):
 @pytest.fixture
 def notify_client(settings):
     settings.NOTIFY_BUDGET_ALERT_TEMPLATE_ID = "budget-alert-template"
+    settings.NOTIFY_BUDGET_LIMIT_HIT_TEMPLATE_ID = "budget-limit-hit-template"
     client = Mock(spec=NotificationsAPIClient)
     client.send_email_notification.return_value = {"id": "11111111-1111-1111-1111-111111111111"}
     with patch(

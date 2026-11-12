@@ -23,6 +23,7 @@ from ai_gateway.forms import (
     UsagePeriodForm,
     build_model_usage_rate_formset,
 )
+from ai_gateway.mixins import BudgetLimitBannerMixin
 from ai_gateway.models import Key, Team
 from ai_gateway.services import (
     DAILY_SPEND_PREVIEW_COUNT,
@@ -181,7 +182,11 @@ class AICostUsageCalculatorView(TemplateView):
 
 
 class UsageView(
-    FeatureRequiredMixin, ExistingProjectMixin, ProjectLayoutContextMixin, TemplateView
+    BudgetLimitBannerMixin,
+    FeatureRequiredMixin,
+    ExistingProjectMixin,
+    ProjectLayoutContextMixin,
+    TemplateView,
 ):
     """
     The usage UI is a single page with GOV.UK tabs for Overview, Spend per API key and
@@ -192,6 +197,7 @@ class UsageView(
     feature_flag = "AI_GATEWAY_COSTS"
     active_project_section = "ai_gateway"
     active_ai_gateway_section = "usage"
+    budget_limit_banner_auto = False
 
     def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:
         context = self.get_context_data(**kwargs)
@@ -229,7 +235,14 @@ class UsageView(
             ai_gateway_team = self.project.ai_gateway_team
         except Team.DoesNotExist:
             empty = {"has_usage": False}
-            context.update({"overview_data": empty, "key_data": empty, "model_data": empty})
+            context.update(
+                {
+                    "overview_data": empty,
+                    "key_data": empty,
+                    "model_data": empty,
+                    "show_budget_limit_banner": False,
+                }
+            )
             return context
 
         try:
@@ -325,17 +338,24 @@ class UsageView(
                 query.update({"month": selected_month.strftime("%Y-%m"), "daily": "all"})
                 show_all["url"] = f"?{urlencode(query)}"
 
+            show_budget_limit = self.get_budget_limit_banner(
+                team=team, service=service, month=selected_month
+            )
+
             return {
                 "month_form": month_form,
                 "selected_month": selected_month,
                 "daily_filter_form": daily_filter_form,
                 "usage_filters": filters,
                 "usage_url": reverse("ai_gateway:usage", args=[self.project.uuid]),
+                "show_budget_limit_banner": show_budget_limit,
                 **usage,
             }
 
 
-class KeyListView(ExistingProjectMixin, ProjectLayoutContextMixin, ListView):
+class KeyListView(
+    BudgetLimitBannerMixin, ExistingProjectMixin, ProjectLayoutContextMixin, ListView
+):
     template_name = "ai_gateway/key-list.html"
     context_object_name = "keys"
     active_project_section = "ai_gateway"
@@ -801,7 +821,7 @@ class KeyModelChangeConfirmView(
         return kwargs
 
 
-class KeyDetailView(KeyScopedMixin, DetailView):
+class KeyDetailView(BudgetLimitBannerMixin, KeyScopedMixin, DetailView):
     template_name = "ai_gateway/key-detail.html"
     context_object_name = "key"
 

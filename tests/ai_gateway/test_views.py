@@ -1,5 +1,5 @@
 from datetime import date
-from unittest.mock import create_autospec, patch
+from unittest.mock import MagicMock, create_autospec, patch
 
 import pytest
 from django.urls import reverse
@@ -22,6 +22,14 @@ from projects.models import ProjectPermission
 PLAINTEXT_KEY = "sk-plaintext-key-value-123456"
 
 
+def budget_limit_service(reached: bool):
+    service = MagicMock()
+    service.__enter__.return_value = service
+    service.__exit__.return_value = False
+    service.is_at_budget_limit.return_value = reached
+    return service
+
+
 class TestKeyListView:
     def test_renders_for_member(self, client, user, project):
         client.force_login(user)
@@ -35,6 +43,16 @@ class TestKeyListView:
         assert "ai_gateway/key-list.html" in [t.name for t in response.templates]
         assertContains(response, 'aria-current="location"', count=1)
         assertInHTML(current_ai_gateway_link, response.content.decode())
+
+    def test_shows_budget_limit_warning(self, client, user, project, team_without_key):
+        client.force_login(user)
+        service = budget_limit_service(reached=True)
+
+        with patch("ai_gateway.mixins.UsageService.from_settings", return_value=service):
+            response = client.get(reverse("ai_gateway:key_list", args=[project.uuid]))
+
+        assertContains(response, "You've spent 100% of your monthly Justice AI Gateway budget")
+        service.is_at_budget_limit.assert_called_once()
 
     def test_lists_existing_keys(self, client, user, project, key):
         client.force_login(user)
@@ -789,6 +807,18 @@ class TestKeyDetailView:
             response,
             f'href="{reverse("ai_gateway:key_model_change", args=[project.uuid, key.pk])}"',
         )
+
+    def test_shows_budget_limit_warning(
+        self, client, user, project, key, key_service, team_without_key
+    ):
+        client.force_login(user)
+        service = budget_limit_service(reached=True)
+
+        with patch("ai_gateway.mixins.UsageService.from_settings", return_value=service):
+            response = client.get(reverse("ai_gateway:key_detail", args=[project.uuid, key.pk]))
+
+        assertContains(response, "You've spent 100% of your monthly Justice AI Gateway budget")
+        service.is_at_budget_limit.assert_called_once()
 
     def test_renders_none_when_key_uses_no_default_models(
         self, client, user, project, key, key_service

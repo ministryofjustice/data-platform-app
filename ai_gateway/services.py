@@ -31,6 +31,7 @@ from users.models import User
 
 DAILY_SPEND_PREVIEW_COUNT = 10
 LINE_CHART_MIN_POINTS = 2
+MAX_BUDGET_ALERT_THRESHOLD = 100
 BUDGET_ALERT_THRESHOLDS = [90, 50]
 _ESTIMATE_TOO_LARGE = (
     "The estimated cost is too large to calculate. Enter smaller token or request values."
@@ -47,11 +48,14 @@ class _UsageTotals(TypedDict):
 
 
 def budget_alert_threshold(spend: Decimal, budget: Decimal | None) -> int | None:
-    """Return the highest threshold exceeded, without rounding the spend."""
+    """Return the highest threshold reached, without rounding the spend."""
     if not budget:
         return None
 
     percent_used = (spend / budget) * 100
+    if percent_used >= MAX_BUDGET_ALERT_THRESHOLD:
+        return MAX_BUDGET_ALERT_THRESHOLD
+
     for threshold in BUDGET_ALERT_THRESHOLDS:
         if percent_used > threshold:
             return threshold
@@ -80,7 +84,12 @@ def record_budget_alert(
     if not created:
         return None
 
-    memberships = project.memberships.can_manage_api_keys().select_related("user")
+    memberships = None
+    if threshold >= MAX_BUDGET_ALERT_THRESHOLD:
+        memberships = project.memberships.select_related("user")
+    else:
+        memberships = project.memberships.can_manage_api_keys().select_related("user")
+
     for membership in memberships:
         alert.notifications.get_or_create(
             email_address=membership.user.email,
@@ -98,21 +107,30 @@ def send_budget_alert_notification(notification: BudgetAlertNotification) -> Non
     if notification.sent_at:
         return
 
-    template_id = settings.NOTIFY_BUDGET_ALERT_TEMPLATE_ID
+    limit_hit = alert.threshold_percent >= MAX_BUDGET_ALERT_THRESHOLD
+    if limit_hit:
+        template_id = settings.NOTIFY_BUDGET_LIMIT_HIT_TEMPLATE_ID
+        setting_name = "NOTIFY_BUDGET_LIMIT_HIT_TEMPLATE_ID"
+    else:
+        template_id = settings.NOTIFY_BUDGET_ALERT_TEMPLATE_ID
+        setting_name = "NOTIFY_BUDGET_ALERT_TEMPLATE_ID"
     if not template_id:
-        raise ImproperlyConfigured("Missing Notify settings: NOTIFY_BUDGET_ALERT_TEMPLATE_ID")
+        raise ImproperlyConfigured(f"Missing Notify settings: {setting_name}")
+
+    personalisation = {
+        "project_name": alert.project.name,
+        "project_url": (
+            f"{build_base_url(settings.APP_ENV)}"
+            f"{reverse('ai_gateway:usage', kwargs={'uuid': alert.project.uuid})}"
+        ),
+    }
+    if not limit_hit:
+        personalisation["threshold_percent"] = str(alert.threshold_percent)
 
     notification.notify_notification_id = GovUKNotificationsService.from_settings().send_email(
         email_address=notification.email_address,
         template_id=template_id,
-        personalisation={
-            "project_name": alert.project.name,
-            "project_url": (
-                f"{build_base_url(settings.APP_ENV)}"
-                f"{reverse('ai_gateway:usage', kwargs={'uuid': alert.project.uuid})}"
-            ),
-            "threshold_percent": str(alert.threshold_percent),
-        },
+        personalisation=personalisation,
     )
     notification.sent_at = timezone.now()
     notification.save(update_fields=["sent_at", "notify_notification_id", "modified"])
@@ -263,6 +281,13 @@ class UsageService:
         spend = sum((Decimal(str(row["spend"])) for row in daily_rows), Decimal("0"))
         budget = self.team_info["max_budget"]
         return spend, None if budget is None else Decimal(str(budget))
+
+    def is_at_budget_limit(self, month: date) -> bool:
+        """Return True if the team is at or over budget for the month."""
+        spend, budget = self.get_budget_usage(month)
+        if budget is None:
+            return False
+        return spend >= budget
 
     def _build_overview(
         self,
