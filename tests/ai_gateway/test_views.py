@@ -1501,6 +1501,26 @@ class TestUsageView:
         )
 
     @freeze_time("2026-10-28 05:00:00")
+    def test_hides_budget_banner_at_max_budget(self, client, user, team):
+        with patch("ai_gateway.services.AIGatewayClient.from_settings") as factory:
+            gateway = factory.return_value
+            gateway.team_info.return_value = {
+                "team_info": {"created_at": "2026-09-01T00:00:00Z", "max_budget": 100}
+            }
+            gateway.team_daily_activity.return_value = {
+                "results": [{"date": "2026-10-01", "metrics": {"spend": 100}}]
+            }
+            client.force_login(user)
+
+            response = client.get(
+                reverse("ai_gateway:usage", kwargs={"uuid": team.project.uuid}),
+                {"month": "2026-10"},
+            )
+
+        assert response.context["overview_data"]["budget_alert_threshold"] == 100
+        assertNotContains(response, 'class="moj-ticket-panel app-usage-budget-banner"', count=0)
+
+    @freeze_time("2026-10-28 05:00:00")
     @pytest.mark.parametrize(
         ("spend", "budget", "month"),
         [(50, 100, "2026-10"), (90.5, None, "2026-10"), (90.5, 100, "2026-09")],
