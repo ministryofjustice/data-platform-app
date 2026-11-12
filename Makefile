@@ -1,4 +1,4 @@
-.PHONY: run install npm-install build-css build-js build-static lint format lint-templates format-templates test start-ai-gateway stop-ai-gateway
+.PHONY: run install npm-install build-css build-js build-static lint format lint-templates format-templates test test-e2e start-ai-gateway stop-ai-gateway
 
 run:
 	uv run python manage.py makemigrations --check
@@ -67,6 +67,9 @@ test:
 	DB_PASSWORD=data_platform_app \
 	DB_NAME=data_platform_app \
 	uv run pytest --failed-first --maxfail=5 $(ARGS)
+
+test-e2e:
+	uv run pytest -c pytest-e2e.ini --no-cov $(ARGS)
 
 start-ai-gateway:
 	bash contrib/ai-gateway/start.sh
