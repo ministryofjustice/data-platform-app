@@ -1518,7 +1518,7 @@ class TestUsageView:
             )
 
         assert response.context["overview_data"]["budget_alert_threshold"] == 100
-        assertNotContains(response, 'class="moj-ticket-panel app-usage-budget-banner"', count=0)
+        assertNotContains(response, 'class="moj-ticket-panel app-usage-budget-banner"')
 
     @freeze_time("2026-10-28 05:00:00")
     @pytest.mark.parametrize(
