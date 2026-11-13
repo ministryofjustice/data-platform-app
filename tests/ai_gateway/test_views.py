@@ -51,7 +51,11 @@ class TestKeyListView:
         with patch("ai_gateway.mixins.UsageService.from_settings", return_value=service):
             response = client.get(reverse("ai_gateway:key_list", args=[project.uuid]))
 
-        assertContains(response, "You've spent 100% of your monthly Justice AI Gateway budget")
+        assertContains(
+            response,
+            '<h2 class="moj-alert__heading">You\'ve spent 100% of your monthly budget</h2>',
+            html=True,
+        )
         service.is_at_budget_limit.assert_called_once()
 
     def test_lists_existing_keys(self, client, user, project, key):
@@ -817,7 +821,11 @@ class TestKeyDetailView:
         with patch("ai_gateway.mixins.UsageService.from_settings", return_value=service):
             response = client.get(reverse("ai_gateway:key_detail", args=[project.uuid, key.pk]))
 
-        assertContains(response, "You've spent 100% of your monthly Justice AI Gateway budget")
+        assertContains(
+            response,
+            '<h2 class="moj-alert__heading">You\'ve spent 100% of your monthly budget</h2>',
+            html=True,
+        )
         service.is_at_budget_limit.assert_called_once()
 
     def test_renders_none_when_key_uses_no_default_models(
@@ -1491,6 +1499,26 @@ class TestUsageView:
             "https://user-guide.data-platform.service.justice.gov.uk/support/"
             "index.html#request-an-increase-to-your-ai-usage-limits",
         )
+
+    @freeze_time("2026-10-28 05:00:00")
+    def test_hides_budget_banner_at_max_budget(self, client, user, team):
+        with patch("ai_gateway.services.AIGatewayClient.from_settings") as factory:
+            gateway = factory.return_value
+            gateway.team_info.return_value = {
+                "team_info": {"created_at": "2026-09-01T00:00:00Z", "max_budget": 100}
+            }
+            gateway.team_daily_activity.return_value = {
+                "results": [{"date": "2026-10-01", "metrics": {"spend": 100}}]
+            }
+            client.force_login(user)
+
+            response = client.get(
+                reverse("ai_gateway:usage", kwargs={"uuid": team.project.uuid}),
+                {"month": "2026-10"},
+            )
+
+        assert response.context["overview_data"]["budget_alert_threshold"] == 100
+        assertNotContains(response, 'class="moj-ticket-panel app-usage-budget-banner"')
 
     @freeze_time("2026-10-28 05:00:00")
     @pytest.mark.parametrize(

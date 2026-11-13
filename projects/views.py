@@ -123,6 +123,7 @@ class ProjectDetailView(
     context_object_name = "project"
     model = Project
     active_project_section = "overview"
+    banner_heading = "You've spent 100% of your monthly Justice AI Gateway budget"
 
     def get_queryset(self):
         return self.get_accessible_projects(

@@ -305,7 +305,9 @@ class UsageService:
         monthly_rows = self._monthly_rows(full_spend_history)
 
         max_budget = self.team_info.get("max_budget")
-        budget_remaining = None if max_budget is None else round(max_budget - total_spend, 2)
+        budget_remaining = (
+            None if max_budget is None else round(max(0, max_budget - total_spend), 2)
+        )
         percent_used = None if not max_budget else round((total_spend / max_budget) * 100, 1)
         alert_threshold = None
         if month_start == timezone.localdate().replace(day=1):

@@ -1,8 +1,12 @@
+{% comment %}
+  Expects:
+    heading - heading of banner
+{% endcomment %}
 <div class="govuk-grid-row">
   <div class="govuk-grid-column-three-quarters">
     <div role="region"
          class="moj-alert moj-alert--warning moj-alert--with-heading"
-         aria-label="warning: you've spent 100% of your monthly Justice AI Gateway budget"
+         aria-label="warning: {{ heading }}"
          data-module="moj-alert">
       <div>
         <svg class="moj-alert__icon"
@@ -16,7 +20,7 @@
         </svg>
       </div>
       <div class="moj-alert__content">
-        <h2 class="moj-alert__heading">You've spent 100% of your monthly Justice AI Gateway budget</h2>
+        <h2 class="moj-alert__heading">{{ heading }}</h2>
         API requests are unavailable until the budget resets or is increased. Applications using keys from this project may stop working. Learn how to <a href="https://user-guide.data-platform.service.justice.gov.uk/support/index.html#raise-an-issue">request an increase to your AI usage limits</a>.
       </div>
       <div class="moj-alert__action">
