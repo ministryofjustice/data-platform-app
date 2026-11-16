@@ -2,7 +2,7 @@
 {% block content %}
   {% block budget_limit_content %}
     {% if show_budget_limit_banner %}
-      {% include "includes/ai_gateway/_budget_limit_warning.html" only %}
+      {% include "includes/ai_gateway/_budget_limit_warning.html" with heading=banner_heading only %}
     {% endif %}
   {% endblock budget_limit_content %}
   <div class="govuk-grid-row">

@@ -76,7 +76,7 @@
               </div>
             </div>
           </div>
-          {% if overview_data.budget_alert_threshold %}
+          {% if overview_data.budget_alert_threshold and not show_budget_limit_banner %}
             {% include "includes/ai_gateway/_usage_budget_banner.html" with threshold=overview_data.budget_alert_threshold only %}
           {% endif %}
           {% include "includes/ai_gateway/_usage_spend_section.html" with heading="Daily usage" heading_level="h4" column_label="Date" rows=overview_data.daily_spend_preview chart_name=overview_data.daily_chart_name chart_data=overview_data.daily_chart_data chart_label=overview_data.daily_chart_label requests_chart_name=overview_data.daily_requests_chart_name requests_chart_data=overview_data.daily_requests_chart_data requests_chart_label=overview_data.daily_requests_chart_label show_all=overview_data.daily_show_all empty_message="No spend recorded for this month." only %}

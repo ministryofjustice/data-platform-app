@@ -10,7 +10,7 @@
 {% block content %}
   {% has_project_permission request.user "projects.manage_api_keys" project as can_manage_api_keys %}
   {% if show_budget_limit_banner %}
-    {% include "includes/ai_gateway/_budget_limit_warning.html" only %}
+    {% include "includes/ai_gateway/_budget_limit_warning.html" with heading=banner_heading only %}
   {% endif %}
   <div class="govuk-grid-row">
     {% if success_message %}

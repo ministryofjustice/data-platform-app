@@ -14,11 +14,14 @@ class BudgetLimitBannerMixin:
     """Add current-month budget status to a project page's template context."""
 
     budget_limit_banner_auto = True
+    banner_heading = "You've spent 100% of your monthly budget"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         if self.budget_limit_banner_auto:
             context["show_budget_limit_banner"] = self.get_budget_limit_banner()
+
+        context["banner_heading"] = self.banner_heading
         return context
 
     def get_budget_limit_banner(

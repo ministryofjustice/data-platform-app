@@ -129,6 +129,20 @@ class TestUsageServiceBudgetLimit:
 
 
 class TestUsageServiceGetUsage:
+    def test_budget_remaining_is_zero_when_spend_exceeds_budget(self, team, gateway_client):
+        gateway_client.team_info.return_value = {
+            "team_info": {"created_at": "2026-08-01T00:00:00", "max_budget": 100}
+        }
+        gateway_client.team_daily_activity.return_value = {
+            "results": [{"date": "2026-08-10", "metrics": {"spend": 125}}]
+        }
+
+        with UsageService(gateway_client, team) as service:
+            overview = service.get_usage(date(2026, 8, 1))["overview_data"]
+
+        assert overview["total_spend"] == 125
+        assert overview["budget_remaining"] == 0
+
     def test_model_tokens_are_aggregated_for_monthly_and_daily_charts_only(
         self, team, gateway_client, key
     ):
