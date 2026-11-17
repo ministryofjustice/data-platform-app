@@ -23,7 +23,12 @@ def auth_callback(request: HttpRequest) -> HttpResponse:
             raise
 
         sentry_sdk.capture_message("auth_state_mismatch", level="warning")
-        return render(request, "auth_sign_in_again.html", status=400)
+        return render(
+            request,
+            "auth_sign_in_again.html",
+            context={"google_analytics_id": ""},
+            status=400,
+        )
 
 
 class ProductPageMixin:
