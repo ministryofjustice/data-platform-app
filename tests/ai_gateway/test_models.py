@@ -104,3 +104,10 @@ class TestKeyHistoricalModel:
         assert latest_history.models_removed == []
         assert latest_history.has_models_added_and_removed is False
         assert latest_history.has_model_changes is True
+
+    def test_model_change_type_is_key_regenerated(self, key):
+        key.litellm_token = "new_token"
+        key.save()
+
+        prev_record = key.history.first()
+        assert prev_record.model_change_type == "Key regenerated"
