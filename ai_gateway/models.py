@@ -150,6 +150,8 @@ class KeyHistoricalModel(models.Model):
             return "Model added" if len(self.models_added) == 1 else "Models added"
         if self.models_removed:
             return "Model removed" if len(self.models_removed) == 1 else "Models removed"
+        if self.litellm_token != self.previous_record.litellm_token:
+            return "Key regenerated"
         return None
 
 
