@@ -2,10 +2,50 @@ import re
 from unittest.mock import patch
 
 import pytest
+from django.http import HttpResponseRedirect
 from django.urls import reverse
 from pytest_django.asserts import assertContains, assertNotContains, assertTemplateUsed
 
 from ai_gateway.exceptions import AIGatewayAPIError
+
+
+class TestAuthCallback:
+    def test_state_mismatch_shows_recovery_page_without_login(self, client):
+        error = ValueError('state mismatch: {"next": "/app/"} vs {"next": "/other/"}')
+        with (
+            patch("azure_auth.handlers.AuthHandler.get_token_from_flow", side_effect=error),
+            patch("data_platform_app.views.sentry_sdk.capture_message") as capture_message,
+        ):
+            response = client.get(
+                reverse("auth_callback"), {"code": "sensitive-code", "state": "old-state"}
+            )
+
+        assertTemplateUsed(response, "auth_sign_in_again.html")
+        assertContains(
+            response, "We could not complete your sign-in. Please try again.", status_code=400
+        )
+        assertContains(response, f'href="{reverse("login")}"', status_code=400)
+        assertNotContains(response, "sensitive-code", status_code=400)
+        assertNotContains(response, str(error), status_code=400)
+        capture_message.assert_called_once_with("auth_state_mismatch", level="warning")
+
+    def test_successful_callback_preserves_provider_response(self, client):
+        redirect = HttpResponseRedirect(reverse("landing"))
+        with patch("data_platform_app.views.azure_auth_callback", return_value=redirect):
+            response = client.get(reverse("auth_callback"))
+
+        assert response is redirect
+
+    @pytest.mark.parametrize(
+        "error",
+        [ValueError("Unexpected token error"), RuntimeError("Authentication unavailable")],
+    )
+    def test_unrelated_errors_are_not_hidden(self, client, error):
+        with (
+            patch("azure_auth.handlers.AuthHandler.get_token_from_flow", side_effect=error),
+            pytest.raises(type(error), match=str(error)),
+        ):
+            client.get(reverse("auth_callback"))
 
 
 def _assert_header_logo_links_to(response, expected_href):

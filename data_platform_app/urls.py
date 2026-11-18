@@ -15,7 +15,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
-from azure_auth.views import azure_auth_callback, azure_auth_login, azure_auth_logout
+from azure_auth.views import azure_auth_login, azure_auth_logout
 from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth.decorators import login_not_required
@@ -30,6 +30,7 @@ from data_platform_app.views import (
     HomeView,
     LandingView,
     RoadmapView,
+    auth_callback,
     e2e_login,
     healthcheck,
 )
@@ -60,7 +61,7 @@ urlpatterns = [
     path("healthcheck/", healthcheck, name="healthcheck"),
     path("login/", login_not_required(azure_auth_login), name="login"),
     path("logout/", login_not_required(azure_auth_logout), name="logout"),
-    path("sso/callback/", login_not_required(azure_auth_callback), name="auth_callback"),
+    path("sso/callback/", auth_callback, name="auth_callback"),
 ]
 
 if settings.E2E_AUTH_ENABLED:

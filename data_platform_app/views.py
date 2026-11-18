@@ -1,13 +1,34 @@
 import hmac
 
+import sentry_sdk
+from azure_auth.views import azure_auth_callback
 from django.conf import settings
 from django.contrib.auth import get_user_model, login
 from django.contrib.auth.decorators import login_not_required
 from django.http import HttpRequest, HttpResponse, JsonResponse
+from django.shortcuts import render
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.views.generic import TemplateView
+
+
+@login_not_required
+def auth_callback(request: HttpRequest) -> HttpResponse:
+    """Offer a fresh sign-in when MSAL rejects an outdated authentication flow."""
+    try:
+        return azure_auth_callback(request)
+    except ValueError as exc:
+        if not str(exc).startswith("state mismatch:"):
+            raise
+
+        sentry_sdk.capture_message("auth_state_mismatch", level="warning")
+        return render(
+            request,
+            "auth_sign_in_again.html",
+            context={"google_analytics_id": ""},
+            status=400,
+        )
 
 
 class ProductPageMixin:
