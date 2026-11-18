@@ -10,7 +10,7 @@ dependencies = [
     "django-extensions==4.1",
     "django-simple-history==3.13.0",
     "django-structlog==11.0.0",
-    "gunicorn==26.2.0",
+    "gunicorn==27.0.0",
     "httpx==0.28.1",
     "model-bakery==1.24.2",
     "python-dotenv==1.2.4",
