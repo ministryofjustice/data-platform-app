@@ -12,7 +12,7 @@ dependencies = [
     "django-structlog==11.0.0",
     "gunicorn==27.0.1",
     "httpx==0.28.1",
-    "model-bakery==1.24.2",
+    "model-bakery==1.25.0",
     "python-dotenv==1.2.4",
     "psycopg[binary]==3.3.9",
     "pytest-django==4.14.0",
@@ -27,7 +27,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "djlint==1.50.0",
+    "djlint==1.53.1",
     "django-debug-toolbar==8.0.0",
     "pre-commit==4.7.0",
     "pytest==9.2.0",
